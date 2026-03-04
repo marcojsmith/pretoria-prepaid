@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { NavLink } from "./NavLink";
 import { DashboardStats } from "./DashboardStats";
@@ -15,8 +15,8 @@ describe("Application Components", () => {
     expect(screen.getByText("Home")).toBeInTheDocument();
   });
 
-  it("renders DashboardStats", () => {
-    render(
+  it("renders DashboardStats and handles clicks", () => {
+    const { getByText } = render(
       <BrowserRouter>
         <DashboardStats
           unitsThisMonth={100}
@@ -27,10 +27,12 @@ describe("Application Components", () => {
         />
       </BrowserRouter>
     );
-    expect(screen.getByText(/100 kWh/)).toBeInTheDocument();
-    expect(screen.getByText(/Calculator/)).toBeInTheDocument();
-  });
+    expect(getByText(/100 kWh/)).toBeInTheDocument();
 
+    // Test action cards
+    fireEvent.click(getByText(/Calculator/i));
+    fireEvent.click(getByText(/Record/i));
+  });
   it("renders TierProgress", () => {
     render(<TierProgress unitsBought={50} />);
     expect(screen.getByText(/Tier 1/)).toBeInTheDocument();
