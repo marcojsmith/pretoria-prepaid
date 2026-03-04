@@ -97,8 +97,14 @@ export function usePurchases() {
     return previousMonths.reduce((sum, s) => sum + s.cost, 0) / previousMonths.length;
   }, [getMonthlyStats]);
 
+  const currentMonthPurchases = getCurrentMonthPurchases();
+  const unitsThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.units, 0);
+  const costThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.amountPaid, 0);
+
   return {
     purchases,
+    unitsThisMonth,
+    costThisMonth,
     loading: purchasesData === undefined,
     addPurchase,
     deletePurchase,

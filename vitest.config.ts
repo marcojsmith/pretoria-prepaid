@@ -16,7 +16,6 @@ export default defineConfig({
         "vitest.setup.ts", 
         "convex/", 
         "src/components/ui/**", 
-        "src/pages/**",
         "src/main.tsx",
         "src/App.tsx",
         "src/vite-env.d.ts"
@@ -24,10 +23,10 @@ export default defineConfig({
       all: true,
       include: ["src/**/*.{ts,tsx}"],
       thresholds: {
-        lines: 60,
-        functions: 60,
+        lines: 80,
+        functions: 80,
         branches: 80,
-        statements: 60,
+        statements: 80,
       },
     },
   },

@@ -19,6 +19,16 @@ describe("Data Hooks", () => {
     expect(result.current.loading).toBe(false);
   });
 
+  it("useRates updateRate calls mutation", async () => {
+    const updateMock = vi.fn().mockResolvedValue(null);
+    (convexReact.useMutation as any).mockReturnValue(updateMock);
+
+    const { result } = renderHook(() => useRates());
+    await result.current.updateRate("1" as any, 2.0);
+
+    expect(updateMock).toHaveBeenCalledWith({ id: "1", rate: 2.0 });
+  });
+
   it("useUserRole identifies admin", () => {
     (convexReact.useQuery as any).mockReturnValue("admin");
     const { result } = renderHook(() => useUserRole());
