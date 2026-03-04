@@ -1,0 +1,8 @@
+node_modules
+dist
+build
+public
+convex/_generated
+bun.lockb
+*.config.js
+*.config.ts
