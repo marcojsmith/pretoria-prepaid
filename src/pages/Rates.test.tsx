@@ -5,16 +5,19 @@ import Rates from "./Rates";
 import { useRates } from "../hooks/useRates";
 import { useUserRole } from "../hooks/useUserRole";
 import { useAuth } from "../hooks/useAuth";
+import { usePurchases } from "../hooks/usePurchase";
 
 // Mock the hooks
 vi.mock("../hooks/useRates");
 vi.mock("../hooks/useUserRole");
 vi.mock("../hooks/useAuth");
+vi.mock("../hooks/usePurchase");
 
 describe("Rates Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useAuth as any).mockReturnValue({ user: { id: "1" } });
+    (usePurchases as any).mockReturnValue({ offlineCount: 0 });
   });
 
   it("renders loading state", () => {

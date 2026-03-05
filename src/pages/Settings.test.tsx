@@ -81,9 +81,8 @@ describe("Settings Page", () => {
         meterNumber: "0987654321",
         monthlyBudget: 1000,
       });
+      expect(toast.success).toHaveBeenCalledWith("Settings updated successfully");
     });
-
-    expect(toast.success).toHaveBeenCalledWith("Settings updated successfully");
   });
 
   it("handles submission errors", async () => {
@@ -106,6 +105,7 @@ describe("Settings Page", () => {
     (useProfile as any).mockReturnValue({
       profile: undefined,
       loading: true,
+      updateProfile: mockUpdateProfile,
     });
 
     render(

@@ -25,4 +25,4 @@
 - [x] Task: Final Verification and Testing 30739f7
   - [x] Verify the complete flow from settings update to dashboard reflection.
 
-- [x] Task: Conductor - User Manual Verification 'User Profile and Meter Settings Management' (Protocol in workflow.md) [checkpoint: 30739f7]
+- [x] Task: Conductor - User Manual Verification 'User Profile and Meter Settings Management' (Protocol in workflow.md) 30739f7

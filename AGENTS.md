@@ -1,14 +1,15 @@
 # Quick Reference
 
-| Command                                            | Description              |
-| -------------------------------------------------- | ------------------------ |
-| `bun run dev`                                      | Start development server |
-| `bun run lint`                                     | Check code for errors    |
-| `bun run test`                                     | Run tests                |
-| `bun run build`                                    | Production build         |
-| `bunx vercel`                                      | Deploy to staging        |
-| `bunx vercel --prod`                               | Deploy to production     |
-| `bunx coderabbit --prompt-only --type uncommitted` | Run CodeRabbit review    |
+| Command                                            | Description                                             |
+| -------------------------------------------------- | ------------------------------------------------------- |
+| `bun run dev`                                      | Start development server                                |
+| `bun run lint`                                     | Check code for errors                                   |
+| `bun run test`                                     | Run tests                                               |
+| `bun run build`                                    | Production build                                        |
+| `bunx vercel`                                      | Deploy to staging                                       |
+| `bunx vercel --prod`                               | Deploy to production                                    |
+| `bunx coderabbit --prompt-only --type uncommitted` | Run CodeRabbit review on uncommitted code               |
+| `bunx coderabbit review --prompt-only --base main` | Run CodeRabbit review on PR changes against main branch |
 
 **Key Files:**
 

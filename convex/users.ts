@@ -118,7 +118,9 @@ export const updateProfile = mutation({
     if (args.meterNumber !== undefined) updates.meterNumber = args.meterNumber;
     if (args.monthlyBudget !== undefined) updates.monthlyBudget = args.monthlyBudget;
 
-    await ctx.db.patch(profile._id, updates);
+    if (Object.keys(updates).length > 0) {
+      await ctx.db.patch(profile._id, updates);
+    }
 
     return profile._id;
   },

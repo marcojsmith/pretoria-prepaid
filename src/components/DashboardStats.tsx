@@ -54,11 +54,12 @@ export function DashboardStats({
     },
   ];
 
-  const budgetProgress = monthlyBudget ? Math.min((costThisMonth / monthlyBudget) * 100, 100) : 0;
+  const hasBudget = typeof monthlyBudget === "number" && monthlyBudget > 0;
+  const budgetProgress = hasBudget ? Math.min((costThisMonth / monthlyBudget) * 100, 100) : 0;
 
   return (
     <div className="space-y-2">
-      {monthlyBudget !== undefined && (
+      {hasBudget && (
         <Card>
           <CardContent className="p-3">
             <div className="space-y-2">
