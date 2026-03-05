@@ -16,7 +16,7 @@
 - [x] Task: Offline Purchase Calculator 0ce27d7
   - [ ] Use `react-query` or similar for caching electricity rates with stale-while-revalidate.
   - [ ] Ensure the calculator can perform calculations using cached rates when offline.
-- [~] Task: Offline Purchase History
+- [x] Task: Offline Purchase History 33c6020
   - [ ] Implement local storage or IndexedDB (using `idb` or `dexie`) to cache the last 50 purchases.
   - [ ] Update `PurchaseHistory` component to read from local cache if Convex is unavailable.
 - [ ] Task: Conductor - User Manual Verification 'Offline Data and Calculator' (Protocol in workflow.md)
