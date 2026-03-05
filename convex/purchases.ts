@@ -29,6 +29,10 @@ export const addPurchase = mutation({
       throw new Error("Not authenticated");
     }
 
+    if (args.units < 0 || args.cost < 0 || args.amountPaid < 0) {
+      throw new Error("Values cannot be negative");
+    }
+
     const purchase = {
       userId: identity.subject,
       ...args,
