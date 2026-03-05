@@ -1,5 +1,5 @@
 import { useUser, useAuth as useClerkAuth } from "@clerk/clerk-react";
-import { useMutation } from "convex/react";
+import { useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useEffect, createContext, useContext, ReactNode } from "react";
 
@@ -13,14 +13,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, user } = useUser();
+  const { isAuthenticated } = useConvexAuth();
   const { signOut } = useClerkAuth();
   const syncUser = useMutation(api.users.syncUser);
 
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
+    if (isLoaded && isSignedIn && user && isAuthenticated) {
       syncUser({ email: user.primaryEmailAddress?.emailAddress ?? null });
     }
-  }, [isLoaded, isSignedIn, user, syncUser]);
+  }, [isLoaded, isSignedIn, user, isAuthenticated, syncUser]);
 
   return (
     <AuthContext.Provider value={{ user, loading: !isLoaded, signOut }}>

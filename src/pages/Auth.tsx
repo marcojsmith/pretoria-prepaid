@@ -24,11 +24,11 @@ const Auth = () => {
             </TabsList>
 
             <TabsContent value="signin" className="mt-4 flex justify-center">
-              <SignIn routing="hash" />
+              <SignIn routing="path" path="/auth" forceRedirectUrl="/dashboard" />
             </TabsContent>
 
             <TabsContent value="signup" className="mt-4 flex justify-center">
-              <SignUp routing="hash" />
+              <SignUp routing="path" path="/auth" forceRedirectUrl="/dashboard" />
             </TabsContent>
           </Tabs>
         </CardContent>
