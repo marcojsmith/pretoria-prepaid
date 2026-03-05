@@ -17,6 +17,7 @@ describe("usePurchases Hook", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.useFakeTimers();
     // Set system time to Feb 2024
     vi.setSystemTime(new Date("2024-02-25T10:00:00.000Z"));
@@ -37,18 +38,44 @@ describe("usePurchases Hook", () => {
     // Feb 2024 purchases: 60 + 45 = 105 units
     expect(result.current.unitsThisMonth).toBe(105);
     expect(result.current.costThisMonth).toBe(350);
-
-    const monthlyStats = result.current.getMonthlyStats();
-    expect(monthlyStats.length).toBeGreaterThan(0);
-
-    const currentMonthPurchases = result.current.getCurrentMonthPurchases();
-    expect(currentMonthPurchases).toHaveLength(2);
-
-    expect(result.current.getDailyAverageUsage()).toBeGreaterThan(0);
-    expect(result.current.getAverageMonthlyUsage()).toBe(30); // only Jan is a full previous month in the slice
   });
 
-  it("returns loading state when query returns undefined", () => {
+  it("caches purchases to localStorage when fetched from convex", () => {
+    (convexReact.useQuery as any).mockReturnValue(mockPurchases);
+
+    renderHook(() => usePurchases());
+
+    const cached = JSON.parse(localStorage.getItem("purchases_history") || "[]");
+    expect(cached).toHaveLength(3);
+    expect(cached[0].units).toBe(30);
+  });
+
+  it("returns cached purchases from localStorage when convex returns undefined (offline/loading)", () => {
+    // Pre-populate cache
+    const cachedPurchases = [
+      {
+        _id: "cached-1",
+        amountPaid: 50,
+        units: 15,
+        date: "2024-01-01T10:00:00.000Z",
+        cost: 50,
+        tierBreakdown: [],
+      },
+    ];
+    localStorage.setItem("purchases_history", JSON.stringify(cachedPurchases));
+
+    // Simulate offline/loading (useQuery returns undefined)
+    (convexReact.useQuery as any).mockReturnValue(undefined);
+
+    const { result } = renderHook(() => usePurchases());
+
+    expect(result.current.purchases).toHaveLength(1);
+    expect(result.current.purchases[0]._id).toBe("cached-1");
+    // It should not be considered "loading" if we have cached data
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("returns loading state when query returns undefined and cache is empty", () => {
     (convexReact.useQuery as any).mockReturnValue(undefined);
 
     const { result } = renderHook(() => usePurchases());

@@ -1,22 +1,44 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Purchase, TierBreakdown, getCurrentMonth } from "@/lib/electricity";
 import { Id } from "../../convex/_generated/dataModel";
+
+const PURCHASES_CACHE_KEY = "purchases_history";
 
 export function usePurchases() {
   const purchasesData = useQuery(api.purchases.getPurchases);
   const addPurchaseMutation = useMutation(api.purchases.addPurchase);
   const deletePurchaseMutation = useMutation(api.purchases.deletePurchase);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
 
-  const purchases: Purchase[] = (purchasesData ?? []).map((p) => ({
-    _id: p._id,
-    date: p.date,
-    units: p.units,
-    cost: p.cost,
-    amountPaid: p.amountPaid,
-    tierBreakdown: (p.tierBreakdown as unknown as TierBreakdown[]) || [],
-  }));
+  // Load from cache on mount
+  useEffect(() => {
+    const cached = localStorage.getItem(PURCHASES_CACHE_KEY);
+    if (cached) {
+      try {
+        setPurchases(JSON.parse(cached));
+      } catch (e) {
+        console.error("Failed to parse cached purchases", e);
+      }
+    }
+  }, []);
+
+  // Update cache and state when data changes
+  useEffect(() => {
+    if (purchasesData) {
+      const mappedPurchases: Purchase[] = purchasesData.map((p) => ({
+        _id: p._id,
+        date: p.date,
+        units: p.units,
+        cost: p.cost,
+        amountPaid: p.amountPaid,
+        tierBreakdown: (p.tierBreakdown as unknown as TierBreakdown[]) || [],
+      }));
+      setPurchases(mappedPurchases);
+      localStorage.setItem(PURCHASES_CACHE_KEY, JSON.stringify(mappedPurchases));
+    }
+  }, [purchasesData]);
 
   const addPurchase = useCallback(
     async (units: number, amountPaid: number, date: string) => {
@@ -94,7 +116,7 @@ export function usePurchases() {
     purchases,
     unitsThisMonth,
     costThisMonth,
-    loading: purchasesData === undefined,
+    loading: purchasesData === undefined && purchases.length === 0,
     addPurchase,
     deletePurchase,
     getCurrentMonthPurchases,
