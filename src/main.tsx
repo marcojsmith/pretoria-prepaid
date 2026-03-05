@@ -5,12 +5,18 @@ import { ConvexReactClient } from "convex/react";
 import App from "./App";
 import "./index.css";
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Publishable Key");
+if (!CONVEX_URL) {
+  throw new Error("Missing VITE_CONVEX_URL environment variable");
 }
+
+if (!PUBLISHABLE_KEY) {
+  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY environment variable");
+}
+
+const convex = new ConvexReactClient(CONVEX_URL);
 
 createRoot(document.getElementById("root")!).render(
   <ClerkProvider publishableKey={PUBLISHABLE_KEY}>

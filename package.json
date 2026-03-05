@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun x vite",
     "build": "bun x tsc && bun x vite build",
-    "build:prod": "npx convex deploy --cmd 'VITE_CONVEX_URL=$CONVEX_URL bun run build'",
+    "build:prod": "bun x convex deploy --cmd 'bun run build' --cmd-url-env-var-name VITE_CONVEX_URL",
     "lint": "bun x eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write .",
     "test": "vitest",
