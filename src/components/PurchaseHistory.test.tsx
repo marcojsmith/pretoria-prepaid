@@ -11,7 +11,7 @@ describe("PurchaseHistory", () => {
   it("renders list of purchases correctly", () => {
     const purchases = [
       {
-        id: "1",
+        _id: "1",
         date: "2024-01-01",
         units: 100,
         cost: 342,

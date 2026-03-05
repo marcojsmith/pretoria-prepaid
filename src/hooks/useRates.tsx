@@ -4,7 +4,6 @@ import { Id } from "../../convex/_generated/dataModel";
 
 export interface ElectricityRate {
   _id: string;
-  id: string;
   tier_number: number;
   tier_label: string;
   min_units: number;
@@ -18,7 +17,6 @@ export function useRates() {
 
   const rates: ElectricityRate[] = (ratesData ?? []).map((r) => ({
     _id: r._id,
-    id: r._id,
     tier_number: r.tier_number,
     tier_label: r.tier_label,
     min_units: r.min_units,

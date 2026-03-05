@@ -10,7 +10,7 @@ export function usePurchases() {
   const deletePurchaseMutation = useMutation(api.purchases.deletePurchase);
 
   const purchases: Purchase[] = (purchasesData ?? []).map((p) => ({
-    id: p._id,
+    _id: p._id,
     date: p.date,
     units: p.units,
     cost: p.cost,
