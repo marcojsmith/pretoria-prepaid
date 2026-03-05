@@ -13,7 +13,7 @@
 
 ## Phase 2: Offline Data and Calculator
 
-- [ ] Task: Offline Purchase Calculator
+- [~] Task: Offline Purchase Calculator
   - [ ] Use `react-query` or similar for caching electricity rates with stale-while-revalidate.
   - [ ] Ensure the calculator can perform calculations using cached rates when offline.
 - [ ] Task: Offline Purchase History
