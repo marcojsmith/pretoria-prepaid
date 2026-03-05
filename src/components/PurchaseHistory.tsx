@@ -49,7 +49,7 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
             typeof purchase.tierBreakdown[0].tier === "number";
           return (
             <div
-              key={purchase.id}
+              key={purchase._id}
               className="space-y-1.5 rounded-md border border-border bg-secondary-foreground p-2.5"
             >
               {/* Header row with date top-right */}
@@ -75,7 +75,7 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => onDelete(purchase.id)}
+                  onClick={() => onDelete(purchase._id)}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>

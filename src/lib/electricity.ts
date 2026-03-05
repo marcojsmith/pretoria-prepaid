@@ -15,7 +15,7 @@ export interface TierBreakdown {
 }
 
 export interface Purchase {
-  id: string;
+  _id: string;
   date: string;
   units: number;
   cost: number;
