@@ -6,6 +6,7 @@
 | `bun run lint`                                     | Check code for errors    |
 | `bun run test`                                     | Run tests                |
 | `bun run build`                                    | Production build         |
+| `bunx vercel`                                      | Deploy to staging        |
 | `bunx vercel --prod`                               | Deploy to production     |
 | `bunx coderabbit --prompt-only --type uncommitted` | Run CodeRabbit review    |
 

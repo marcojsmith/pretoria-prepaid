@@ -9,30 +9,72 @@
 5. **User Experience First:** Every decision should prioritize user experience
 6. **Non-Interactive & CI-Aware:** Prefer non-interactive commands. Use `CI=true` for watch-mode tools (tests, linters) to ensure single execution.
 
+## Track Management Workflow
+
+To maintain strict isolation and allow for parallel feature development, each track MUST be implemented in its own `git worktree`.
+
+### 1. Initialize Track
+
+When a new track is selected from `conductor/tracks.md`:
+
+1.  **Identify Track ID**: Use the track's folder name (e.g., `profile_settings_20260305`).
+2.  **Create Worktree Branch**: Create a new branch for the track from the latest `main`.
+    ```bash
+    git checkout main && git pull
+    git branch feature/<track-id>
+    ```
+3.  **Add Git Worktree**: Initialize a new worktree in a directory adjacent to the main repository.
+    ```bash
+    git worktree add ../pretoria-prepaid-tracks/<track-id> feature/<track-id>
+    ```
+4.  **Navigate to Worktree**: All subsequent development for this track MUST happen within the worktree directory.
+    ```bash
+    cd ../pretoria-prepaid-tracks/<track-id>
+    ```
+5.  **Initialize Environment**: Install dependencies and ensure the track environment is ready.
+    ```bash
+    bun install
+    ```
+
+### 2. Track Cleanup
+
+Once a track is fully merged and verified in `main`:
+
+1.  **Remove Worktree**:
+    ```bash
+    git worktree remove ../pretoria-prepaid-tracks/<track-id>
+    ```
+2.  **Delete Branch**:
+    ```bash
+    git branch -d feature/<track-id>
+    ```
+
 ## Task Workflow
 
 All tasks follow a strict lifecycle:
 
 ### Standard Task Workflow
 
-1. **Select Task:** Choose the next available task from `plan.md` in sequential order
+1. **Verify Worktree:** Ensure you are working within the correct `git worktree` for the active track.
 
-2. **Mark In Progress:** Before beginning work, edit `plan.md` and change the task from `[ ]` to `[~]`
+2. **Select Task:** Choose the next available task from `plan.md` in sequential order
 
-3. **Write Failing Tests (Red Phase):**
+3. **Mark In Progress:** Before beginning work, edit `plan.md` and change the task from `[ ]` to `[~]`
+
+4. **Write Failing Tests (Red Phase):**
    - Create a new test file for the feature or bug fix.
    - Write one or more unit tests that clearly define the expected behavior and acceptance criteria for the task.
    - **CRITICAL:** Run the tests and confirm that they fail as expected. This is the "Red" phase of TDD. Do not proceed until you have failing tests.
 
-4. **Implement to Pass Tests (Green Phase):**
+5. **Implement to Pass Tests (Green Phase):**
    - Write the minimum amount of application code necessary to make the failing tests pass.
    - Run the test suite again and confirm that all tests now pass. This is the "Green" phase.
 
-5. **Refactor (Optional but Recommended):**
+6. **Refactor (Optional but Recommended):**
    - With the safety of passing tests, refactor the implementation code and the test code to improve clarity, remove duplication, and enhance performance without changing the external behavior.
    - Rerun tests to ensure they still pass after refactoring.
 
-6. **Verify Coverage:** Run coverage reports using the project's chosen tools. For example, in a Python project, this might look like:
+7. **Verify Coverage:** Run coverage reports using the project's chosen tools. For example, in a Python project, this might look like:
 
    ```bash
    pytest --cov=app --cov-report=html
@@ -40,31 +82,32 @@ All tasks follow a strict lifecycle:
 
    Target: >80% coverage for new code. The specific tools and commands will vary by language and framework.
 
-7. **Document Deviations:** If implementation differs from tech stack:
+8. **Document Deviations:** If implementation differs from tech stack:
    - **STOP** implementation
    - Update `tech-stack.md` with new design
    - Add dated note explaining the change
    - Resume implementation
 
-8. **Commit Code Changes:**
+9. **Commit Code Changes:**
    - Stage all code changes related to the task.
    - Propose a clear, concise commit message e.g, `feat(ui): Create basic HTML structure for calculator`.
    - Perform the commit.
 
-9. **Attach Task Summary with Git Notes:**
-   - **Step 9.1: Get Commit Hash:** Obtain the hash of the _just-completed commit_ (`git log -1 --format="%H"`).
-   - **Step 9.2: Draft Note Content:** Create a detailed summary for the completed task. This should include the task name, a summary of changes, a list of all created/modified files, and the core "why" for the change.
-   - **Step 9.3: Attach Note:** Use the `git notes` command to attach the summary to the commit.
-     ```bash
-     # The note content from the previous step is passed via the -m flag.
-     git notes add -m "<note content>" <commit_hash>
-     ```
+10. **Attach Task Summary with Git Notes:**
 
-10. **Get and Record Task Commit SHA:**
-    - **Step 10.1: Update Plan:** Read `plan.md`, find the line for the completed task, update its status from `[~]` to `[x]`, and append the first 7 characters of the _just-completed commit's_ commit hash.
-    - **Step 10.2: Write Plan:** Write the updated content back to `plan.md`.
+- **Step 10.1: Get Commit Hash:** Obtain the hash of the _just-completed commit_ (`git log -1 --format="%H"`).
+- **Step 10.2: Draft Note Content:** Create a detailed summary for the completed task. This should include the task name, a summary of changes, a list of all created/modified files, and the core "why" for the change.
+- **Step 10.3: Attach Note:** Use the `git notes` command to attach the summary to the commit.
+  ```bash
+  # The note content from the previous step is passed via the -m flag.
+  git notes add -m "<note content>" <commit_hash>
+  ```
 
-11. **Commit Plan Update:**
+11. **Get and Record Task Commit SHA:**
+    - **Step 11.1: Update Plan:** Read `plan.md`, find the line for the completed task, update its status from `[~]` to `[x]`, and append the first 7 characters of the _just-completed commit's_ commit hash.
+    - **Step 11.2: Write Plan:** Write the updated content back to `plan.md`.
+
+12. **Commit Plan Update:**
     - **Action:** Stage the modified `plan.md` file.
     - **Action:** Commit this change with a descriptive message (e.g., `conductor(plan): Mark task 'Create user model' as complete`).
 

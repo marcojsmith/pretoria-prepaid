@@ -22,6 +22,7 @@ export interface Purchase {
   cost: number;
   amountPaid: number;
   tierBreakdown: TierBreakdown[];
+  isOffline?: boolean;
 }
 
 // Calculate the cost of electricity based on tiered pricing

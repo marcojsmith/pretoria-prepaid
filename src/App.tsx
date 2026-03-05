@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { lazy, Suspense } from "react";
+import RegisterSW from "@/components/RegisterSW";
 import "./App.css";
 
 // Lazy load pages for code splitting
@@ -29,6 +30,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
+        <RegisterSW />
         <Toaster />
         <Sonner />
         <BrowserRouter>

@@ -11,6 +11,15 @@ afterEach(() => {
   cleanup();
 });
 
+// Mock PWA registration
+vi.mock("virtual:pwa-register/react", () => ({
+  useRegisterSW: vi.fn(() => ({
+    needRefresh: [false, vi.fn()],
+    offlineReady: [false, vi.fn()],
+    updateServiceWorker: vi.fn(),
+  })),
+}));
+
 // Mock convex/react globally to prevent 'Could not find Convex client' errors
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => [

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useRates } from "@/hooks/useRates";
+import { usePurchases } from "@/hooks/usePurchase";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,15 +16,18 @@ export default function Rates() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
   const { rates, loading: ratesLoading, updateRate } = useRates();
+  const { offlineCount } = usePurchases();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
   };
+
   if (authLoading || ratesLoading || roleLoading) {
     return (
       <div
@@ -34,18 +38,22 @@ export default function Rates() {
       </div>
     );
   }
+
   if (!user) {
     navigate("/auth");
     return null;
   }
+
   const handleEdit = (id: string, currentRate: number) => {
     setEditingId(id);
     setEditValue(currentRate.toString());
   };
+
   const handleCancel = () => {
     setEditingId(null);
     setEditValue("");
   };
+
   const handleSave = async (id: string) => {
     const newRate = parseFloat(editValue);
     if (isNaN(newRate) || newRate <= 0) {
@@ -73,12 +81,13 @@ export default function Rates() {
       setEditingId(null);
     }
   };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-2">
-            <NavMenu />
+            <NavMenu offlineCount={offlineCount} />
             <Zap className="h-4 w-4 text-primary" />
             <span className="text-xs font-semibold">PowerTracker</span>
           </div>
