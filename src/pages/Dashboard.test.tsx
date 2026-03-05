@@ -3,12 +3,14 @@ import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Dashboard from "./Dashboard";
 import { useAuth } from "../hooks/useAuth";
+import { useProfile } from "../hooks/useProfile";
 import { usePurchases } from "../hooks/usePurchase";
 import { useUserRole } from "../hooks/useUserRole";
 import { useRates } from "../hooks/useRates";
 
 // Mock the hooks
 vi.mock("../hooks/useAuth");
+vi.mock("../hooks/useProfile");
 vi.mock("../hooks/usePurchase");
 vi.mock("../hooks/useUserRole");
 vi.mock("../hooks/useRates");
@@ -33,6 +35,17 @@ describe("Dashboard Page", () => {
     (useRates as any).mockReturnValue({ rates: MOCK_RATES, loading: false });
   });
 
+  const mockUseProfile = (overrides = {}) => {
+    (useProfile as any).mockReturnValue({
+      loading: false,
+      profile: {
+        preferredName: "Marco",
+        monthlyBudget: 500,
+      },
+      ...overrides,
+    });
+  };
+
   const mockUsePurchases = (overrides = {}) => {
     (usePurchases as any).mockReturnValue({
       loading: false,
@@ -52,6 +65,7 @@ describe("Dashboard Page", () => {
     (useAuth as any).mockReturnValue({ user: null, loading: true });
     mockUsePurchases({ loading: true });
     (useUserRole as any).mockReturnValue({ loading: true, role: null });
+    mockUseProfile({ loading: true });
 
     render(
       <BrowserRouter>
@@ -70,6 +84,7 @@ describe("Dashboard Page", () => {
     const getCurrentMonthPurchases = vi.fn(() => []);
     mockUsePurchases({ getCurrentMonthPurchases });
     (useUserRole as any).mockReturnValue({ loading: false, role: "user" });
+    mockUseProfile();
 
     render(
       <BrowserRouter>
@@ -88,6 +103,7 @@ describe("Dashboard Page", () => {
     });
     mockUsePurchases();
     (useUserRole as any).mockReturnValue({ loading: false, role: "admin", isAdmin: true });
+    mockUseProfile();
 
     render(
       <BrowserRouter>
@@ -107,6 +123,7 @@ describe("Dashboard Page", () => {
     });
     mockUsePurchases();
     (useUserRole as any).mockReturnValue({ loading: false, role: "admin", isAdmin: true });
+    mockUseProfile();
 
     render(
       <BrowserRouter>

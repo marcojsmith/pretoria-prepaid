@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { formatCurrency, roundUnits } from "@/lib/electricity";
 import { Calculator, Plus } from "lucide-react";
 
@@ -9,6 +10,7 @@ interface DashboardStatsProps {
   averageMonthlyUsage: number;
   dailyAverage: number;
   averageMonthlyCost: number;
+  monthlyBudget?: number | undefined;
 }
 
 export function DashboardStats({
@@ -17,6 +19,7 @@ export function DashboardStats({
   averageMonthlyUsage,
   dailyAverage,
   averageMonthlyCost,
+  monthlyBudget,
 }: DashboardStatsProps) {
   const navigate = useNavigate();
 
@@ -51,8 +54,35 @@ export function DashboardStats({
     },
   ];
 
+  const budgetProgress = monthlyBudget ? Math.min((costThisMonth / monthlyBudget) * 100, 100) : 0;
+
   return (
     <div className="space-y-2">
+      {monthlyBudget !== undefined && (
+        <Card>
+          <CardContent className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="font-bold uppercase tracking-wider text-muted-foreground">
+                  Monthly Budget
+                </span>
+                <span className="font-medium">
+                  {formatCurrency(costThisMonth)} / {formatCurrency(monthlyBudget)}
+                </span>
+              </div>
+              <Progress value={budgetProgress} className="h-1.5" />
+              <div className="flex justify-end">
+                <span className="text-[10px] italic text-muted-foreground">
+                  {budgetProgress >= 100
+                    ? "Budget exceeded!"
+                    : `${Math.round(100 - budgetProgress)}% remaining`}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-3 gap-2">
         {stats.map((stat) => (
           <Card key={stat.label}>

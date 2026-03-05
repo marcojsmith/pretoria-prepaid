@@ -7,7 +7,6 @@ tools:
   - write_file
   - grep_search
   - glob
-  - bash
 max_turns: 50
 ---
 

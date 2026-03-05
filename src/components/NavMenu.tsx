@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, LayoutDashboard, History, Calculator, DollarSign, Download } from "lucide-react";
+import {
+  Menu,
+  LayoutDashboard,
+  History,
+  Calculator,
+  DollarSign,
+  Download,
+  Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -12,6 +20,7 @@ const navItems = [
   { title: "Smart Calculator", path: "/calculator", icon: Calculator },
   { title: "Rates", path: "/rates", icon: DollarSign },
   { title: "Export Data", path: "/export", icon: Download },
+  { title: "Settings", path: "/settings", icon: Settings },
 ];
 
 interface NavMenuProps {

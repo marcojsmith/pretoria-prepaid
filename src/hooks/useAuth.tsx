@@ -19,7 +19,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isLoaded && isSignedIn && user && isAuthenticated) {
-      syncUser({ email: user.primaryEmailAddress?.emailAddress ?? null });
+      const args: {
+        email: string | null;
+        preferredName?: string;
+      } = {
+        email: user.primaryEmailAddress?.emailAddress ?? null,
+      };
+      if (user.firstName) {
+        args.preferredName = user.firstName;
+      }
+      syncUser(args);
     }
   }, [isLoaded, isSignedIn, user, isAuthenticated, syncUser]);
 

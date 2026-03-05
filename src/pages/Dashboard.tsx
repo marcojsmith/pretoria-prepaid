@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { usePurchases } from "@/hooks/usePurchase";
 import { useRates } from "@/hooks/useRates";
 import { formatCurrency } from "@/lib/electricity";
@@ -15,6 +16,7 @@ import { LogOut, Zap, Loader2 } from "lucide-react";
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
   const { rates, loading: ratesLoading } = useRates();
   const {
     loading: purchasesLoading,
@@ -54,7 +56,7 @@ export default function Dashboard() {
     navigate("/auth");
   };
 
-  if (authLoading || purchasesLoading) {
+  if (authLoading || purchasesLoading || profileLoading) {
     return (
       <div
         className="flex min-h-screen items-center justify-center bg-background"
@@ -78,7 +80,7 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden text-[10px] text-muted-foreground sm:inline">
-              {user.primaryEmailAddress?.emailAddress}
+              {profile?.preferredName || user.primaryEmailAddress?.emailAddress}
             </span>
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleSignOut}>
               <LogOut className="h-3 w-3" />
@@ -96,6 +98,7 @@ export default function Dashboard() {
           averageMonthlyUsage={averageMonthlyUsage}
           dailyAverage={dailyAverage}
           averageMonthlyCost={averageMonthlyCost}
+          monthlyBudget={profile?.monthlyBudget}
         />
 
         <div className="flex flex-col gap-3 lg:flex-row">

@@ -8,7 +8,7 @@ import eslintConfigPrettier from "eslint-config-prettier";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 
 export default tseslint.config(
-  { ignores: ["dist", "convex/_generated", "coverage"] },
+  { ignores: ["dist", "dev-dist", "convex/_generated", "coverage"] },
   {
     extends: [
       js.configs.recommended,

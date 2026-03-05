@@ -16,6 +16,7 @@ const Rates = lazy(() => import("./pages/Rates"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const CalculatorPage = lazy(() => import("./pages/CalculatorPage"));
 const ExportPage = lazy(() => import("./pages/ExportPage"));
+const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/calculator" element={<CalculatorPage />} />
               <Route path="/export" element={<ExportPage />} />
+              <Route path="/settings" element={<Settings />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

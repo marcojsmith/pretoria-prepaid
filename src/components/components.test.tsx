@@ -55,6 +55,25 @@ describe("Application Components", () => {
     fireEvent.click(getByText(/Calculator/i));
     fireEvent.click(getByText(/Record/i));
   });
+
+  it("renders DashboardStats with monthlyBudget and progress bar", () => {
+    const { getByText, getByRole, getAllByText } = render(
+      <BrowserRouter>
+        <DashboardStats
+          unitsThisMonth={100}
+          costThisMonth={342}
+          averageMonthlyUsage={300}
+          dailyAverage={10}
+          averageMonthlyCost={1000}
+          monthlyBudget={1000}
+        />
+      </BrowserRouter>
+    );
+    expect(getByText(/Monthly Budget/i)).toBeInTheDocument();
+    expect(getAllByText(/1000.00/)[0]).toBeInTheDocument();
+    expect(getByRole("progressbar")).toBeInTheDocument();
+  });
+
   it("renders TierProgress", () => {
     render(<TierProgress unitsBought={50} />);
     expect(screen.getByText(/Tier 1/)).toBeInTheDocument();

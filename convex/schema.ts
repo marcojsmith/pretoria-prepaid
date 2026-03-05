@@ -12,6 +12,9 @@ export default defineSchema({
   profiles: defineTable({
     userId: v.string(), // Clerk's user ID
     email: v.union(v.string(), v.null()),
+    meterNumber: v.optional(v.string()),
+    monthlyBudget: v.optional(v.number()),
+    preferredName: v.optional(v.string()),
   }).index("by_userId", ["userId"]),
   purchases: defineTable({
     userId: v.string(),

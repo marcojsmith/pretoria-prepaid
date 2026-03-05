@@ -23,6 +23,16 @@ describe("NavMenu", () => {
     expect(screen.getByRole("button", { name: "" })).toBeInTheDocument();
   });
 
+  it("renders the settings link", () => {
+    render(
+      <BrowserRouter>
+        <NavMenu />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByText(/Settings/i)).toBeInTheDocument();
+  });
+
   it("handles navigation", () => {
     render(
       <BrowserRouter>
