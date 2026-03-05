@@ -6,7 +6,7 @@ A web application for tracking and calculating prepaid electricity purchases in 
 
 ## Overview
 
-Pretoria Prepaid is a specialized web application designed to help residents of Pretoria, South Africa, effectively manage and optimize their prepaid electricity spending. By leveraging the local tiered tariff system, the app provides users with precise cost calculations, consumption tracking, and historical insights.
+Pretoria Prepaid is a specialized web application designed to help residents of Pretoria, South Africa, effectively manage and optimize their prepaid electricity spending. By leveraging the local tiered tariff system, the app provides users with precise cost calculations, consumption tracking, and historical insights. As a Progressive Web App (PWA), it remains fully functional during power outages and intermittent connectivity, ensuring users can always track their utility spending.
 
 ## Project Goals
 
@@ -23,6 +23,7 @@ Pretoria Prepaid is a specialized web application designed to help residents of 
 - **Dashboard & Analytics:** A central hub for visualizing monthly spending trends, consumption patterns, and progress through electricity tiers.
 - **Purchase Calculator:** A tool that allows users to input a Rand amount and see exactly how many units (kWh) they will receive after accounting for tiers and service fees.
 - **History & Export:** A comprehensive log of all past purchases with the ability to export data for personal record-keeping or budget analysis.
+- **Offline First:** Fully functional offline mode for calculating and viewing history, with background synchronization for data entry when reconnected.
 
 ## Product Vision
 

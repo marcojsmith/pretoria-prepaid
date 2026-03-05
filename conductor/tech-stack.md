@@ -7,6 +7,7 @@
 - **Styling:** Tailwind CSS with shadcn/ui components
 - **Backend & Database:** Convex (Real-time synchronization)
 - **Authentication:** Clerk
+- **Offline & PWA:** vite-plugin-pwa (Workbox) for service workers and offline caching
 
 ## Supporting Libraries
 
@@ -15,6 +16,7 @@
 - **Form Validation:** Zod
 - **API Client:** TanStack Query
 - **Routing:** React Router DOM
+- **Network Security:** @vitejs/plugin-basic-ssl (for local HTTPS testing)
 
 ## Development & Deployment
 

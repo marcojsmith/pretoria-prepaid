@@ -23,13 +23,13 @@
 
 ## Phase 3: Background Sync and UI Refinement
 
-- [ ] Task: Offline Data Entry and Background Sync
+- [x] Task: Offline Data Entry and Background Sync 21da8fd
   - [ ] Create an offline queue for purchases added while disconnected.
   - [ ] Implement a background sync mechanism (or manual sync on reconnect) to push queued purchases to Convex.
-- [ ] Task: Connection Status UI
+- [x] Task: Connection Status UI 21da8fd
   - [ ] Add an "Offline Mode" indicator (e.g., a small banner or icon) to the UI.
   - [ ] Provide user feedback when data is being synced.
-- [ ] Task: Performance Audit and Polish
-  - [ ] Run Lighthouse audits and address any performance bottlenecks.
-  - [ ] Final UI/UX refinement for a native-like experience.
-- [ ] Task: Conductor - User Manual Verification 'Background Sync and UI Refinement' (Protocol in workflow.md)
+- [x] Task: Performance Audit and Polish 8ac24d1
+  - [x] Run Lighthouse audits and address any performance bottlenecks.
+  - [x] Final UI/UX refinement for a native-like experience.
+- [x] Task: Conductor - User Manual Verification 'Background Sync and UI Refinement' (Protocol in workflow.md) 8ac24d1

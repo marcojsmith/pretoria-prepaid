@@ -17,6 +17,7 @@ export default function HistoryPage() {
     addPurchase,
     deletePurchase,
     getCurrentMonthPurchases,
+    offlineCount,
   } = usePurchases();
 
   // Get prefill values from navigation state
@@ -65,7 +66,7 @@ export default function HistoryPage() {
       <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-2">
-            <NavMenu />
+            <NavMenu offlineCount={offlineCount} />
             <Zap className="h-4 w-4 text-primary" />
             <span className="text-xs font-semibold">PowerTracker</span>
           </div>

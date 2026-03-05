@@ -13,6 +13,7 @@
 ## User Experience (UX) Principles
 
 - **Real-time Feedback:** Leverage Convex's real-time capabilities to provide immediate updates across the dashboard and calculator, ensuring the app always feels "alive."
+- **Resilient Offline UX:** The application must remain functional during network interruptions. Clearly communicate connection status and pending synchronization tasks to maintain user trust even when offline.
 - **Visual Simplicity:** Complex electricity tariff structures should be distilled into intuitive, easy-to-read charts, progress bars, and simple labels.
 - **Efficiency-focused UX:** The purchase logging and calculation flows must be optimized for speed, allowing users to enter and process data with minimal friction.
 

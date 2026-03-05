@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { usePurchases } from "@/hooks/usePurchase";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { NavMenu } from "@/components/NavMenu";
@@ -14,6 +15,7 @@ export default function ExportPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
+  const { offlineCount } = usePurchases();
   const { toast } = useToast();
 
   const profile = useQuery(api.users.getProfile);
@@ -69,7 +71,7 @@ export default function ExportPage() {
       <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
         <div className="container mx-auto flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-2">
-            <NavMenu />
+            <NavMenu offlineCount={offlineCount} />
             <Zap className="h-4 w-4 text-primary" />
             <span className="text-xs font-semibold">PowerTracker</span>
           </div>

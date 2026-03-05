@@ -7,13 +7,17 @@ import {
   TIER_TEXT_CLASSES,
   roundUnits,
 } from "@/lib/electricity";
-import { History, Trash2, ChevronDown } from "lucide-react";
+import { History, Trash2, ChevronDown, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
 interface PurchaseHistoryProps {
   purchases: Purchase[];
   onDelete: (id: string) => void;
 }
+
 export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
   const [visibleCount, setVisibleCount] = useState(10);
+
   if (purchases.length === 0) {
     return (
       <div className="space-y-3">
@@ -25,11 +29,14 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
       </div>
     );
   }
+
   const visiblePurchases = purchases.slice(0, visibleCount);
   const hasMore = purchases.length > visibleCount;
+
   const handleShowMore = () => {
     setVisibleCount((prev) => prev + 10);
   };
+
   return (
     <div className="space-y-3">
       <h2 className="flex items-center gap-2 text-sm font-semibold">
@@ -47,15 +54,29 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
             purchase.tierBreakdown &&
             purchase.tierBreakdown.length > 0 &&
             typeof purchase.tierBreakdown[0].tier === "number";
+
           return (
             <div
               key={purchase._id}
-              className="space-y-1.5 rounded-md border border-border bg-secondary-foreground p-2.5"
+              className={`space-y-1.5 rounded-md border p-2.5 ${
+                purchase.isOffline
+                  ? "border-amber-200 bg-amber-50/30"
+                  : "border-border bg-secondary-foreground"
+              }`}
             >
               {/* Header row with date top-right */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium">{roundUnits(purchase.units)} kWh</span>
+                  {purchase.isOffline && (
+                    <Badge
+                      variant="outline"
+                      className="flex h-4 gap-1 border-amber-300 bg-amber-100/50 px-1 text-[9px] font-normal text-amber-700"
+                    >
+                      <Clock className="h-2 w-2" />
+                      Pending Sync
+                    </Badge>
+                  )}
                 </div>
                 <span className="text-[10px] text-muted-foreground">
                   {new Date(purchase.date).toLocaleDateString("en-ZA", {
