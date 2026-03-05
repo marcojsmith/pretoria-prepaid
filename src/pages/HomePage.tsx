@@ -1,14 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Zap, TrendingUp, Calculator, History } from "lucide-react";
-import { TIERS, formatCurrency } from "@/lib/electricity";
+import { Zap, TrendingUp, Calculator, History, Loader2 } from "lucide-react";
+import { formatCurrency } from "@/lib/electricity";
 import { useAuth } from "@/hooks/useAuth";
+import { useRates } from "@/hooks/useRates";
 import { useEffect } from "react";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { rates, loading: ratesLoading } = useRates();
 
   useEffect(() => {
     if (!loading && user) {
@@ -84,17 +86,23 @@ export default function HomePage() {
         <Card>
           <CardContent className="pb-4 pt-4">
             <h2 className="mb-3 text-center text-sm font-semibold">Current Electricity Rates</h2>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {TIERS.map((tier) => (
-                <div key={tier.label} className="rounded-md bg-primary-foreground p-2 text-center">
-                  <p className="text-xs text-muted-foreground">{tier.label}</p>
-                  <p className="text-sm font-medium">{formatCurrency(tier.rate)}/kWh</p>
-                  <p className="text-xs text-muted-foreground">
-                    {tier.min}-{tier.max === Infinity ? "∞" : tier.max} units
-                  </p>
-                </div>
-              ))}
-            </div>
+            {ratesLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {rates.map((rate) => (
+                  <div key={rate._id} className="rounded-md bg-primary-foreground p-2 text-center">
+                    <p className="text-xs text-muted-foreground">{rate.tier_label}</p>
+                    <p className="text-sm font-medium">{formatCurrency(rate.rate)}/kWh</p>
+                    <p className="text-xs text-muted-foreground">
+                      {rate.min_units}-{rate.max_units === null ? "∞" : rate.max_units} units
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>

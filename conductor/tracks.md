@@ -1,0 +1,8 @@
+# Project Tracks
+
+This file tracks all major tracks for the project. Each track has its own detailed plan in its respective folder.
+
+---
+
+- [ ] **Track: Implement User Profile and Meter Settings Management**
+      _Link: [./tracks/profile_settings_20260305/](./tracks/profile_settings_20260305/)_

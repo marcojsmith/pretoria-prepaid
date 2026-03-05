@@ -3,30 +3,36 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useRates } from "@/hooks/useRates";
 import {
   calculateCost,
   formatCurrency,
   TIER_BG_CLASSES,
   TIER_TEXT_CLASSES,
   roundUnits,
+  ElectricityRate,
 } from "@/lib/electricity";
-import { Calculator, Lightbulb, Save } from "lucide-react";
+import { Calculator, Lightbulb, Save, Loader2 } from "lucide-react";
+
 interface PurchaseCalculatorProps {
   unitsAlreadyBought: number;
   averageMonthlyUsage: number;
   daysLeftInMonth: number;
   onSavePurchase?: (units: number, amount: number) => void;
 }
+
 export function PurchaseCalculator({
   unitsAlreadyBought,
   averageMonthlyUsage,
   daysLeftInMonth,
   onSavePurchase,
 }: PurchaseCalculatorProps) {
+  const { rates, loading: ratesLoading } = useRates();
   const suggestedUnits = useMemo(() => {
     if (averageMonthlyUsage === 0) return 0;
     return Math.max(0, averageMonthlyUsage - unitsAlreadyBought);
   }, [averageMonthlyUsage, unitsAlreadyBought]);
+
   const [targetUnits, setTargetUnits] = useState("");
 
   // Pre-populate with suggested units when it becomes available
@@ -34,17 +40,31 @@ export function PurchaseCalculator({
     if (suggestedUnits > 0 && targetUnits === "") {
       setTargetUnits(roundUnits(suggestedUnits).toString());
     }
-  }, [suggestedUnits]);
+  }, [suggestedUnits, targetUnits]);
+
   const targetNum = parseFloat(targetUnits) || 0;
+
   const calculation = useMemo(() => {
-    if (targetNum <= 0) return null;
-    return calculateCost(targetNum, unitsAlreadyBought);
-  }, [targetNum, unitsAlreadyBought]);
+    if (targetNum <= 0 || ratesLoading || rates.length === 0) return null;
+    return calculateCost(targetNum, unitsAlreadyBought, rates as ElectricityRate[]);
+  }, [targetNum, unitsAlreadyBought, rates, ratesLoading]);
+
   const handleSavePurchase = () => {
     if (calculation && onSavePurchase) {
       onSavePurchase(targetNum, calculation.total);
     }
   };
+
+  if (ratesLoading) {
+    return (
+      <Card>
+        <CardContent className="flex h-40 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3">

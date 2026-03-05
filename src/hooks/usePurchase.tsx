@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCallback } from "react";
-import { Purchase, getCurrentMonth, TierBreakdown, calculateCost } from "@/lib/electricity";
+import { Purchase, TierBreakdown, getCurrentMonth } from "@/lib/electricity";
 import { Id } from "../../convex/_generated/dataModel";
 
 export function usePurchases() {
@@ -20,25 +20,14 @@ export function usePurchases() {
 
   const addPurchase = useCallback(
     async (units: number, amountPaid: number, date: string) => {
-      const purchaseMonth = date.substring(0, 7);
-      const unitsBeforePurchase = purchases
-        .filter((p) => {
-          const pMonth = p.date.substring(0, 7);
-          return pMonth === purchaseMonth && p.date < date;
-        })
-        .reduce((sum, p) => sum + p.units, 0);
-
-      const { breakdown } = calculateCost(units, unitsBeforePurchase);
-
       await addPurchaseMutation({
         date,
         units,
-        cost: amountPaid,
+        cost: 0, // Server will recalculate this
         amountPaid,
-        tierBreakdown: breakdown,
       });
     },
-    [addPurchaseMutation, purchases]
+    [addPurchaseMutation]
   );
 
   const deletePurchase = useCallback(

@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as electricity_logic from "../electricity_logic.js";
 import type * as purchases from "../purchases.js";
 import type * as rates from "../rates.js";
 import type * as users from "../users.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  electricity_logic: typeof electricity_logic;
   purchases: typeof purchases;
   rates: typeof rates;
   users: typeof users;

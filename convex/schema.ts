@@ -19,7 +19,15 @@ export default defineSchema({
     units: v.number(),
     cost: v.number(),
     amountPaid: v.number(),
-    tierBreakdown: v.any(), // Array of TierBreakdown objects
+    tierBreakdown: v.array(
+      v.object({
+        tier: v.number(),
+        label: v.string(),
+        units: v.number(),
+        rate: v.number(),
+        cost: v.number(),
+      })
+    ),
   }).index("by_userId", ["userId"]),
   user_roles: defineTable({
     userId: v.string(),

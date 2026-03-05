@@ -2,18 +2,20 @@ import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { usePurchases } from "@/hooks/usePurchase";
-import { TIERS, formatCurrency } from "@/lib/electricity";
+import { useRates } from "@/hooks/useRates";
+import { formatCurrency } from "@/lib/electricity";
 import { DashboardStats } from "@/components/DashboardStats";
 import { TierProgress } from "@/components/TierProgress";
 import { MonthlyStats } from "@/components/MonthlyStats";
 import { PatreonBanner } from "@/components/PatreonBanner";
 import { NavMenu } from "@/components/NavMenu";
 import { Button } from "@/components/ui/button";
-import { LogOut, Zap } from "lucide-react";
+import { LogOut, Zap, Loader2 } from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
+  const { rates, loading: ratesLoading } = useRates();
   const {
     loading: purchasesLoading,
     getCurrentMonthPurchases,
@@ -109,14 +111,20 @@ export default function Dashboard() {
             <p className="text-[10px] text-muted-foreground">
               Current Electricity Rates (VAT inclusive)
             </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {TIERS.map((tier) => (
-                <div key={tier.label} className="text-[10px]">
-                  <span className="text-muted-foreground">{tier.label}:</span>{" "}
-                  <span className="font-medium">{formatCurrency(tier.rate)}/kWh</span>
-                </div>
-              ))}
-            </div>
+            {ratesLoading ? (
+              <div className="flex justify-center py-2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="flex flex-wrap justify-center gap-2">
+                {rates.map((rate) => (
+                  <div key={rate._id} className="text-[10px]">
+                    <span className="text-muted-foreground">{rate.tier_label}:</span>{" "}
+                    <span className="font-medium">{formatCurrency(rate.rate)}/kWh</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <Button
               variant="link"
               size="sm"

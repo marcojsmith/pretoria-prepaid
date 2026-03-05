@@ -7,9 +7,11 @@ import {
   TIER_TEXT_CLASSES,
   getCurrentMonth,
   roundUnits,
+  ElectricityRate,
 } from "@/lib/electricity";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRates } from "@/hooks/useRates";
 
 interface MonthlyStatsProps {
   stats: { month: string; units: number; cost: number; purchases: number }[];
@@ -17,6 +19,18 @@ interface MonthlyStatsProps {
 }
 
 export function MonthlyStats({ stats, averageUsage }: MonthlyStatsProps) {
+  const { rates, loading: ratesLoading } = useRates();
+
+  if (ratesLoading) {
+    return (
+      <Card>
+        <CardContent className="flex h-40 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (stats.length === 0) {
     return (
       <Card>
@@ -50,7 +64,10 @@ export function MonthlyStats({ stats, averageUsage }: MonthlyStatsProps) {
         <ScrollArea className="h-[180px] pr-4">
           <div className="space-y-3">
             {stats.map((stat) => {
-              const tierBreakdown = getTierBreakdownForUnits(stat.units);
+              const tierBreakdown = getTierBreakdownForUnits(
+                stat.units,
+                rates as ElectricityRate[]
+              );
               const totalWidth = (stat.units / maxUnits) * 100;
               const isCurrentMonth = stat.month === currentMonth;
               const isAboveAverage = stat.units > averageUsage;
