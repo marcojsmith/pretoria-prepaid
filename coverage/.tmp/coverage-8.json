@@ -1,0 +1,166 @@
+{
+  "result": [
+    {
+      "scriptId": "1202",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/vitest.setup.ts",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 1863, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 1863, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 793, "endOffset": 837, "count": 3 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1728",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/hooks/useAuth.test.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 7340, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 7340, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 324, "endOffset": 374, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 401, "endOffset": 448, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 431, "endOffset": 444, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 993, "endOffset": 3182, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 1038, "endOffset": 1899, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 1936, "endOffset": 2852, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2906, "endOffset": 3178, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2983, "endOffset": 2996, "count": 3 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 3010, "endOffset": 3075, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 3043, "endOffset": 3074, "count": 4 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1733",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/hooks/useAuth.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 5229, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 5229, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "AuthProvider",
+          "ranges": [{ "startOffset": 953, "endOffset": 1829, "count": 9 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 1319, "endOffset": 1472, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 1930, "endOffset": 1958, "count": 2 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "useAuth",
+          "ranges": [
+            { "startOffset": 1962, "endOffset": 2167, "count": 4 },
+            { "startOffset": 2147, "endOffset": 2166, "count": 0 }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 2263, "endOffset": 2286, "count": 4 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1734",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/convex/_generated/api.js",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 3349, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 3349, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 790, "endOffset": 809, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 956, "endOffset": 980, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 1144, "endOffset": 1170, "count": 0 }],
+          "isBlockCoverage": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "result": [
+    {
+      "scriptId": "1202",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/vitest.setup.ts",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 1863, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 1863, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 793, "endOffset": 837, "count": 1 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1728",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/pages/NotFound.test.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 3531, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 3531, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 914, "endOffset": 1901, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 970, "endOffset": 1897, "count": 1 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1793",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/pages/NotFound.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 4321, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 4321, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "NotFound",
+          "ranges": [{ "startOffset": 595, "endOffset": 2307, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 693, "endOffset": 801, "count": 1 }],
+          "isBlockCoverage": true
+        }
+      ]
+    }
+  ]
+}

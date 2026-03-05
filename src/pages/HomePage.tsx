@@ -3,9 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Zap, TrendingUp, Calculator, History } from "lucide-react";
 import { TIERS, formatCurrency } from "@/lib/electricity";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, loading, navigate]);
   const features = [
     {
       icon: Zap,

@@ -1,0 +1,983 @@
+{
+  "result": [
+    {
+      "scriptId": "1202",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/vitest.setup.ts",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 1863, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 1863, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 793, "endOffset": 837, "count": 4 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1728",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/pages/Dashboard.test.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 13368, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 13368, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 1099, "endOffset": 5746, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 1120, "endOffset": 1155, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "mockUsePurchases",
+          "ranges": [{ "startOffset": 1185, "endOffset": 1578, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getMonthlyStats",
+          "ranges": [{ "startOffset": 1377, "endOffset": 1385, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getAverageMonthlyUsage",
+          "ranges": [{ "startOffset": 1417, "endOffset": 1426, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getCurrentMonthPurchases",
+          "ranges": [{ "startOffset": 1460, "endOffset": 1468, "count": 3 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getDailyAverageUsage",
+          "ranges": [{ "startOffset": 1498, "endOffset": 1506, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getAverageMonthlyCost",
+          "ranges": [{ "startOffset": 1537, "endOffset": 1546, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 1610, "endOffset": 2463, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2502, "endOffset": 3580, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2724, "endOffset": 2732, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 3615, "endOffset": 4570, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 4602, "endOffset": 5742, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 5582, "endOffset": 5623, "count": 2 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1793",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/pages/Dashboard.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 24446, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 24446, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "Dashboard",
+          "ranges": [
+            { "startOffset": 1877, "endOffset": 13153, "count": 5 },
+            { "startOffset": 3403, "endOffset": 3422, "count": 4 },
+            { "startOffset": 3424, "endOffset": 4180, "count": 1 },
+            { "startOffset": 4180, "endOffset": 4194, "count": 4 },
+            { "startOffset": 4194, "endOffset": 4206, "count": 0 },
+            { "startOffset": 4206, "endOffset": 6103, "count": 4 }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [
+            { "startOffset": 2289, "endOffset": 2364, "count": 5 },
+            { "startOffset": 2318, "endOffset": 2326, "count": 4 },
+            { "startOffset": 2328, "endOffset": 2360, "count": 0 }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2465, "endOffset": 2497, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2595, "endOffset": 2659, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2630, "endOffset": 2655, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2753, "endOffset": 2822, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2788, "endOffset": 2818, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2910, "endOffset": 2933, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 3015, "endOffset": 3045, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 3127, "endOffset": 3155, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 3241, "endOffset": 3270, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "handleSignOut",
+          "ranges": [{ "startOffset": 3322, "endOffset": 3383, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 10618, "endOffset": 11692, "count": 16 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "onClick",
+          "ranges": [{ "startOffset": 12115, "endOffset": 12139, "count": 0 }],
+          "isBlockCoverage": false
+        }
+      ]
+    },
+    {
+      "scriptId": "1796",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/hooks/useAuth.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 5229, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 5229, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "AuthProvider",
+          "ranges": [{ "startOffset": 953, "endOffset": 1829, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 1930, "endOffset": 1958, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "useAuth",
+          "ranges": [{ "startOffset": 1962, "endOffset": 2167, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 2263, "endOffset": 2286, "count": 1 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1900",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/convex/_generated/api.js",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 3349, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 3349, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 790, "endOffset": 809, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 956, "endOffset": 980, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 1144, "endOffset": 1170, "count": 0 }],
+          "isBlockCoverage": false
+        }
+      ]
+    },
+    {
+      "scriptId": "1926",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/hooks/usePurchase.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 14909, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 14909, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "usePurchases",
+          "ranges": [{ "startOffset": 716, "endOffset": 4865, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 4966, "endOffset": 4994, "count": 1 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1927",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/lib/electricity.ts",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 16272, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 16272, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 531, "endOffset": 552, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "getHighestApplicableTierRate",
+          "ranges": [{ "startOffset": 556, "endOffset": 787, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 904, "endOffset": 948, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "getTierLabel",
+          "ranges": [{ "startOffset": 952, "endOffset": 1170, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 1271, "endOffset": 1299, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "calculateCostAtHighestTier",
+          "ranges": [{ "startOffset": 1303, "endOffset": 1424, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 1539, "endOffset": 1581, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "calculateCost",
+          "ranges": [{ "startOffset": 1585, "endOffset": 2534, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 2636, "endOffset": 2665, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "getTierBreakdownForUnits",
+          "ranges": [{ "startOffset": 2669, "endOffset": 2767, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 2880, "endOffset": 2920, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "formatCurrency",
+          "ranges": [{ "startOffset": 2924, "endOffset": 3009, "count": 40 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3112, "endOffset": 3142, "count": 40 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "roundUnits",
+          "ranges": [{ "startOffset": 3146, "endOffset": 3214, "count": 40 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3313, "endOffset": 3339, "count": 40 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "roundCurrency",
+          "ranges": [{ "startOffset": 3343, "endOffset": 3418, "count": 40 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3520, "endOffset": 3549, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "getCurrentMonth",
+          "ranges": [{ "startOffset": 3553, "endOffset": 3705, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3809, "endOffset": 3840, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "getMonthName",
+          "ranges": [{ "startOffset": 3844, "endOffset": 4065, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 4166, "endOffset": 4194, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "getDaysLeftInMonth",
+          "ranges": [{ "startOffset": 4198, "endOffset": 4387, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 4494, "endOffset": 4528, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "getTierProgress",
+          "ranges": [{ "startOffset": 4532, "endOffset": 5074, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [
+            { "startOffset": 4591, "endOffset": 5070, "count": 16 },
+            { "startOffset": 4646, "endOffset": 4651, "count": 4 },
+            { "startOffset": 4652, "endOffset": 4677, "count": 12 },
+            { "startOffset": 4910, "endOffset": 4913, "count": 4 },
+            { "startOffset": 4914, "endOffset": 4951, "count": 12 }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 5178, "endOffset": 5209, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 5427, "endOffset": 5458, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 5688, "endOffset": 5721, "count": 0 }],
+          "isBlockCoverage": false
+        }
+      ]
+    },
+    {
+      "scriptId": "1928",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/DashboardStats.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 12065, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 12065, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "DashboardStats",
+          "ranges": [{ "startOffset": 876, "endOffset": 6061, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "onClick",
+          "ranges": [{ "startOffset": 1740, "endOffset": 1769, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "onClick",
+          "ranges": [{ "startOffset": 1861, "endOffset": 1887, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2113, "endOffset": 3937, "count": 12 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 4243, "endOffset": 5698, "count": 8 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 6164, "endOffset": 6194, "count": 4 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1929",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/ui/card.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 8486, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 8486, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 559, "endOffset": 992, "count": 28 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 1078, "endOffset": 1427, "count": 8 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 1524, "endOffset": 1952, "count": 8 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2053, "endOffset": 2402, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2511, "endOffset": 2839, "count": 28 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2939, "endOffset": 3285, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3421, "endOffset": 3441, "count": 28 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3543, "endOffset": 3569, "count": 8 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3671, "endOffset": 3697, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3798, "endOffset": 3823, "count": 8 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3930, "endOffset": 3961, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 4064, "endOffset": 4091, "count": 28 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1930",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/lib/utils.ts",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 1290, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 1290, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "cn",
+          "ranges": [{ "startOffset": 448, "endOffset": 550, "count": 144 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 641, "endOffset": 659, "count": 144 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1935",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/TierProgress.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 10298, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 10298, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "TierProgress",
+          "ranges": [{ "startOffset": 998, "endOffset": 5498, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [
+            { "startOffset": 2506, "endOffset": 5139, "count": 16 },
+            { "startOffset": 4249, "endOffset": 4254, "count": 4 },
+            { "startOffset": 4255, "endOffset": 4280, "count": 12 },
+            { "startOffset": 4338, "endOffset": 4355, "count": 12 },
+            { "startOffset": 4356, "endOffset": 4753, "count": 12 }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 5599, "endOffset": 5627, "count": 4 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1936",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/ui/progress.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 3775, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 3775, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 689, "endOffset": 1597, "count": 16 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 1760, "endOffset": 1784, "count": 16 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1946",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/MonthlyStats.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 22314, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 22314, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "MonthlyStats",
+          "ranges": [
+            { "startOffset": 981, "endOffset": 11722, "count": 4 },
+            { "startOffset": 2959, "endOffset": 11721, "count": 0 }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 3001, "endOffset": 3015, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 4443, "endOffset": 11002, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 11823, "endOffset": 11851, "count": 4 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1947",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/ui/scroll-area.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 7180, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 7180, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 680, "endOffset": 1969, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2088, "endOffset": 3104, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3285, "endOffset": 3311, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3412, "endOffset": 3437, "count": 0 }],
+          "isBlockCoverage": false
+        }
+      ]
+    },
+    {
+      "scriptId": "1958",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/PatreonBanner.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 6651, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 6651, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "PatreonBanner",
+          "ranges": [
+            { "startOffset": 704, "endOffset": 3565, "count": 4 },
+            { "startOffset": 823, "endOffset": 835, "count": 0 }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "onClick",
+          "ranges": [{ "startOffset": 2829, "endOffset": 2853, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 3667, "endOffset": 3696, "count": 4 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1959",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/ui/button.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 6507, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 6507, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [
+            { "startOffset": 2008, "endOffset": 2484, "count": 16 },
+            { "startOffset": 2101, "endOffset": 2129, "count": 0 }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 2614, "endOffset": 2636, "count": 16 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 2742, "endOffset": 2772, "count": 0 }],
+          "isBlockCoverage": false
+        }
+      ]
+    },
+    {
+      "scriptId": "1961",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/NavMenu.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 10387, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 10387, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "NavMenu",
+          "ranges": [{ "startOffset": 1654, "endOffset": 5345, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "handleNavigate",
+          "ranges": [{ "startOffset": 1877, "endOffset": 1932, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [
+            { "startOffset": 3770, "endOffset": 4808, "count": 20 },
+            { "startOffset": 4092, "endOffset": 4134, "count": 0 }
+          ],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "onClick",
+          "ranges": [{ "startOffset": 3873, "endOffset": 3904, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 5441, "endOffset": 5464, "count": 4 }],
+          "isBlockCoverage": true
+        }
+      ]
+    },
+    {
+      "scriptId": "1962",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/components/ui/sheet.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 16744, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 16744, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 1163, "endOffset": 1705, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 2714, "endOffset": 4691, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "SheetHeader",
+          "ranges": [{ "startOffset": 4784, "endOffset": 5135, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "SheetFooter",
+          "ranges": [{ "startOffset": 5198, "endOffset": 5594, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 5689, "endOffset": 6097, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 6224, "endOffset": 6631, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 6806, "endOffset": 6827, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 6930, "endOffset": 6957, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 7061, "endOffset": 7089, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 7193, "endOffset": 7221, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 7323, "endOffset": 7349, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 7453, "endOffset": 7481, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 7584, "endOffset": 7611, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 7714, "endOffset": 7741, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 7843, "endOffset": 7869, "count": 4 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 7977, "endOffset": 8009, "count": 0 }],
+          "isBlockCoverage": false
+        }
+      ]
+    },
+    {
+      "scriptId": "2011",
+      "url": "file:///Users/marcosmith/Documents/GitHub/pretoria-prepaid/src/hooks/useUserRole.tsx",
+      "functions": [
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 0, "endOffset": 1677, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "",
+          "ranges": [{ "startOffset": 13, "endOffset": 1677, "count": 1 }],
+          "isBlockCoverage": true
+        },
+        {
+          "functionName": "useUserRole",
+          "ranges": [{ "startOffset": 437, "endOffset": 627, "count": 0 }],
+          "isBlockCoverage": false
+        },
+        {
+          "functionName": "get",
+          "ranges": [{ "startOffset": 727, "endOffset": 754, "count": 1 }],
+          "isBlockCoverage": true
+        }
+      ]
+    }
+  ]
+}

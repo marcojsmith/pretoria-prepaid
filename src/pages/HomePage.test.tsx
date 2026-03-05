@@ -3,6 +3,10 @@ import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import HomePage from "./HomePage";
 
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: vi.fn(() => ({ user: null, loading: false })),
+}));
+
 vi.mock("@clerk/clerk-react", () => ({
   SignedIn: ({ children }: any) => <>{children}</>,
   SignedOut: ({ children }: any) => <>{children}</>,

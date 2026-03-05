@@ -11,6 +11,7 @@ vi.mock("@clerk/clerk-react", () => ({
 
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(() => vi.fn()),
+  useConvexAuth: vi.fn(() => ({ isAuthenticated: true })),
 }));
 
 describe("AuthProvider", () => {
