@@ -1,0 +1,39 @@
+# CodeRabbit Configuration
+# https://docs.coderabbit.ai/features/code-review
+
+project:
+  name: pretoria-prepaid
+  language: en
+
+review:
+  profile: strict
+  high_level_summary: true
+  collapse_walkthrough: false
+  sequence_diagrams: true
+
+  path_filters:
+    exclude:
+      - "**/node_modules/**"
+      - "**/dist/**"
+      - "**/.git/**"
+      - "**/convex/_generated/**"
+      - "**/*.d.ts"
+
+  path_instructions:
+    - path: "app/convex/**"
+      instructions: "Follow convex_rules.md guidelines. Ensure validators are defined for all functions."
+    - path: "app/src/components/**"
+      instructions: "Use shadcn/ui patterns. Ensure proper TypeScript types."
+    - path: "app/src/pages/**"
+      instructions: "Follow React best practices. Check accessibility."
+
+  knowledge:
+    basefiles:
+      - "AGENTS.md"
+      - ".gemini/convex_rules.md"
+      - "conductor/code_styleguides/typescript.md"
+
+chat:
+  auto_reply: true
+
+version: "1.0"

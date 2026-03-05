@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   calculateCost,
-  getHighestApplicableTierRate,
   getTierLabel,
-  calculateCostAtHighestTier,
   getTierBreakdownForUnits,
   formatCurrency,
   roundUnits,
@@ -12,74 +10,69 @@ import {
   getMonthName,
   getDaysLeftInMonth,
   getTierProgress,
+  ElectricityRate,
 } from "./electricity";
+
+const MOCK_RATES: ElectricityRate[] = [
+  { _id: "1", tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.42585 },
+  { _id: "2", tier_number: 2, tier_label: "Tier 2", min_units: 101, max_units: 400, rate: 4.00936 },
+  { _id: "3", tier_number: 3, tier_label: "Tier 3", min_units: 401, max_units: 650, rate: 4.36816 },
+  {
+    _id: "4",
+    tier_number: 4,
+    tier_label: "Tier 4",
+    min_units: 651,
+    max_units: null,
+    rate: 4.70902,
+  },
+];
 
 describe("electricity calculator utilities", () => {
   describe("calculateCost", () => {
     it("calculates cost for Tier 1 correctly", () => {
-      const { total, breakdown } = calculateCost(10);
+      const { total, breakdown } = calculateCost(10, 0, MOCK_RATES);
       expect(total).toBeCloseTo(34.2585, 4);
       expect(breakdown[0].units).toBe(10);
       expect(breakdown[0].tier).toBe(1);
     });
 
     it("calculates cost across multiple tiers", () => {
-      const { total } = calculateCost(150);
+      const { total } = calculateCost(150, 0, MOCK_RATES);
       const expected = 100 * 3.42585 + 50 * 4.00936;
       expect(total).toBeCloseTo(expected, 4);
     });
 
     it("respects unitsAlreadyBought", () => {
-      const { breakdown } = calculateCost(10, 100);
+      const { breakdown } = calculateCost(10, 100, MOCK_RATES);
       expect(breakdown[0].tier).toBe(2);
       expect(breakdown[0].rate).toBe(4.00936);
     });
 
     it("handles zero or negative units", () => {
-      expect(calculateCost(0).total).toBe(0);
-      expect(calculateCost(-10).total).toBe(0);
+      expect(calculateCost(0, 0, MOCK_RATES).total).toBe(0);
+      expect(calculateCost(-10, 0, MOCK_RATES).total).toBe(0);
     });
 
     it("caps units correctly at highest tier", () => {
-      const { breakdown } = calculateCost(1000, 0);
+      const { breakdown } = calculateCost(1000, 0, MOCK_RATES);
       expect(breakdown.length).toBe(4);
       expect(breakdown[3].label).toBe("Tier 4");
     });
   });
 
-  describe("getHighestApplicableTierRate", () => {
-    it("returns Tier 1 rate for low units", () => {
-      expect(getHighestApplicableTierRate(50)).toBe(3.42585);
-    });
-    it("returns Tier 4 rate for high units", () => {
-      expect(getHighestApplicableTierRate(700)).toBe(4.70902);
-    });
-    it("returns Tier 1 rate for 0 or negative", () => {
-      expect(getHighestApplicableTierRate(0)).toBe(3.42585);
-      expect(getHighestApplicableTierRate(-10)).toBe(3.42585);
-    });
-  });
-
   describe("getTierLabel", () => {
     it("returns correct labels", () => {
-      expect(getTierLabel(50)).toBe("Tier 1");
-      expect(getTierLabel(150)).toBe("Tier 2");
-      expect(getTierLabel(450)).toBe("Tier 3");
-      expect(getTierLabel(700)).toBe("Tier 4");
-      expect(getTierLabel(0)).toBe("Tier 1");
-    });
-  });
-
-  describe("calculateCostAtHighestTier", () => {
-    it("calculates total cost at highest tier rate", () => {
-      expect(calculateCostAtHighestTier(100)).toBe(100 * 3.42585);
-      expect(calculateCostAtHighestTier(700)).toBe(700 * 4.70902);
+      expect(getTierLabel(50, MOCK_RATES)).toBe("Tier 1");
+      expect(getTierLabel(150, MOCK_RATES)).toBe("Tier 2");
+      expect(getTierLabel(450, MOCK_RATES)).toBe("Tier 3");
+      expect(getTierLabel(700, MOCK_RATES)).toBe("Tier 4");
+      expect(getTierLabel(0, MOCK_RATES)).toBe("Tier 1");
     });
   });
 
   describe("getTierBreakdownForUnits", () => {
     it("returns breakdown starting from zero", () => {
-      const breakdown = getTierBreakdownForUnits(150);
+      const breakdown = getTierBreakdownForUnits(150, MOCK_RATES);
       expect(breakdown.length).toBe(2);
       expect(breakdown[0].tier).toBe(1);
       expect(breakdown[1].tier).toBe(2);
@@ -129,7 +122,7 @@ describe("electricity calculator utilities", () => {
 
   describe("getTierProgress", () => {
     it("calculates progress for each tier correctly", () => {
-      const progress = getTierProgress(150);
+      const progress = getTierProgress(150, MOCK_RATES);
       expect(progress[0].progress).toBe(100); // Tier 1 full
       expect(progress[1].progress).toBeGreaterThan(0); // Tier 2 started
       expect(progress[1].progress).toBeLessThan(100);

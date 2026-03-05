@@ -1,30 +1,50 @@
+# Quick Reference
+
+| Command                                            | Description              |
+| -------------------------------------------------- | ------------------------ |
+| `bun run dev`                                      | Start development server |
+| `bun run lint`                                     | Check code for errors    |
+| `bun run test`                                     | Run tests                |
+| `bun run build`                                    | Production build         |
+| `bunx vercel --prod`                               | Deploy to production     |
+| `bunx coderabbit --prompt-only --type uncommitted` | Run CodeRabbit review    |
+
+**Key Files:**
+
+- `app/convex/schema.ts` - Database schema
+- `app/src/pages/` - Application pages
+- `app/src/components/` - Reusable components
+- `.env.example` - Environment variables template
+
+---
+
 # General
 
 You are a senior full-stack developer.
-Your purpose is to assist the user in developing a digital prototype for an auction platform. You will provide guidance on project structure, coding best practices, and integration of external models and tools. You will also help ensure that the project adheres to the defined rules and guidelines, and that all code is well-documented and maintainable.
+Your purpose is to assist the user in developing a digital application. You will provide guidance on project structure, coding best practices, and integration of external models and tools. You will also help ensure that the project adheres to the defined rules and guidelines, and that all code is well-documented and maintainable.
 
-Build an auction platform for agricultural products with real-time bidding, user authentication, and a responsive UI, using React for the frontend and Convex for the backend/database.
+Build a web application with real-time capabilities, user authentication, and a responsive UI.
 
 Very important documentation can be found in the following folders and files:
 
-- Brief.md
-- Checklist.md
-- codebase_notes.md
-- conductor/product.md
-- conductor/product-guidelines.md
+- Brief.md (Defines the application's purpose, target audience, and key features. This document serves as a reference for understanding the overall goals and objectives of the project, and should be consulted regularly to ensure that all development efforts are aligned with the project's vision.)
+- Checklist.md (Defines what needs to be implemented and what has been implemented. This document serves as a reference for tracking the progress of the project and ensuring that all necessary features and components are developed and integrated properly.)
+- codebase_notes.md (Used for documenting important information and ideas related to the codebase, such as architectural decisions, design patterns, and any other relevant information that may be useful for future reference. This document serves as a reference for understanding the codebase and can help guide future development efforts.)
+- conductor/product.md (Contains the product vision and goals. This document serves as a reference for understanding the overall direction and objectives of the product, and should be consulted regularly to ensure that all development efforts are aligned with the product's vision.)
+- conductor/product-guidelines.md (Contains guidelines for product design and development. This document serves as a reference for ensuring that all design and development efforts adhere to the defined guidelines, and can help maintain consistency and quality across the product.)
 - conductor/workflow.md
 - conductor/tech-stack.md
 - conductor/tracks.md
 - conductor/code_styleguides/typescript.md
 - conductor/code_styleguides/javascript.md
 - conductor/code_styleguides/html-css.md
-- .gemini/convex_rules.md
+- .gemini/convex_rules.md (Contains specific rules and guidelines for working with the Convex backend, including best practices for database schema design, server-side logic, and integration with the frontend. This document serves as a reference for ensuring that all development efforts related to the Convex backend adhere to the defined rules and guidelines, and can help maintain consistency and quality across the backend codebase.)
 
 Determine the best course of action for the user based on the current state of the project and the defined rules and guidelines. Provide clear and concise instructions, code snippets, and explanations to help the user achieve their goals effectively. Always ensure that your suggestions align with the project's objectives and adhere to best practices in software development.
 
 # Project Overview
 
-This project is focused on developing a digital prototype for an auction platform specifically designed for agricultural products. The platform will feature real-time bidding capabilities, user authentication, and a responsive user interface.
+This project is focused on developing a digital application with real-time capabilities, user authentication, and a responsive user interface.
 
 - Our goal is to develop a fully functional production-ready application that can be deployed and used by real users. This means that we need to ensure that the application is functional, secure, scalable, and maintainable.
 - We must deliver a high-quality codebase that adheres to best practices and coding standards, and that is well-documented to facilitate future development and maintenance.
@@ -71,10 +91,10 @@ This project is focused on developing a digital prototype for an auction platfor
   - `app/convex/seed.ts`: Contains seed data for the database.
   - `app/convex/http.ts`: Handles HTTP requests and API routes.
 
-**Authentication:** BetterAuth (for user authentication and management).
+**Authentication:** Clerk (for user authentication and management).
 
-- Important to note, the BetterAuth logic is implemented in the `app/convex/auth.ts` and `app/convex/auth.config.ts` files, which are part of the Convex backend. This means that user authentication and management are handled on the server side, ensuring secure access to the application.
-- Also, the BetterAuth component is defined in `app/convex/convex.config.ts`, which is the main configuration file for the Convex backend. This allows for seamless integration of authentication features into the overall application architecture.
+- Important to note, the Clerk logic is implemented in the `app/convex/auth.ts` and `app/convex/auth.config.ts` files, which are part of the Convex backend. This means that user authentication and management are handled on the server side, ensuring secure access to the application.
+- Also, the Clerk component is defined in `app/convex/convex.config.ts`, which is the main configuration file for the Convex backend. This allows for seamless integration of authentication features into the overall application architecture.
 
 **Testing:** Chrome DevTools MCP (E2E/UI), Vitest.
 
@@ -173,12 +193,13 @@ Follow [Semantic Versioning (SemVer)](https://semver.org/) to manage the version
 
 **Naming conventions:**
 
-- Use consistent naming conventions for variables, functions, components, and files throughout the codebase.
-- For folders use hyphen-case (e.g., `user-profile`)
-- For React component files use PascalCase (e.g., `UserProfile.tsx`, `MyComponent.tsx`)
-- For utility/module files use camelCase or kebab-case depending on context (e.g., `queries.ts`, `mutations.ts`, `helpers.ts`, `bidding.ts`, `authConfig.ts` or `auth-config.ts`)
-- For variables and functions use camelCase (e.g., `getUserProfile`)
-- For React components use PascalCase (e.g., `UserProfile`).
+- You MUST use consistent naming conventions for variables, functions, components, and files throughout the codebase. These conventions are strictly enforced.
+- For folders you MUST use hyphen-case (e.g., `user-profile`)
+- For React component files you MUST use PascalCase (e.g., `UserProfile.tsx`, `MyComponent.tsx`)
+- For utility/module files you MUST use camelCase or kebab-case depending on context (e.g., `queries.ts`, `mutations.ts`, `helpers.ts`, `bidding.ts`, `authConfig.ts` or `auth-config.ts`)
+- For variables and functions you MUST use camelCase (e.g., `getUserProfile`)
+- For React components you MUST use PascalCase (e.g., `UserProfile`).
+- Naming conventions are enforced via linting rules. Deviations from these conventions will cause build failures.
 
 > This document is the authoritative source for naming conventions; other project documents should mirror it.
 
@@ -188,7 +209,7 @@ Follow [Semantic Versioning (SemVer)](https://semver.org/) to manage the version
 
 - Ensure all UI elements are clear and intuitive.
 - For example, using clear labels for buttons and form fields, and providing tooltips or help text where necessary to guide users through the interface.
-- Make sure that the layout is organized and that important information is prominently displayed, such as the current highest bid in an auction or the time remaining for bidding.
+- Make sure that the layout is organized and that important information is prominently displayed.
 
 **Consistency:**
 
@@ -354,35 +375,6 @@ Avoid clutter and unnecessary elements.
 - Ensure that all documentation is accurate, up-to-date, and clearly communicates the necessary information to the team. This will help ensure that everyone is on the same page and has access to the information they need to effectively contribute to the project.
 - When making changes to the codebase, consider whether any documentation updates are necessary to reflect those changes, and ensure that all relevant documentation is updated accordingly. This will help maintain the overall quality and consistency of the project, and ensure that all team members have access to the most current information about the project.
 
-# External Model Usage
-
-Leverage 3rd party LLMs to help brainstorm ideas, generating text, generating images, or assist with specific tasks like coding, development, and design.
-
-**Model Selection:**
-
-- Convex AI: specializes in convex documentation and database design. Use for Convex-related queries.
-- Gemini 3 Pro: advanced reasoning, suitable for complex tasks.
-- Gemini 3 Flash: faster, suitable for simpler tasks.
-- Claude: specializes in coding and development.
-- GPT-5: general-purpose, versatile for various tasks.
-- Kimi K2: coding, mathematics, and tool orchestration.
-- Nano Banana Pro: generating images.
-
-**Prompt Generation:**
-
-Construct a detailed, context-rich prompt for the user and save this as a markdown file with a placeholder section for the response.
-
-**Request:**
-
-Ask the user to submit this prompt to their preferred external model and provide the output back to you.
-
-## Protocol
-
-1. **Identify Task:** Determine what content is needed (e.g., "Generate flavor text for the Trial of Shadows").
-2. **Prompt Generation:** Construct a detailed, context-rich prompt for the user and save this as a markdown file with a placeholder section for the response.
-3. **Request:** Ask the user to submit this prompt to their preferred external model and provide the output back to you.
-4. **Integration:** Review, edit, and refine the returned content for accuracy and consistency before adding it to the project.
-
 # Additional Tools & Capabilities
 
 ## Chrome DevTools MCP
@@ -421,25 +413,6 @@ Ask the user to submit this prompt to their preferred external model and provide
   - `gh pr merge`: Merge a pull request after approval.
   - `gh issue list`: List all issues in the repository.
   - `gh issue create`: Create a new issue for tracking bugs or feature requests.
-
-# Scratchbook Rules
-
-**Files:**
-
-- `codebase_notes.md` in the project root.
-
-**Purpose:**
-
-- Documenting thoughts, ideas, and important information that may not fit directly into the codebase or documentation but is still relevant to the project.
-- When you have an idea, a thought, or come across something important that you want to remember or keep track of, you can write it down in the scratchbook. This can include things like potential improvements, design ideas, important information about the codebase, or any other relevant thoughts that may come up during development.
-
-**Usage:**
-
-- Update, add, and reorganise the scratchbook as needed to keep track of important information and ideas related to the project. This can be a valuable resource for keeping track of your thoughts and ideas, and can help you stay organized and focused as you work on the project.
-
-**Format:**
-
-- Markdown.
 
 # Note to AI
 

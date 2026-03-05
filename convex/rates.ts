@@ -1,5 +1,28 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
+
+/**
+ * Helper to check if the current user is an admin.
+ * @param ctx - The query or mutation context.
+ * @returns The user's role if they are an admin, otherwise throws an error.
+ */
+async function checkAdmin(ctx: QueryCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+
+  const userRole = await ctx.db
+    .query("user_roles")
+    .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+    .unique();
+
+  if (userRole?.role !== "admin") {
+    throw new Error("Not authorized");
+  }
+
+  return { identity, userRole };
+}
 
 export const getRates = query({
   args: {},
@@ -14,22 +37,21 @@ export const updateRate = mutation({
     rate: v.number(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    const { identity } = await checkAdmin(ctx);
 
-    // Check if user is admin
-    const userRole = await ctx.db
-      .query("user_roles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
-      .unique();
+    const oldRate = await ctx.db.get(args.id);
 
-    if (userRole?.role !== "admin") {
-      throw new Error("Not authorized");
+    if (oldRate === null) {
+      throw new Error(`Rate not found: ${args.id}`);
     }
 
     await ctx.db.patch(args.id, { rate: args.rate });
+
+    // Audit logging
+    console.log(
+      `[AUDIT] Rate updated by ${identity.email || identity.subject}. ` +
+        `Rate ID: ${args.id}, Old: ${oldRate.rate}, New: ${args.rate}`
+    );
   },
 });
 
@@ -37,6 +59,8 @@ export const updateRate = mutation({
 export const seedRates = mutation({
   args: {},
   handler: async (ctx) => {
+    const { identity } = await checkAdmin(ctx);
+
     const existing = await ctx.db.query("electricity_rates").collect();
     if (existing.length > 0) return;
 
@@ -50,5 +74,7 @@ export const seedRates = mutation({
     for (const tier of TIERS) {
       await ctx.db.insert("electricity_rates", tier);
     }
+
+    console.log(`[AUDIT] Rates seeded by ${identity.email || identity.subject}`);
   },
 });

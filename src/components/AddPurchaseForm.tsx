@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatCurrency, getTierLabel, roundUnits, roundCurrency } from "@/lib/electricity";
+import { useRates } from "@/hooks/useRates";
+import { formatCurrency, roundUnits, roundCurrency } from "@/lib/electricity";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,6 +21,7 @@ export function AddPurchaseForm({
   prefillAmount,
   prefillUnits,
 }: AddPurchaseFormProps) {
+  const { rates, loading: ratesLoading } = useRates();
   const [amountPaid, setAmountPaid] = useState("");
   const [unitsReceived, setUnitsReceived] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -37,7 +39,19 @@ export function AddPurchaseForm({
   const amountNum = parseFloat(amountPaid) || 0;
   const unitsNum = parseFloat(unitsReceived) || 0;
   const effectiveRate = unitsNum > 0 ? amountNum / unitsNum : 0;
-  const currentTier = getTierLabel(unitsAlreadyBought + unitsNum);
+
+  const currentTier = useMemo(() => {
+    if (ratesLoading || rates.length === 0) return "Loading...";
+    const totalUnits = unitsAlreadyBought + unitsNum;
+    const sortedRates = [...rates].sort((a, b) => a.tier_number - b.tier_number);
+
+    for (let i = sortedRates.length - 1; i >= 0; i--) {
+      if (totalUnits >= sortedRates[i].min_units) {
+        return sortedRates[i].tier_label;
+      }
+    }
+    return sortedRates[0].tier_label;
+  }, [unitsAlreadyBought, unitsNum, rates, ratesLoading]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

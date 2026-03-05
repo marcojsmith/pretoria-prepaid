@@ -1,13 +1,13 @@
 {
   "name": "pretoria-prepaid",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "bun x vite",
     "build": "bun x tsc && bun x vite build",
     "build:prod": "bun x convex deploy --cmd 'bun run build' --cmd-url-env-var-name VITE_CONVEX_URL",
-    "lint": "bun x eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write .",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",

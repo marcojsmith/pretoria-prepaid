@@ -1,10 +1,11 @@
-// South African prepaid electricity pricing tiers (VAT inclusive)
-export const TIERS = [
-  { min: 1, max: 100, rate: 3.42585, label: "Tier 1" },
-  { min: 101, max: 400, rate: 4.00936, label: "Tier 2" },
-  { min: 401, max: 650, rate: 4.36816, label: "Tier 3" },
-  { min: 651, max: Infinity, rate: 4.70902, label: "Tier 4" },
-] as const;
+export interface ElectricityRate {
+  _id: string;
+  tier_number: number;
+  tier_label: string;
+  min_units: number;
+  max_units: number | null;
+  rate: number;
+}
 
 export interface TierBreakdown {
   tier: number;
@@ -23,52 +24,25 @@ export interface Purchase {
   tierBreakdown: TierBreakdown[];
 }
 
-// Get the highest applicable tier rate for a given number of units
-export function getHighestApplicableTierRate(units: number): number {
-  if (units <= 0) return TIERS[0].rate;
-
-  for (let i = TIERS.length - 1; i >= 0; i--) {
-    if (units >= TIERS[i].min) {
-      return TIERS[i].rate;
-    }
-  }
-  return TIERS[0].rate;
-}
-
-// Get the tier label for a given number of units
-export function getTierLabel(units: number): string {
-  if (units <= 0) return TIERS[0].label;
-
-  for (let i = TIERS.length - 1; i >= 0; i--) {
-    if (units >= TIERS[i].min) {
-      return TIERS[i].label;
-    }
-  }
-  return TIERS[0].label;
-}
-
-// Calculate the cost if all units were bought at the highest applicable tier rate
-export function calculateCostAtHighestTier(units: number): number {
-  const rate = getHighestApplicableTierRate(units);
-  return units * rate;
-}
-
 // Calculate the cost of electricity based on tiered pricing
 export function calculateCost(
   units: number,
-  unitsAlreadyBought: number = 0
+  unitsAlreadyBought: number = 0,
+  rates: ElectricityRate[]
 ): { total: number; breakdown: TierBreakdown[] } {
   const breakdown: TierBreakdown[] = [];
   let remainingUnits = units;
   let currentPosition = unitsAlreadyBought;
   let total = 0;
 
-  for (let i = 0; i < TIERS.length; i++) {
-    const tier = TIERS[i];
+  // Sort rates by tier number to ensure correct sequential calculation
+  const sortedRates = [...rates].sort((a, b) => a.tier_number - b.tier_number);
+
+  for (const rate of sortedRates) {
     if (remainingUnits <= 0) break;
 
-    const tierStart = tier.min - 1;
-    const tierEnd = tier.max;
+    const tierStart = rate.min_units - 1;
+    const tierEnd = rate.max_units ?? Infinity;
 
     // Skip tiers we've already passed
     if (currentPosition >= tierEnd) continue;
@@ -79,12 +53,12 @@ export function calculateCost(
     const unitsInThisTier = Math.min(remainingUnits, availableInTier);
 
     if (unitsInThisTier > 0) {
-      const cost = unitsInThisTier * tier.rate;
+      const cost = unitsInThisTier * rate.rate;
       breakdown.push({
-        tier: i + 1,
-        label: tier.label,
+        tier: rate.tier_number,
+        label: rate.tier_label,
         units: unitsInThisTier,
-        rate: tier.rate,
+        rate: rate.rate,
         cost,
       });
       total += cost;
@@ -94,11 +68,6 @@ export function calculateCost(
   }
 
   return { total, breakdown };
-}
-
-// Get tier breakdown for a total number of units (from 0)
-export function getTierBreakdownForUnits(totalUnits: number): TierBreakdown[] {
-  return calculateCost(totalUnits, 0).breakdown;
 }
 
 export function formatCurrency(amount: number): string {
@@ -130,26 +99,52 @@ export function getDaysLeftInMonth(): number {
   return lastDay.getDate() - now.getDate();
 }
 
-export function getTierProgress(unitsBought: number): {
-  tier: (typeof TIERS)[number];
+export function getTierProgress(
+  unitsBought: number,
+  rates: ElectricityRate[]
+): {
+  tier: ElectricityRate;
   progress: number;
   unitsInTier: number;
   unitsToNextTier: number;
 }[] {
-  return TIERS.map((tier) => {
-    const tierSize = tier.max === Infinity ? 350 : tier.max - tier.min + 1;
-    const unitsBeforeTier = tier.min - 1;
+  const sortedRates = [...rates].sort((a, b) => a.tier_number - b.tier_number);
+
+  return sortedRates.map((rate) => {
+    const tierSize = rate.max_units === null ? 350 : rate.max_units - rate.min_units + 1;
+    const unitsBeforeTier = rate.min_units - 1;
     const unitsInTier = Math.max(0, Math.min(unitsBought - unitsBeforeTier, tierSize));
     const progress = (unitsInTier / tierSize) * 100;
-    const unitsToNextTier = tier.max === Infinity ? 0 : Math.max(0, tier.max - unitsBought);
+    const unitsToNextTier = rate.max_units === null ? 0 : Math.max(0, rate.max_units - unitsBought);
 
     return {
-      tier,
+      tier: rate,
       progress: Math.min(100, progress),
       unitsInTier,
       unitsToNextTier,
     };
   });
+}
+
+// Get the tier label for a given number of units (absolute units, not already bought)
+export function getTierLabel(units: number, rates: ElectricityRate[]): string {
+  if (rates.length === 0) return "Unknown";
+  const sortedRates = [...rates].sort((a, b) => a.tier_number - b.tier_number);
+
+  for (let i = sortedRates.length - 1; i >= 0; i--) {
+    if (units >= sortedRates[i].min_units) {
+      return sortedRates[i].tier_label;
+    }
+  }
+  return sortedRates[0].tier_label;
+}
+
+// Get tier breakdown for a total number of units (from 0)
+export function getTierBreakdownForUnits(
+  totalUnits: number,
+  rates: ElectricityRate[]
+): TierBreakdown[] {
+  return calculateCost(totalUnits, 0, rates).breakdown;
 }
 
 // Tier colors for visual display
