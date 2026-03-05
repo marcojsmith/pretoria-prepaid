@@ -87,7 +87,7 @@ export default function ExportPage() {
       <main className="container mx-auto space-y-4 px-4 py-4">
         <div className="mx-auto max-w-[600px] space-y-4">
           {/* User Export */}
-          <Card>
+          <Card data-testid="export-user-data-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Download className="h-4 w-4" />

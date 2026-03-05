@@ -26,7 +26,10 @@ export default function Rates() {
   };
   if (authLoading || ratesLoading || roleLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div
+        className="flex min-h-screen items-center justify-center bg-background"
+        data-testid="loading-spinner"
+      >
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
@@ -103,7 +106,7 @@ export default function Rates() {
               <div className="space-y-3">
                 {rates.map((rate) => (
                   <div
-                    key={rate.id}
+                    key={rate._id}
                     className="flex items-center justify-between rounded-md border border-muted bg-secondary-foreground p-3"
                   >
                     <div className="flex-1">
@@ -113,7 +116,7 @@ export default function Rates() {
                       </p>
                     </div>
 
-                    {editingId === rate.id ? (
+                    {editingId === rate._id ? (
                       <div className="flex items-center gap-2">
                         <Input
                           type="number"
@@ -125,7 +128,7 @@ export default function Rates() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleSave(rate.id)}
+                          onClick={() => handleSave(rate._id)}
                           disabled={saving}
                         >
                           {saving ? (
@@ -145,7 +148,8 @@ export default function Rates() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleEdit(rate.id, rate.rate)}
+                            onClick={() => handleEdit(rate._id, rate.rate)}
+                            data-testid="edit-rate-button"
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>

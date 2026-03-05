@@ -3,6 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 
 export interface ElectricityRate {
+  _id: string;
   id: string;
   tier_number: number;
   tier_label: string;
@@ -16,6 +17,7 @@ export function useRates() {
   const updateRateMutation = useMutation(api.rates.updateRate);
 
   const rates: ElectricityRate[] = (ratesData ?? []).map((r) => ({
+    _id: r._id,
     id: r._id,
     tier_number: r.tier_number,
     tier_label: r.tier_label,

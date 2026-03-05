@@ -16,7 +16,6 @@ export default defineConfig({
         "vitest.setup.ts", 
         "convex/", 
         "src/components/ui/**", 
-        "src/pages/**",
         "src/main.tsx",
         "src/App.tsx",
         "src/vite-env.d.ts"

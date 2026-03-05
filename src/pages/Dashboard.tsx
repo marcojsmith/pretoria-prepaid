@@ -53,8 +53,11 @@ export default function Dashboard() {
 
   if (authLoading || purchasesLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
+      <div
+        className="flex min-h-screen items-center justify-center bg-background"
+        data-testid="loading-spinner"
+      >
+        <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
       </div>
     );
   }
