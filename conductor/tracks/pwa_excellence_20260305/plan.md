@@ -6,7 +6,7 @@
   - [ ] Add `manifest.json` with appropriate icons (512x512, 192x192), splash screen, and theme colors.
   - [ ] Configure `vite-plugin-pwa` in `vite.config.ts`.
   - [ ] Implement `RegisterSW` component to handle service worker registration.
-- [ ] Task: Static Asset Optimization
+- [x] Task: Static Asset Optimization 8c7a6aa
   - [ ] Audit existing assets and compress images (using `sharp` or similar).
   - [ ] Implement code-splitting for main pages (Dashboard, Calculator, History).
 - [ ] Task: Conductor - User Manual Verification 'PWA Configuration and Asset Setup' (Protocol in workflow.md)
