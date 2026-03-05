@@ -1,4 +1,4 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { calculateTierBreakdown } from "./electricity_logic";
@@ -138,44 +138,80 @@ export const deletePurchase = mutation({
 });
 
 /**
+ * Helper function to perform the actual system-wide recalculation.
+ * Extracted to avoid TypeScript circularity issues when calling mutations in the same file.
+ */
+async function performSystemWideRecalculation(ctx: MutationCtx) {
+  const allPurchases = await ctx.db.query("purchases").collect();
+  const userMonths = new Map<string, Set<string>>();
+
+  allPurchases.forEach((p) => {
+    const monthKey = p.date.substring(0, 7);
+    if (!userMonths.has(p.userId)) {
+      userMonths.set(p.userId, new Set());
+    }
+    userMonths.get(p.userId)!.add(monthKey);
+  });
+
+  for (const [userId, months] of userMonths.entries()) {
+    for (const monthKey of months) {
+      await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {
+        userId,
+        monthKey,
+      });
+    }
+  }
+
+  return { usersProcessed: userMonths.size };
+}
+
+/**
+ * Internal logic for system-wide recalculation.
+ */
+export const recalculateSystemWideInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    return await performSystemWideRecalculation(ctx);
+  },
+});
+
+/**
+ * CLI-accessible trigger for system-wide recalculation.
+ * Run via: `npx convex run purchases:runSystemWideMigration`
+ * This is public but intended for administrative CLI use.
+ */
+export const runSystemWideMigration = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await performSystemWideRecalculation(ctx);
+  },
+});
+
+/**
  * Triggers recalculation for all users in the system.
  * High-impact administrative operation.
+ * If running from dashboard, ensure you are 'Run as' an admin user.
  */
 export const recalculateSystemWide = mutation({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) {
+      throw new Error(
+        "Not authenticated. To run system-wide recalculation from the dashboard, " +
+          "you must use the 'Run as user' feature with an admin userId."
+      );
+    }
 
-    // Optional: Add admin check here if user_roles is populated
     const userRole = await ctx.db
       .query("user_roles")
       .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .unique();
+
     if (userRole?.role !== "admin") {
       throw new Error("Not authorized: Admin only");
     }
 
-    const allPurchases = await ctx.db.query("purchases").collect();
-    const userMonths = new Map<string, Set<string>>();
-
-    allPurchases.forEach((p) => {
-      const monthKey = p.date.substring(0, 7);
-      if (!userMonths.has(p.userId)) {
-        userMonths.set(p.userId, new Set());
-      }
-      userMonths.get(p.userId)!.add(monthKey);
-    });
-
-    for (const [userId, months] of userMonths.entries()) {
-      for (const monthKey of months) {
-        await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {
-          userId,
-          monthKey,
-        });
-      }
-    }
-
-    return { usersProcessed: userMonths.size };
+    return await performSystemWideRecalculation(ctx);
   },
 });
