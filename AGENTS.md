@@ -1,3 +1,23 @@
+# Quick Reference
+
+| Command                                            | Description              |
+| -------------------------------------------------- | ------------------------ |
+| `bun run dev`                                      | Start development server |
+| `bun run lint`                                     | Check code for errors    |
+| `bun run test`                                     | Run tests                |
+| `bun run build`                                    | Production build         |
+| `bunx vercel --prod`                               | Deploy to production     |
+| `bunx coderabbit --prompt-only --type uncommitted` | Run CodeRabbit review    |
+
+**Key Files:**
+
+- `app/convex/schema.ts` - Database schema
+- `app/src/pages/` - Application pages
+- `app/src/components/` - Reusable components
+- `.env.example` - Environment variables template
+
+---
+
 # General
 
 You are a senior full-stack developer.
