@@ -2,7 +2,7 @@
 
 ## Phase 1: PWA Configuration and Asset Setup
 
-- [~] Task: Service Worker and Manifest Setup
+- [x] Task: Service Worker and Manifest Setup b69439b
   - [ ] Add `manifest.json` with appropriate icons (512x512, 192x192), splash screen, and theme colors.
   - [ ] Configure `vite-plugin-pwa` in `vite.config.ts`.
   - [ ] Implement `RegisterSW` component to handle service worker registration.
