@@ -4,13 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePurchases } from "@/hooks/usePurchase";
 import { useConsumption } from "@/hooks/useConsumption";
 import { PurchaseHistory } from "@/components/PurchaseHistory";
+import { ReadingHistory } from "@/components/ReadingHistory";
 import { AddPurchaseForm } from "@/components/AddPurchaseForm";
 import { AddReadingForm } from "@/components/AddReadingForm";
 import { NavMenu } from "@/components/NavMenu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LogOut, Zap, Receipt, Activity, Trash2 } from "lucide-react";
-import { roundUnits } from "@/lib/electricity";
+import { MonthYearFilter } from "@/components/MonthYearFilter";
+import { LogOut, Zap, Receipt, Activity, Filter, X } from "lucide-react";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function HistoryPage() {
     loading: purchasesLoading,
     addPurchase,
     deletePurchase,
+    purchases,
     getCurrentMonthPurchases,
     offlineCount,
   } = usePurchases();
@@ -27,6 +29,9 @@ export default function HistoryPage() {
   const { readings, addReading, deleteReading, loading: consumptionLoading } = useConsumption();
 
   const [activeTab, setActiveTab] = useState<"purchases" | "readings">("purchases");
+  const [selectedMonth, setSelectedMonth] = useState<string>("All");
+  const [selectedYear, setSelectedYear] = useState<string>("All");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Get prefill values from navigation state
   const prefillData = location.state as {
@@ -48,6 +53,7 @@ export default function HistoryPage() {
     }
   }, [prefillData]);
 
+  // For AddPurchaseForm context
   const currentMonthPurchases = useMemo(
     () => getCurrentMonthPurchases(),
     [getCurrentMonthPurchases]
@@ -56,6 +62,41 @@ export default function HistoryPage() {
     () => currentMonthPurchases.reduce((sum, p) => sum + p.units, 0),
     [currentMonthPurchases]
   );
+
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    purchases.forEach((p) => {
+      if (p.date) years.add(p.date.substring(0, 4));
+    });
+    readings?.forEach((r) => {
+      if (r.date) years.add(r.date.substring(0, 4));
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [purchases, readings]);
+
+  const filteredPurchases = useMemo(() => {
+    return purchases.filter((p) => {
+      const monthMatch = selectedMonth === "All" || p.date.substring(5, 7) === selectedMonth;
+      const yearMatch = selectedYear === "All" || p.date.substring(0, 4) === selectedYear;
+      return monthMatch && yearMatch;
+    });
+  }, [purchases, selectedMonth, selectedYear]);
+
+  const filteredReadings = useMemo(() => {
+    if (!readings) return [];
+    return readings.filter((r) => {
+      const monthMatch = selectedMonth === "All" || r.date.substring(5, 7) === selectedMonth;
+      const yearMatch = selectedYear === "All" || r.date.substring(0, 4) === selectedYear;
+      return monthMatch && yearMatch;
+    });
+  }, [readings, selectedMonth, selectedYear]);
+
+  const resetFilters = () => {
+    setSelectedMonth("All");
+    setSelectedYear("All");
+  };
+
+  const isFiltered = selectedMonth !== "All" || selectedYear !== "All";
 
   const handleSignOut = async () => {
     await signOut();
@@ -106,26 +147,64 @@ export default function HistoryPage() {
 
       <main className="container mx-auto space-y-4 px-4 py-4">
         <div className="mx-auto max-w-[600px] space-y-4">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="grid flex-1 grid-cols-2 gap-2">
+              <Button
+                variant={activeTab === "purchases" ? "default" : "outline"}
+                size="sm"
+                className="h-9 gap-2"
+                onClick={() => setActiveTab("purchases")}
+              >
+                <Receipt className="h-4 w-4" />
+                Purchases
+              </Button>
+              <Button
+                variant={activeTab === "readings" ? "default" : "outline"}
+                size="sm"
+                className="h-9 gap-2"
+                onClick={() => setActiveTab("readings")}
+              >
+                <Activity className="h-4 w-4" />
+                Readings
+              </Button>
+            </div>
             <Button
-              variant={activeTab === "purchases" ? "default" : "outline"}
-              size="sm"
-              className="h-9 gap-2"
-              onClick={() => setActiveTab("purchases")}
+              variant={showFilters ? "secondary" : "outline"}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setShowFilters(!showFilters)}
             >
-              <Receipt className="h-4 w-4" />
-              Purchases
-            </Button>
-            <Button
-              variant={activeTab === "readings" ? "default" : "outline"}
-              size="sm"
-              className="h-9 gap-2"
-              onClick={() => setActiveTab("readings")}
-            >
-              <Activity className="h-4 w-4" />
-              Readings
+              <Filter className={`h-4 w-4 ${isFiltered ? "fill-primary text-primary" : ""}`} />
             </Button>
           </div>
+
+          {showFilters && (
+            <Card className="bg-secondary/20">
+              <CardContent className="space-y-4 p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider">Filters</h3>
+                  {isFiltered && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 gap-1 px-2 text-[10px]"
+                      onClick={resetFilters}
+                    >
+                      <X className="h-3 w-3" />
+                      Reset
+                    </Button>
+                  )}
+                </div>
+                <MonthYearFilter
+                  selectedMonth={selectedMonth}
+                  selectedYear={selectedYear}
+                  availableYears={availableYears}
+                  onMonthChange={setSelectedMonth}
+                  onYearChange={setSelectedYear}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {activeTab === "purchases" ? (
             <>
@@ -136,54 +215,16 @@ export default function HistoryPage() {
                 prefillUnits={prefillData?.prefillUnits}
                 prefillReading={prefillData?.prefillReading}
               />
-              <PurchaseHistory purchases={currentMonthPurchases} onDelete={deletePurchase} />
+              <PurchaseHistory purchases={filteredPurchases} onDelete={deletePurchase} />
             </>
           ) : (
             <>
               <AddReadingForm onAdd={addReading} />
-              <div className="space-y-3">
-                <h3 className="px-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  Reading History
-                </h3>
-                {readings && readings.length > 0 ? (
-                  <div className="space-y-2">
-                    {readings.map((reading) => (
-                      <Card key={reading._id} className="overflow-hidden">
-                        <CardContent className="flex items-center justify-between p-3">
-                          <div className="space-y-0.5">
-                            <p className="text-sm font-bold">{roundUnits(reading.reading)} kWh</p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {new Date(reading.date).toLocaleDateString("en-ZA", {
-                                day: "numeric",
-                                month: "long",
-                                year: "numeric",
-                              })}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => deleteReading(reading._id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                      <Activity className="mb-2 h-8 w-8 opacity-20" />
-                      <p className="text-xs">No readings logged yet.</p>
-                      <p className="text-[10px]">
-                        Log your first meter reading to start tracking usage.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+              <ReadingHistory
+                readings={filteredReadings}
+                onDelete={deleteReading}
+                isFiltered={isFiltered}
+              />
             </>
           )}
         </div>

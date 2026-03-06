@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Purchase,
@@ -7,7 +7,7 @@ import {
   TIER_TEXT_CLASSES,
   roundUnits,
 } from "@/lib/electricity";
-import { History, Trash2, ChevronDown, Clock } from "lucide-react";
+import { History, Trash2, ChevronDown, Clock, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface PurchaseHistoryProps {
@@ -17,6 +17,28 @@ interface PurchaseHistoryProps {
 
 export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
   const [visibleCount, setVisibleCount] = useState(10);
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && purchases.length > visibleCount) {
+          setVisibleCount((prev) => prev + 10);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [purchases.length, visibleCount]);
 
   if (purchases.length === 0) {
     return (
@@ -148,7 +170,14 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
       </div>
 
       {hasMore && (
-        <Button variant="outline" size="sm" className="w-full" onClick={handleShowMore}>
+        <div ref={observerTarget} className="flex justify-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin text-primary opacity-50" />
+        </div>
+      )}
+
+      {/* Fallback button if observer doesn't work or for accessibility */}
+      {hasMore && (
+        <Button variant="outline" size="sm" className="sr-only w-full" onClick={handleShowMore}>
           <ChevronDown className="mr-1 h-3 w-3" />
           Show More ({purchases.length - visibleCount} remaining)
         </Button>

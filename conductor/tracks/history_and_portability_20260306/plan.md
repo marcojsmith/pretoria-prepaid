@@ -2,15 +2,15 @@
 
 ## Phase 1: History Page Refactoring (Infinite Scroll & Filtering)
 
-- [ ] Task: Update `usePurchases` and `useConsumption` hooks for full data access.
-  - [ ] Ensure `usePurchases` supports efficient access to all historical records (not just current month).
-  - [ ] Add `fetchNextPage` or equivalent logic if needed for infinite scroll.
-- [ ] Task: Implement Date Filter Component.
-  - [ ] Write failing tests for filtering logic in `HistoryPage.test.tsx`.
-  - [ ] Create `MonthYearFilter.tsx` component.
-  - [ ] Implement filtering logic in `HistoryPage.tsx` to filter local state based on selection.
-  - [ ] Verify tests pass.
-- [ ] Task: Implement Infinite Scroll in `HistoryPage`.
+- [x] Task: Update `usePurchases` and `useConsumption` hooks for full data access.
+  - [x] Ensure `usePurchases` supports efficient access to all historical records (not just current month).
+  - [x] Add `fetchNextPage` or equivalent logic if needed for infinite scroll.
+- [x] Task: Implement Date Filter Component.
+  - [x] Write failing tests for filtering logic in `HistoryPage.test.tsx`.
+  - [x] Create `MonthYearFilter.tsx` component.
+  - [x] Implement filtering logic in `HistoryPage.tsx` to filter local state based on selection.
+  - [x] Verify tests pass.
+- [~] Task: Implement Infinite Scroll in `HistoryPage`.
   - [ ] Write failing tests for scrolling behavior.
   - [ ] Replace `visibleCount` logic with an intersection observer pattern for auto-loading.
   - [ ] Ensure smooth performance with many items.

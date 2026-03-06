@@ -20,6 +20,19 @@ vi.mock("virtual:pwa-register/react", () => ({
   })),
 }));
 
+// Mock IntersectionObserver
+class MockIntersectionObserver {
+  observe = vi.fn();
+  disconnect = vi.fn();
+  unobserve = vi.fn();
+}
+
+Object.defineProperty(window, "IntersectionObserver", {
+  writable: true,
+  configurable: true,
+  value: MockIntersectionObserver,
+});
+
 // Mock convex/react globally to prevent 'Could not find Convex client' errors
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => [

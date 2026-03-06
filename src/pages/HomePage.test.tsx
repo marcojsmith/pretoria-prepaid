@@ -3,6 +3,18 @@ import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import HomePage from "./HomePage";
 import * as convexReact from "convex/react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: vi.fn(),
+  };
+});
+
+// ... rest of the mocks ...
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
@@ -53,6 +65,9 @@ describe("HomePage", () => {
   });
 
   it("handles login click", () => {
+    const mockNavigate = vi.fn();
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+
     render(
       <BrowserRouter>
         <HomePage />
@@ -61,6 +76,24 @@ describe("HomePage", () => {
 
     const loginButton = screen.getAllByText(/Login/i)[0];
     loginButton.click();
-    // Verification of navigation would require mocking useNavigate
+    expect(mockNavigate).toHaveBeenCalledWith("/auth");
+  });
+
+  it("redirects to dashboard when authenticated", () => {
+    const mockNavigate = vi.fn();
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: "1" } as any,
+      loading: false,
+      signOut: vi.fn(),
+    });
+
+    render(
+      <BrowserRouter>
+        <HomePage />
+      </BrowserRouter>
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
   });
 });

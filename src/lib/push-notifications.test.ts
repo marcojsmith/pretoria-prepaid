@@ -82,4 +82,33 @@ describe("push-notifications", () => {
     expect(mockSubscription.unsubscribe).toHaveBeenCalled();
     expect(result).toBe(true);
   });
+
+  it("returns null when push is not supported", () => {
+    vi.stubGlobal("navigator", {});
+    expect(isPushSupported()).toBe(false);
+  });
+
+  it("returns existing subscription if available", async () => {
+    mockNotification.requestPermission.mockResolvedValue("granted");
+    const mockSubscription = {
+      endpoint: "https://existing",
+      toJSON: () => ({ endpoint: "https://existing" }),
+    };
+
+    const registration = await mockServiceWorker.ready;
+    vi.mocked(registration.pushManager.getSubscription).mockResolvedValue(
+      mockSubscription as unknown as PushSubscription
+    );
+
+    const result = await subscribeUserToPush();
+    expect(result).toEqual({ endpoint: "https://existing" });
+  });
+
+  it("handles missing VAPID key", async () => {
+    const registration = await mockServiceWorker.ready;
+    vi.mocked(registration.pushManager.getSubscription).mockResolvedValue(null);
+    vi.stubEnv("VITE_VAPID_PUBLIC_KEY", "");
+    const result = await subscribeUserToPush();
+    expect(result).toBeNull();
+  });
 });

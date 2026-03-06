@@ -237,4 +237,26 @@ describe("Rates Page", () => {
 
     expect(signOut).toHaveBeenCalled();
   });
+
+  it("returns null when no user", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      loading: false,
+      signOut: vi.fn(),
+    });
+    vi.mocked(useRates).mockReturnValue({
+      loading: false,
+      rates: [],
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
+    });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+
+    const { container } = render(
+      <BrowserRouter>
+        <Rates />
+      </BrowserRouter>
+    );
+    expect(container.firstChild).toBeNull();
+  });
 });

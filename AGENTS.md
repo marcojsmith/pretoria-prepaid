@@ -4,7 +4,6 @@
 | -------------------------------------------------- | ------------------------------------------------------- |
 | `bun run dev`                                      | Start development server                                |
 | `bun run lint`                                     | Check code for errors                                   |
-| `bun run test --run`                               | Run tests                                               |
 | `bun run test:coverage`                            | Run tests with coverage report                          |
 | `bun run build`                                    | Production build                                        |
 | `bunx vercel`                                      | Deploy to staging                                       |

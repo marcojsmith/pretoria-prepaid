@@ -100,4 +100,13 @@ describe("AddPurchaseForm", () => {
     expect(screen.getByText(/This purchase exceeds the/i)).toBeInTheDocument();
     expect(screen.getByText(/20 kWh/i)).toBeInTheDocument();
   });
+
+  it("handles reading input change", () => {
+    const onAdd = vi.fn();
+    render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={onAdd} />);
+
+    const readingInput = screen.getByLabelText(/Current Meter/i);
+    fireEvent.change(readingInput, { target: { value: "1000" } });
+    expect(readingInput).toHaveValue(1000);
+  });
 });
