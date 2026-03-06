@@ -5,6 +5,7 @@ import Settings from "./Settings";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
+import { Id } from "../../convex/_generated/dataModel";
 
 // Mock hooks
 vi.mock("@/hooks/useAuth");
@@ -18,6 +19,7 @@ vi.mock("sonner", () => ({
 
 describe("Settings Page", () => {
   const mockUser = {
+    id: "1",
     primaryEmailAddress: { emailAddress: "test@example.com" },
   };
 
@@ -25,19 +27,27 @@ describe("Settings Page", () => {
     preferredName: "Test User",
     meterNumber: "1234567890",
     monthlyBudget: 500,
+    lowBalanceThreshold: 10,
   };
 
   const mockUpdateProfile = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuth as any).mockReturnValue({
-      user: mockUser,
+    vi.mocked(useAuth).mockReturnValue({
+      user: mockUser as unknown as ReturnType<typeof useAuth>["user"],
       loading: false,
+      signOut: vi.fn(),
     });
-    (useProfile as any).mockReturnValue({
-      profile: mockProfile,
-      updateProfile: mockUpdateProfile,
+    vi.mocked(useProfile).mockReturnValue({
+      profile: {
+        ...mockProfile,
+        _id: "user1" as unknown as Id<"profiles">,
+        _creationTime: Date.now(),
+        email: "test@example.com",
+        userId: "clerk1",
+      },
+      updateProfile: mockUpdateProfile as unknown as ReturnType<typeof useProfile>["updateProfile"],
       loading: false,
     });
   });
@@ -52,6 +62,7 @@ describe("Settings Page", () => {
     expect(screen.getByLabelText(/preferred name/i)).toHaveValue("Test User");
     expect(screen.getByLabelText(/meter number/i)).toHaveValue("1234567890");
     expect(screen.getByLabelText(/monthly budget/i)).toHaveValue(500);
+    expect(screen.getByLabelText(/low balance threshold/i)).toHaveValue(10);
   });
 
   it("handles form submission successfully", async () => {
@@ -72,6 +83,9 @@ describe("Settings Page", () => {
     fireEvent.change(screen.getByLabelText(/monthly budget/i), {
       target: { value: "1000" },
     });
+    fireEvent.change(screen.getByLabelText(/low balance threshold/i), {
+      target: { value: "20" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /save settings/i }));
 
@@ -80,9 +94,11 @@ describe("Settings Page", () => {
         preferredName: "New Name",
         meterNumber: "0987654321",
         monthlyBudget: 1000,
+        lowBalanceThreshold: 20,
       });
-      expect(toast.success).toHaveBeenCalledWith("Settings updated successfully");
     });
+
+    expect(toast.success).toHaveBeenCalledWith("Settings updated successfully");
   });
 
   it("handles submission errors", async () => {
@@ -102,10 +118,10 @@ describe("Settings Page", () => {
   });
 
   it("shows loading state when profile is loading", () => {
-    (useProfile as any).mockReturnValue({
+    vi.mocked(useProfile).mockReturnValue({
       profile: undefined,
       loading: true,
-      updateProfile: mockUpdateProfile,
+      updateProfile: mockUpdateProfile as unknown as ReturnType<typeof useProfile>["updateProfile"],
     });
 
     render(

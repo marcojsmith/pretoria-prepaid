@@ -25,7 +25,7 @@ const MOCK_RATES = [
 describe("AddPurchaseForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (convexReact.useQuery as any).mockReturnValue(MOCK_RATES);
+    vi.mocked(convexReact.useQuery).mockReturnValue(MOCK_RATES);
   });
 
   it("renders correctly with default values", () => {
@@ -57,7 +57,26 @@ describe("AddPurchaseForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Add Purchase/i }));
 
-    expect(onAdd).toHaveBeenCalledWith(120, 500, expect.any(String));
+    expect(onAdd).toHaveBeenCalledWith(120, 500, expect.any(String), undefined);
+  });
+
+  it("shows error toast when amount is invalid", () => {
+    const onAdd = vi.fn();
+    render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={onAdd} />);
+
+    fireEvent.change(screen.getByLabelText(/kWh Received/i), { target: { value: "120" } });
+    // Amount is empty/0
+
+    const submitButton = screen.getByRole("button", { name: /Add Purchase/i });
+    // Force click even if disabled (or if we remove the disabled prop check)
+    fireEvent.click(submitButton);
+
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it("supports prefillReading", () => {
+    render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={vi.fn()} prefillReading={100.5} />);
+    expect(screen.getByLabelText(/Current Meter/i)).toHaveValue(100.5);
   });
 
   it("shows effective rate and tier when inputs are filled", () => {

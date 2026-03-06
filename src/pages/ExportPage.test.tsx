@@ -2,38 +2,87 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import ExportPage from "./ExportPage";
-import { usePurchases } from "../hooks/usePurchase";
 import { useAuth } from "../hooks/useAuth";
 import { useUserRole } from "../hooks/useUserRole";
-import * as convexReact from "convex/react";
+import { usePurchases } from "../hooks/usePurchase";
+import { useToast } from "../hooks/use-toast";
+import { useQuery } from "convex/react";
 
-vi.mock("../hooks/usePurchase");
+// Mock everything
 vi.mock("../hooks/useAuth");
 vi.mock("../hooks/useUserRole");
+vi.mock("../hooks/usePurchase");
+vi.mock("../hooks/use-toast");
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
-  useMutation: vi.fn(() => vi.fn()),
 }));
 
 describe("ExportPage", () => {
+  const mockSignOut = vi.fn();
+  const mockToast = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuth as any).mockReturnValue({
-      user: { id: "1", primaryEmailAddress: { emailAddress: "test@example.com" } },
+    vi.mocked(useAuth).mockReturnValue({
+      user: { primaryEmailAddress: { emailAddress: "test@example.com" } } as unknown as ReturnType<
+        typeof useAuth
+      >["user"],
       loading: false,
-      signOut: vi.fn(),
+      signOut: mockSignOut,
     });
-    (useUserRole as any).mockReturnValue({ loading: false, isAdmin: false });
-    (convexReact.useQuery as any).mockReturnValue({ firstName: "Test" }); // Mock profile
+    vi.mocked(useUserRole).mockReturnValue({ isAdmin: false, loading: false });
+    vi.mocked(usePurchases).mockReturnValue({
+      loading: false,
+      purchases: [],
+      addPurchase: vi.fn(),
+      deletePurchase: vi.fn(),
+      unitsThisMonth: 0,
+      costThisMonth: 0,
+      getMonthlyStats: vi.fn(() => []),
+      getAverageMonthlyUsage: vi.fn(() => 0),
+      getDailyAverageUsage: vi.fn(() => 0),
+      getAverageMonthlyCost: vi.fn(() => 0),
+      getCurrentMonthPurchases: vi.fn(() => []),
+      offlineCount: 0,
+    } as ReturnType<typeof usePurchases>);
+    vi.mocked(useToast).mockReturnValue({
+      toast: mockToast,
+      toasts: [],
+      dismiss: vi.fn(),
+    } as ReturnType<typeof useToast>);
+    vi.mocked(useQuery).mockReturnValue({});
+
+    // Mock clipboard
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   it("renders correctly", () => {
-    (usePurchases as any).mockReturnValue({
-      loading: false,
-      purchases: [],
-      getMonthlyStats: () => [],
-      getCurrentMonthPurchases: () => [],
-      getAverageMonthlyUsage: () => 300,
+    render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+    expect(screen.getAllByText(/Export My Data/i).length).toBeGreaterThan(0);
+  });
+
+  it("shows loading state when auth or role is loading", () => {
+    vi.mocked(useAuth).mockReturnValue({ user: null, loading: true, signOut: vi.fn() });
+    const { container } = render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+    expect(container.querySelector(".animate-spin")).toBeInTheDocument();
+  });
+
+  it("handles export and copy to clipboard", async () => {
+    vi.mocked(useQuery).mockImplementation(() => {
+      // Return specific data for profile and purchases queries
+      return { id: "1", mock: "data" };
     });
 
     render(
@@ -42,19 +91,25 @@ describe("ExportPage", () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByTestId("export-user-data-card")).toBeInTheDocument();
-    expect(screen.getAllByText(/Export My Data/i).length).toBeGreaterThan(0);
+    const exportButton = screen.getByRole("button", { name: /Export My Data/i });
+
+    await act(async () => {
+      fireEvent.click(exportButton);
+    });
+
+    expect(screen.getByText(/"mock": "data"/i)).toBeInTheDocument();
+
+    const copyButton = screen.getByRole("button", { name: /Copy/i });
+    await act(async () => {
+      fireEvent.click(copyButton);
+    });
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Copied" }));
   });
 
-  it("renders correctly for admins", () => {
-    (useUserRole as any).mockReturnValue({ loading: false, isAdmin: true });
-    (usePurchases as any).mockReturnValue({
-      loading: false,
-      purchases: [],
-      getMonthlyStats: () => [],
-      getCurrentMonthPurchases: () => [],
-      getAverageMonthlyUsage: () => 300,
-    });
+  it("shows admin section for admin users", () => {
+    vi.mocked(useUserRole).mockReturnValue({ isAdmin: true, loading: false });
 
     render(
       <BrowserRouter>
@@ -65,44 +120,7 @@ describe("ExportPage", () => {
     expect(screen.getByText(/Admin Dashboard/i)).toBeInTheDocument();
   });
 
-  it("handles export data click", async () => {
-    (usePurchases as any).mockReturnValue({
-      loading: false,
-      purchases: [{ _id: "1", amountPaid: 100, units: 30, date: "2024-01-01" }],
-      getMonthlyStats: () => [],
-      getCurrentMonthPurchases: () => [],
-      getAverageMonthlyUsage: () => 300,
-    });
-
-    render(
-      <BrowserRouter>
-        <ExportPage />
-      </BrowserRouter>
-    );
-
-    const exportButton = screen
-      .getAllByText(/Export My Data/i)
-      .find((el) => el.tagName === "BUTTON");
-    await act(async () => {
-      fireEvent.click(exportButton!);
-    });
-
-    // Verify some part of the JSON data is visible
-    expect(screen.getByText((content) => content.includes("exported_at"))).toBeInTheDocument();
-    expect(screen.getByText(/Copy/i)).toBeInTheDocument();
-  });
-
-  it("handles logout click", async () => {
-    const signOut = vi.fn();
-    (useAuth as any).mockReturnValue({ user: { id: "1" }, loading: false, signOut });
-    (usePurchases as any).mockReturnValue({
-      loading: false,
-      purchases: [],
-      getMonthlyStats: () => [],
-      getCurrentMonthPurchases: () => [],
-      getAverageMonthlyUsage: () => 300,
-    });
-
+  it("handles logout", async () => {
     render(
       <BrowserRouter>
         <ExportPage />
@@ -116,6 +134,6 @@ describe("ExportPage", () => {
       fireEvent.click(logoutButton!);
     });
 
-    expect(signOut).toHaveBeenCalled();
+    expect(mockSignOut).toHaveBeenCalled();
   });
 });

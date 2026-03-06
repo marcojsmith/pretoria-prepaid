@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency, roundUnits } from "@/lib/electricity";
-import { Calculator, Plus } from "lucide-react";
+import { Calculator, Plus, Activity } from "lucide-react";
 
 interface DashboardStatsProps {
   unitsThisMonth: number;
@@ -52,6 +52,11 @@ export function DashboardStats({
       icon: Plus,
       onClick: () => navigate("/history"),
     },
+    {
+      label: "Meter",
+      icon: Activity,
+      onClick: () => navigate("/history", { state: { showReadings: true } }),
+    },
   ];
 
   const hasBudget = typeof monthlyBudget === "number" && monthlyBudget > 0;
@@ -97,16 +102,16 @@ export function DashboardStats({
           </Card>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {actionCards.map((action) => (
           <Card
             key={action.label}
             className="cursor-pointer transition-colors hover:bg-muted/50"
             onClick={action.onClick}
           >
-            <CardContent className="flex items-center justify-center gap-2 p-3">
+            <CardContent className="flex flex-col items-center justify-center gap-1 p-3">
               <action.icon className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium">{action.label}</span>
+              <span className="text-[10px] font-medium">{action.label}</span>
             </CardContent>
           </Card>
         ))}

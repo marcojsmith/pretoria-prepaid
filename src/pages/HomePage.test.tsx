@@ -24,19 +24,19 @@ const MOCK_RATES = [
 ];
 
 vi.mock("@/hooks/useAuth", () => ({
-  useAuth: vi.fn(() => ({ user: null, loading: false })),
+  useAuth: vi.fn(() => ({ user: null, loading: false, signOut: vi.fn() })),
 }));
 
 vi.mock("@clerk/clerk-react", () => ({
-  SignedIn: ({ children }: any) => <>{children}</>,
-  SignedOut: ({ children }: any) => <>{children}</>,
+  SignedIn: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SignedOut: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useAuth: () => ({ isSignedIn: true }),
 }));
 
 describe("HomePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (convexReact.useQuery as any).mockReturnValue(MOCK_RATES);
+    vi.mocked(convexReact.useQuery).mockReturnValue(MOCK_RATES);
   });
 
   it("renders correctly", () => {

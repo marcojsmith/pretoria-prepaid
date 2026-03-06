@@ -1,5 +1,5 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
 const RegisterSW = () => {
@@ -11,15 +11,15 @@ const RegisterSW = () => {
     onRegistered(r: ServiceWorkerRegistration | undefined) {
       console.log("SW Registered: " + r);
     },
-    onRegisterError(error: any) {
+    onRegisterError(error: unknown) {
       console.error("SW registration error", error);
     },
   });
 
-  const close = () => {
+  const close = useCallback(() => {
     setOfflineReady(false);
     setNeedRefresh(false);
-  };
+  }, [setOfflineReady, setNeedRefresh]);
 
   useEffect(() => {
     if (offlineReady) {
@@ -30,7 +30,7 @@ const RegisterSW = () => {
         },
       });
     }
-  }, [offlineReady]);
+  }, [offlineReady, close]);
 
   useEffect(() => {
     if (needRefresh) {
@@ -41,7 +41,7 @@ const RegisterSW = () => {
         },
       });
     }
-  }, [needRefresh]);
+  }, [needRefresh, updateServiceWorker]);
 
   return null;
 };

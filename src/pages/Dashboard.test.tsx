@@ -1,21 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { BrowserRouter, useNavigate } from "react-router-dom";
 import Dashboard from "./Dashboard";
 import { useAuth } from "../hooks/useAuth";
 import { useProfile } from "../hooks/useProfile";
 import { usePurchases } from "../hooks/usePurchase";
 import { useUserRole } from "../hooks/useUserRole";
-import { useRates } from "../hooks/useRates";
+import { useRates, ElectricityRate } from "../hooks/useRates";
+import { useConsumption } from "../hooks/useConsumption";
+import { Id } from "../../convex/_generated/dataModel";
 
 // Mock the hooks
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: vi.fn(),
+  };
+});
 vi.mock("../hooks/useAuth");
 vi.mock("../hooks/useProfile");
 vi.mock("../hooks/usePurchase");
 vi.mock("../hooks/useUserRole");
 vi.mock("../hooks/useRates");
+vi.mock("../hooks/useConsumption");
 
-const MOCK_RATES = [
+const MOCK_RATES: ElectricityRate[] = [
   { _id: "1", tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.42585 },
   { _id: "2", tier_number: 2, tier_label: "Tier 2", min_units: 101, max_units: 400, rate: 4.00936 },
   { _id: "3", tier_number: 3, tier_label: "Tier 3", min_units: 401, max_units: 650, rate: 4.36816 },
@@ -30,26 +40,49 @@ const MOCK_RATES = [
 ];
 
 describe("Dashboard Page", () => {
+  const mockNavigate = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRates as any).mockReturnValue({ rates: MOCK_RATES, loading: false });
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+    vi.mocked(useRates).mockReturnValue({
+      rates: MOCK_RATES,
+      loading: false,
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
+    });
+    vi.mocked(useConsumption).mockReturnValue({
+      loading: false,
+      stats: null,
+      readings: [],
+      addReading: vi.fn(),
+      deleteReading: vi.fn(),
+    });
   });
 
   const mockUseProfile = (overrides = {}) => {
-    (useProfile as any).mockReturnValue({
+    vi.mocked(useProfile).mockReturnValue({
       loading: false,
       profile: {
         preferredName: "Marco",
         monthlyBudget: 500,
+        lowBalanceThreshold: 50,
+        _id: "user1" as unknown as Id<"profiles">,
+        _creationTime: Date.now(),
+        email: "marco@example.com",
+        userId: "clerk1",
       },
+      updateProfile: vi.fn() as unknown as ReturnType<typeof useProfile>["updateProfile"],
       ...overrides,
-    });
+    } as unknown as ReturnType<typeof useProfile>);
   };
 
   const mockUsePurchases = (overrides = {}) => {
-    (usePurchases as any).mockReturnValue({
+    vi.mocked(usePurchases).mockReturnValue({
       loading: false,
       purchases: [],
+      addPurchase: vi.fn(),
+      deletePurchase: vi.fn(),
       unitsThisMonth: 100,
       costThisMonth: 342,
       getMonthlyStats: () => [],
@@ -57,14 +90,15 @@ describe("Dashboard Page", () => {
       getCurrentMonthPurchases: () => [],
       getDailyAverageUsage: () => 10,
       getAverageMonthlyCost: () => 1000,
+      offlineCount: 0,
       ...overrides,
-    });
+    } as ReturnType<typeof usePurchases>);
   };
 
   it("renders loading state", () => {
-    (useAuth as any).mockReturnValue({ user: null, loading: true });
+    vi.mocked(useAuth).mockReturnValue({ user: null, loading: true, signOut: vi.fn() });
     mockUsePurchases({ loading: true });
-    (useUserRole as any).mockReturnValue({ loading: true, role: null });
+    vi.mocked(useUserRole).mockReturnValue({ loading: true, isAdmin: false });
     mockUseProfile({ loading: true });
 
     render(
@@ -77,13 +111,17 @@ describe("Dashboard Page", () => {
   });
 
   it("renders dashboard with data", () => {
-    (useAuth as any).mockReturnValue({
-      user: { firstName: "Marco", primaryEmailAddress: { emailAddress: "marco@example.com" } },
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Marco",
+        primaryEmailAddress: { emailAddress: "marco@example.com" },
+      } as unknown as ReturnType<typeof useAuth>["user"],
       loading: false,
+      signOut: vi.fn(),
     });
     const getCurrentMonthPurchases = vi.fn(() => []);
     mockUsePurchases({ getCurrentMonthPurchases });
-    (useUserRole as any).mockReturnValue({ loading: false, role: "user" });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
     mockUseProfile();
 
     render(
@@ -97,12 +135,16 @@ describe("Dashboard Page", () => {
   });
 
   it("renders for admin users", () => {
-    (useAuth as any).mockReturnValue({
-      user: { firstName: "Admin", primaryEmailAddress: { emailAddress: "admin@example.com" } },
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Admin",
+        primaryEmailAddress: { emailAddress: "admin@example.com" },
+      } as unknown as ReturnType<typeof useAuth>["user"],
       loading: false,
+      signOut: vi.fn(),
     });
     mockUsePurchases();
-    (useUserRole as any).mockReturnValue({ loading: false, role: "admin", isAdmin: true });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
     mockUseProfile();
 
     render(
@@ -114,15 +156,18 @@ describe("Dashboard Page", () => {
     expect(screen.getAllByText(/PowerTracker/i).length).toBeGreaterThan(0);
   });
 
-  it("handles logout click", () => {
+  it("handles logout click", async () => {
     const signOut = vi.fn();
-    (useAuth as any).mockReturnValue({
-      user: { firstName: "Admin", primaryEmailAddress: { emailAddress: "admin@example.com" } },
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Admin",
+        primaryEmailAddress: { emailAddress: "admin@example.com" },
+      } as unknown as ReturnType<typeof useAuth>["user"],
       loading: false,
       signOut,
     });
     mockUsePurchases();
-    (useUserRole as any).mockReturnValue({ loading: false, role: "admin", isAdmin: true });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
     mockUseProfile();
 
     render(
@@ -135,7 +180,99 @@ describe("Dashboard Page", () => {
       .getAllByRole("button")
       .find((b) => b.querySelector(".lucide-log-out"));
     expect(logoutButton).toBeInTheDocument();
-    logoutButton?.click();
+    fireEvent.click(logoutButton!);
     expect(signOut).toHaveBeenCalled();
+  });
+
+  it("navigates to calculator when calculator card clicked", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Marco",
+        primaryEmailAddress: { emailAddress: "marco@example.com" },
+      } as unknown as ReturnType<typeof useAuth>["user"],
+      loading: false,
+      signOut: vi.fn(),
+    });
+    mockUsePurchases();
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+    mockUseProfile();
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByText("Calculator"));
+    expect(mockNavigate).toHaveBeenCalledWith("/calculator");
+  });
+
+  it("navigates to history when record card clicked", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Marco",
+        primaryEmailAddress: { emailAddress: "marco@example.com" },
+      } as unknown as ReturnType<typeof useAuth>["user"],
+      loading: false,
+      signOut: vi.fn(),
+    });
+    mockUsePurchases();
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+    mockUseProfile();
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByText("Record"));
+    expect(mockNavigate).toHaveBeenCalledWith("/history");
+  });
+
+  it("navigates to history with meter state when meter card clicked", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Marco",
+        primaryEmailAddress: { emailAddress: "marco@example.com" },
+      } as unknown as ReturnType<typeof useAuth>["user"],
+      loading: false,
+      signOut: vi.fn(),
+    });
+    mockUsePurchases();
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+    mockUseProfile();
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByText("Meter"));
+    expect(mockNavigate).toHaveBeenCalledWith("/history", { state: { showReadings: true } });
+  });
+
+  it("navigates to rates when View All Rates clicked", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Marco",
+        primaryEmailAddress: { emailAddress: "marco@example.com" },
+      } as unknown as ReturnType<typeof useAuth>["user"],
+      loading: false,
+      signOut: vi.fn(),
+    });
+    mockUsePurchases();
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+    mockUseProfile();
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByText("View All Rates"));
+    expect(mockNavigate).toHaveBeenCalledWith("/rates");
   });
 });

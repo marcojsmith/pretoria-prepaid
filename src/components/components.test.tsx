@@ -25,7 +25,12 @@ const MOCK_RATES = [
 describe("Application Components", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRates as any).mockReturnValue({ rates: MOCK_RATES, loading: false });
+    vi.mocked(useRates).mockReturnValue({
+      rates: MOCK_RATES,
+      loading: false,
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
+    });
   });
 
   it("renders NavLink", () => {

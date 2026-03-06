@@ -25,7 +25,7 @@ const MOCK_RATES = [
 describe("PurchaseCalculator", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (convexReact.useQuery as any).mockReturnValue(MOCK_RATES);
+    vi.mocked(convexReact.useQuery).mockReturnValue(MOCK_RATES);
   });
 
   it("renders correctly", () => {
@@ -52,10 +52,10 @@ describe("PurchaseCalculator", () => {
 
     expect(screen.getByText(/Price Breakdown/i)).toBeInTheDocument();
     expect(screen.getByText(/Total Cost/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/R 342.59/i).length).toBeGreaterThan(0); // Appears multiple times
+    expect(screen.getAllByText(/R 342.59/i).length).toBeGreaterThan(0);
   });
 
-  it("calls onSavePurchase when save button is clicked", () => {
+  it("calls onSavePurchase when save button is clicked with balance", () => {
     const onSavePurchase = vi.fn();
     render(
       <PurchaseCalculator
@@ -66,9 +66,45 @@ describe("PurchaseCalculator", () => {
       />
     );
 
+    fireEvent.change(screen.getByLabelText(/Current Meter \(kWh\)/i), {
+      target: { value: "15.5" },
+    });
     fireEvent.change(screen.getByLabelText(/kWh to buy/i), { target: { value: "100" } });
     fireEvent.click(screen.getByRole("button", { name: /Save as Purchase/i }));
 
-    expect(onSavePurchase).toHaveBeenCalledWith(100, expect.any(Number));
+    expect(onSavePurchase).toHaveBeenCalledWith(100, expect.any(Number), 15.5);
+  });
+
+  it("updates kWh to buy when current meter reading is entered", () => {
+    // Fix the date to ensure consistent daysInMonth (March = 31 days)
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-16T12:00:00Z")); // 15 days left in March (31 - 16 = 15)
+
+    render(
+      <PurchaseCalculator
+        unitsAlreadyBought={50}
+        averageMonthlyUsage={300}
+        daysLeftInMonth={15} // 31 days in March, so 16 elapsed
+      />
+    );
+
+    // Initial suggestion based on avg usage: 300 - 50 = 250
+    const targetInput = screen.getByLabelText(/kWh to buy/i) as HTMLInputElement;
+    expect(targetInput.value).toBe("250");
+
+    // Enter meter reading: 20 kWh
+    // Consumed = 50 - 20 = 30.
+    // Days elapsed = 31 - 15 = 16.
+    // Burn rate = 30 / 16 = 1.875 kWh/day.
+    // Needed remaining = 1.875 * 15 = 28.125 kWh.
+    // Needed to buy = 28.125 - 20 (already have) = 8.125.
+    // Rounded to 1 decimal = 8.1.
+    fireEvent.change(screen.getByLabelText(/Current Meter \(kWh\)/i), {
+      target: { value: "20" },
+    });
+
+    expect(targetInput.value).toBe("8.1");
+
+    vi.useRealTimers();
   });
 });

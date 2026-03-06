@@ -4,6 +4,11 @@ import RegisterSW from "./RegisterSW";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { toast } from "sonner";
 
+// Mock virtual module
+vi.mock("virtual:pwa-register/react", () => ({
+  useRegisterSW: vi.fn(),
+}));
+
 // Mock sonner toast
 vi.mock("sonner", () => ({
   toast: vi.fn(),
@@ -12,6 +17,11 @@ vi.mock("sonner", () => ({
 describe("RegisterSW", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useRegisterSW).mockReturnValue({
+      needRefresh: [false, vi.fn()],
+      offlineReady: [false, vi.fn()],
+      updateServiceWorker: vi.fn(),
+    });
   });
 
   it("renders without crashing", () => {
@@ -20,7 +30,7 @@ describe("RegisterSW", () => {
   });
 
   it("shows toast when app is ready for offline", () => {
-    (useRegisterSW as any).mockReturnValue({
+    vi.mocked(useRegisterSW).mockReturnValue({
       needRefresh: [false, vi.fn()],
       offlineReady: [true, vi.fn()],
       updateServiceWorker: vi.fn(),
@@ -31,7 +41,7 @@ describe("RegisterSW", () => {
   });
 
   it("shows toast when new content is available", () => {
-    (useRegisterSW as any).mockReturnValue({
+    vi.mocked(useRegisterSW).mockReturnValue({
       needRefresh: [true, vi.fn()],
       offlineReady: [false, vi.fn()],
       updateServiceWorker: vi.fn(),
@@ -45,39 +55,39 @@ describe("RegisterSW", () => {
   });
 
   it("calls onRegistered", () => {
-    let registeredCallback: any;
-    (useRegisterSW as any).mockImplementation((options: any) => {
-      registeredCallback = options.onRegistered;
+    let registeredCallback: ((registration: unknown) => void) | undefined;
+    vi.mocked(useRegisterSW).mockImplementation((options) => {
+      registeredCallback = options?.onRegistered as unknown as (reg: unknown) => void;
       return {
         needRefresh: [false, vi.fn()],
         offlineReady: [false, vi.fn()],
         updateServiceWorker: vi.fn(),
-      };
+      } as ReturnType<typeof useRegisterSW>;
     });
 
     render(<RegisterSW />);
     const consoleSpy = vi.spyOn(console, "log");
     act(() => {
-      registeredCallback("test-registration");
+      registeredCallback?.("test-registration");
     });
     expect(consoleSpy).toHaveBeenCalledWith("SW Registered: test-registration");
   });
 
   it("calls onRegisterError", () => {
-    let errorCallback: any;
-    (useRegisterSW as any).mockImplementation((options: any) => {
-      errorCallback = options.onRegisterError;
+    let errorCallback: ((error: unknown) => void) | undefined;
+    vi.mocked(useRegisterSW).mockImplementation((options) => {
+      errorCallback = options?.onRegisterError as unknown as (err: unknown) => void;
       return {
         needRefresh: [false, vi.fn()],
         offlineReady: [false, vi.fn()],
         updateServiceWorker: vi.fn(),
-      };
+      } as ReturnType<typeof useRegisterSW>;
     });
 
     render(<RegisterSW />);
     const consoleSpy = vi.spyOn(console, "error");
     act(() => {
-      errorCallback("test-error");
+      errorCallback?.("test-error");
     });
     expect(consoleSpy).toHaveBeenCalledWith("SW registration error", "test-error");
   });
@@ -85,26 +95,30 @@ describe("RegisterSW", () => {
   it("calls close function from offline ready toast action", async () => {
     const setOfflineReady = vi.fn();
     const setNeedRefresh = vi.fn();
-    let toastAction: any;
+    let toastAction: (() => void) | undefined;
 
-    (useRegisterSW as any).mockReturnValue({
+    vi.mocked(useRegisterSW).mockReturnValue({
       needRefresh: [false, setNeedRefresh],
       offlineReady: [true, setOfflineReady],
       updateServiceWorker: vi.fn(),
     });
 
-    (toast as any).mockImplementation((msg: string, options: any) => {
-      if (options && options.action && msg === "App ready to work offline") {
-        toastAction = options.action.onClick;
+    const offlineReadyMock = (msg: string, options: unknown) => {
+      const opt = options as { action?: { onClick: () => void } };
+      if (opt?.action && msg === "App ready to work offline") {
+        toastAction = opt.action.onClick;
       }
-    });
+      return msg;
+    };
+
+    vi.mocked(toast).mockImplementation(offlineReadyMock as unknown as typeof toast);
 
     render(<RegisterSW />);
 
     await waitFor(() => expect(toastAction).toBeDefined());
 
     act(() => {
-      toastAction();
+      toastAction?.();
     });
 
     expect(setOfflineReady).toHaveBeenCalledWith(false);
@@ -113,30 +127,30 @@ describe("RegisterSW", () => {
 
   it("calls updateServiceWorker from refresh toast action", async () => {
     const updateServiceWorker = vi.fn();
-    let toastAction: any;
+    let toastAction: (() => void) | undefined;
 
-    (useRegisterSW as any).mockReturnValue({
+    vi.mocked(useRegisterSW).mockReturnValue({
       needRefresh: [true, vi.fn()],
       offlineReady: [false, vi.fn()],
       updateServiceWorker,
     });
 
-    (toast as any).mockImplementation((msg: string, options: any) => {
-      if (
-        options &&
-        options.action &&
-        msg === "New content available, click on reload button to update."
-      ) {
-        toastAction = options.action.onClick;
+    const refreshMock = (msg: string, options: unknown) => {
+      const opt = options as { action?: { onClick: () => void } };
+      if (opt?.action && msg === "New content available, click on reload button to update.") {
+        toastAction = opt.action.onClick;
       }
-    });
+      return msg;
+    };
+
+    vi.mocked(toast).mockImplementation(refreshMock as unknown as typeof toast);
 
     render(<RegisterSW />);
 
     await waitFor(() => expect(toastAction).toBeDefined());
 
     act(() => {
-      toastAction();
+      toastAction?.();
     });
 
     expect(updateServiceWorker).toHaveBeenCalledWith(true);

@@ -39,8 +39,14 @@ export default function CalculatorPage() {
     navigate("/auth");
   };
 
-  const handleSavePurchase = (units: number, amount: number) => {
-    navigate("/history", { state: { prefillUnits: units, prefillAmount: amount } });
+  const handleSavePurchase = (units: number, amount: number, currentBalance?: number) => {
+    navigate("/history", {
+      state: {
+        prefillUnits: units,
+        prefillAmount: amount,
+        prefillReading: currentBalance,
+      },
+    });
   };
 
   if (authLoading || purchasesLoading) {

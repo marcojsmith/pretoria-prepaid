@@ -25,7 +25,7 @@ const MOCK_RATES = [
 describe("MonthlyStats", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (convexReact.useQuery as any).mockReturnValue(MOCK_RATES);
+    vi.mocked(convexReact.useQuery).mockReturnValue(MOCK_RATES);
   });
 
   it("renders empty message when no stats provided", () => {

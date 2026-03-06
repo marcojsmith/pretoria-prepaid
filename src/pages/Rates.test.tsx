@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Rates from "./Rates";
-import { useRates } from "../hooks/useRates";
+import { useRates, ElectricityRate } from "../hooks/useRates";
 import { useUserRole } from "../hooks/useUserRole";
 import { useAuth } from "../hooks/useAuth";
 import { usePurchases } from "../hooks/usePurchase";
@@ -16,13 +16,35 @@ vi.mock("../hooks/usePurchase");
 describe("Rates Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuth as any).mockReturnValue({ user: { id: "1" } });
-    (usePurchases as any).mockReturnValue({ offlineCount: 0 });
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: "1" } as unknown as ReturnType<typeof useAuth>["user"],
+      loading: false,
+      signOut: vi.fn(),
+    });
+    vi.mocked(usePurchases).mockReturnValue({
+      loading: false,
+      purchases: [],
+      addPurchase: vi.fn(),
+      deletePurchase: vi.fn(),
+      unitsThisMonth: 0,
+      costThisMonth: 0,
+      getMonthlyStats: vi.fn(() => []),
+      getAverageMonthlyUsage: vi.fn(() => 0),
+      getDailyAverageUsage: vi.fn(() => 0),
+      getAverageMonthlyCost: vi.fn(() => 0),
+      getCurrentMonthPurchases: vi.fn(() => []),
+      offlineCount: 0,
+    });
   });
 
   it("renders loading state", () => {
-    (useRates as any).mockReturnValue({ loading: true, rates: [] });
-    (useUserRole as any).mockReturnValue({ loading: true });
+    vi.mocked(useRates).mockReturnValue({
+      loading: true,
+      rates: [],
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
+    });
+    vi.mocked(useUserRole).mockReturnValue({ loading: true, isAdmin: false });
 
     render(
       <BrowserRouter>
@@ -34,7 +56,7 @@ describe("Rates Page", () => {
   });
 
   it("renders rates table", () => {
-    (useRates as any).mockReturnValue({
+    vi.mocked(useRates).mockReturnValue({
       loading: false,
       rates: [
         {
@@ -44,10 +66,12 @@ describe("Rates Page", () => {
           min_units: 0,
           max_units: 100,
           rate: 3.42,
-        },
+        } as ElectricityRate,
       ],
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
     });
-    (useUserRole as any).mockReturnValue({ loading: false, isAdmin: false });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
 
     render(
       <BrowserRouter>
@@ -61,7 +85,7 @@ describe("Rates Page", () => {
   });
 
   it("shows update buttons for admins", () => {
-    (useRates as any).mockReturnValue({
+    vi.mocked(useRates).mockReturnValue({
       loading: false,
       rates: [
         {
@@ -71,10 +95,12 @@ describe("Rates Page", () => {
           min_units: 0,
           max_units: 100,
           rate: 3.42,
-        },
+        } as ElectricityRate,
       ],
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
     });
-    (useUserRole as any).mockReturnValue({ loading: false, isAdmin: true });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
 
     render(
       <BrowserRouter>
@@ -87,7 +113,7 @@ describe("Rates Page", () => {
   });
 
   it("opens update dialog when pencil is clicked", async () => {
-    (useRates as any).mockReturnValue({
+    vi.mocked(useRates).mockReturnValue({
       loading: false,
       rates: [
         {
@@ -97,10 +123,12 @@ describe("Rates Page", () => {
           min_units: 0,
           max_units: 100,
           rate: 3.42,
-        },
+        } as ElectricityRate,
       ],
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
     });
-    (useUserRole as any).mockReturnValue({ loading: false, isAdmin: true });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
 
     render(
       <BrowserRouter>
@@ -138,7 +166,7 @@ describe("Rates Page", () => {
 
   it("handles save rate click", async () => {
     const updateRate = vi.fn().mockResolvedValue({ error: null });
-    (useRates as any).mockReturnValue({
+    vi.mocked(useRates).mockReturnValue({
       loading: false,
       rates: [
         {
@@ -148,11 +176,12 @@ describe("Rates Page", () => {
           min_units: 0,
           max_units: 100,
           rate: 3.42,
-        },
+        } as ElectricityRate,
       ],
       updateRate,
+      refetch: vi.fn(),
     });
-    (useUserRole as any).mockReturnValue({ loading: false, isAdmin: true });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
 
     render(
       <BrowserRouter>
@@ -177,12 +206,18 @@ describe("Rates Page", () => {
 
   it("handles logout click", async () => {
     const signOut = vi.fn();
-    (useAuth as any).mockReturnValue({ user: { id: "1" }, loading: false, signOut });
-    (useRates as any).mockReturnValue({
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: "1" } as unknown as ReturnType<typeof useAuth>["user"],
+      loading: false,
+      signOut,
+    });
+    vi.mocked(useRates).mockReturnValue({
       loading: false,
       rates: [],
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
     });
-    (useUserRole as any).mockReturnValue({ loading: false, isAdmin: false });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
 
     render(
       <BrowserRouter>

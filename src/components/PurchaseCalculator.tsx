@@ -12,13 +12,13 @@ import {
   roundUnits,
   ElectricityRate,
 } from "@/lib/electricity";
-import { Calculator, Lightbulb, Save, Loader2 } from "lucide-react";
+import { Calculator, Lightbulb, Save, Loader2, Zap } from "lucide-react";
 
 interface PurchaseCalculatorProps {
   unitsAlreadyBought: number;
   averageMonthlyUsage: number;
   daysLeftInMonth: number;
-  onSavePurchase?: (units: number, amount: number) => void;
+  onSavePurchase?: (units: number, amount: number, currentBalance?: number) => void;
 }
 
 export function PurchaseCalculator({
@@ -34,6 +34,7 @@ export function PurchaseCalculator({
   }, [averageMonthlyUsage, unitsAlreadyBought]);
 
   const [targetUnits, setTargetUnits] = useState("");
+  const [currentBalance, setCurrentBalance] = useState("");
 
   // Pre-populate with suggested units when it becomes available
   useEffect(() => {
@@ -43,6 +44,7 @@ export function PurchaseCalculator({
   }, [suggestedUnits, targetUnits]);
 
   const targetNum = parseFloat(targetUnits) || 0;
+  const balanceNum = parseFloat(currentBalance) || 0;
 
   const calculation = useMemo(() => {
     if (targetNum <= 0 || ratesLoading || rates.length === 0) return null;
@@ -51,7 +53,7 @@ export function PurchaseCalculator({
 
   const handleSavePurchase = () => {
     if (calculation && onSavePurchase) {
-      onSavePurchase(targetNum, calculation.total);
+      onSavePurchase(targetNum, calculation.total, balanceNum > 0 ? balanceNum : undefined);
     }
   };
 
@@ -94,20 +96,73 @@ export function PurchaseCalculator({
           <p className="text-xs text-muted-foreground">{daysLeftInMonth} days left this month</p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="target" className="text-sm">
-            kWh to buy
-          </Label>
-          <Input
-            id="target"
-            type="number"
-            step="0.1"
-            placeholder={suggestedUnits > 0 ? roundUnits(suggestedUnits).toString() : "Enter kWh"}
-            value={targetUnits}
-            onChange={(e) => setTargetUnits(e.target.value)}
-            min="0.1"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="balance" className="text-sm">
+              Current Meter (kWh)
+            </Label>
+            <Input
+              id="balance"
+              type="number"
+              step="0.1"
+              placeholder="e.g. 15.0"
+              value={currentBalance}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCurrentBalance(val);
+                const num = parseFloat(val);
+                if (!isNaN(num) && averageMonthlyUsage > 0) {
+                  const now = new Date();
+                  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                  const daysElapsed = Math.max(1, daysInMonth - daysLeftInMonth);
+                  const expectedDaily = averageMonthlyUsage / daysInMonth;
+
+                  let burnRate = expectedDaily;
+                  // Estimate consumed units. If unitsAlreadyBought > num, they used the difference.
+                  const consumed = unitsAlreadyBought - num;
+
+                  if (consumed > 0) {
+                    burnRate = consumed / daysElapsed;
+                  }
+
+                  const neededRemaining = burnRate * daysLeftInMonth;
+                  // We need 'neededRemaining' for the rest of the month, and we already have 'num'
+                  const neededToBuy = Math.max(0, neededRemaining - num);
+                  setTargetUnits(roundUnits(neededToBuy).toString());
+                } else if (val === "" && suggestedUnits > 0) {
+                  setTargetUnits(roundUnits(suggestedUnits).toString());
+                }
+              }}
+              min="0"
+              className="h-9"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="target" className="text-sm">
+              kWh to buy
+            </Label>
+            <Input
+              id="target"
+              type="number"
+              step="0.1"
+              placeholder={suggestedUnits > 0 ? roundUnits(suggestedUnits).toString() : "Enter kWh"}
+              value={targetUnits}
+              onChange={(e) => setTargetUnits(e.target.value)}
+              min="0.1"
+              className="h-9"
+            />
+          </div>
         </div>
+
+        {targetNum > 0 && balanceNum > 0 && (
+          <div className="rounded-md bg-primary/5 p-2 text-center">
+            <p className="text-xs text-muted-foreground">Estimated New Balance</p>
+            <p className="flex items-center justify-center gap-2 text-lg font-bold text-primary">
+              <Zap className="h-4 w-4" />
+              {roundUnits(targetNum + balanceNum)} kWh
+            </p>
+          </div>
+        )}
 
         {calculation && calculation.breakdown.length > 0 && (
           <div className="space-y-3">

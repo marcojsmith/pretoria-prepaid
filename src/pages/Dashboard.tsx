@@ -4,11 +4,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { usePurchases } from "@/hooks/usePurchase";
 import { useRates } from "@/hooks/useRates";
+import { useConsumption } from "@/hooks/useConsumption";
 import { formatCurrency } from "@/lib/electricity";
 import { DashboardStats } from "@/components/DashboardStats";
 import { TierProgress } from "@/components/TierProgress";
 import { MonthlyStats } from "@/components/MonthlyStats";
 import { PatreonBanner } from "@/components/PatreonBanner";
+import { ConsumptionStatsCard } from "@/components/ConsumptionStatsCard";
 import { NavMenu } from "@/components/NavMenu";
 import { Button } from "@/components/ui/button";
 import { LogOut, Zap, Loader2 } from "lucide-react";
@@ -18,6 +20,7 @@ export default function Dashboard() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { rates, loading: ratesLoading } = useRates();
+  const { stats: consumptionStats, loading: consumptionLoading } = useConsumption();
   const {
     loading: purchasesLoading,
     getCurrentMonthPurchases,
@@ -56,7 +59,7 @@ export default function Dashboard() {
     navigate("/auth");
   };
 
-  if (authLoading || purchasesLoading || profileLoading) {
+  if (authLoading || purchasesLoading || profileLoading || consumptionLoading) {
     return (
       <div
         className="flex min-h-screen items-center justify-center bg-background"
@@ -91,6 +94,8 @@ export default function Dashboard() {
 
       <main className="container mx-auto space-y-3 px-4 py-3">
         <PatreonBanner />
+
+        <ConsumptionStatsCard stats={consumptionStats} />
 
         <DashboardStats
           unitsThisMonth={unitsThisMonth}

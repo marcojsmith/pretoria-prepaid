@@ -5,14 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRates } from "@/hooks/useRates";
 import { formatCurrency, roundUnits, roundCurrency } from "@/lib/electricity";
-import { Plus } from "lucide-react";
+import { Plus, Activity, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 interface AddPurchaseFormProps {
   unitsAlreadyBought: number;
-  onAdd: (units: number, amountPaid: number, date: string) => void;
-  prefillAmount?: number;
-  prefillUnits?: number;
+  onAdd: (
+    units: number,
+    amountPaid: number,
+    date: string,
+    meterReading?: number | undefined
+  ) => void;
+  prefillAmount?: number | undefined;
+  prefillUnits?: number | undefined;
+  prefillReading?: number | undefined;
 }
 
 export function AddPurchaseForm({
@@ -20,10 +26,12 @@ export function AddPurchaseForm({
   onAdd,
   prefillAmount,
   prefillUnits,
+  prefillReading,
 }: AddPurchaseFormProps) {
   const { rates, loading: ratesLoading } = useRates();
   const [amountPaid, setAmountPaid] = useState("");
   const [unitsReceived, setUnitsReceived] = useState("");
+  const [meterReading, setMeterReading] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
   // Pre-fill values when provided
@@ -34,10 +42,14 @@ export function AddPurchaseForm({
     if (prefillUnits && prefillUnits > 0) {
       setUnitsReceived(roundUnits(prefillUnits).toString());
     }
-  }, [prefillAmount, prefillUnits]);
+    if (prefillReading && prefillReading > 0) {
+      setMeterReading(roundUnits(prefillReading).toString());
+    }
+  }, [prefillAmount, prefillUnits, prefillReading]);
 
   const amountNum = parseFloat(amountPaid) || 0;
   const unitsNum = parseFloat(unitsReceived) || 0;
+  const readingNum = parseFloat(meterReading) || 0;
   const effectiveRate = unitsNum > 0 ? amountNum / unitsNum : 0;
 
   const currentTier = useMemo(() => {
@@ -63,9 +75,10 @@ export function AddPurchaseForm({
       toast.error("Please enter the kWh received");
       return;
     }
-    onAdd(unitsNum, amountNum, date);
+    onAdd(unitsNum, amountNum, date, readingNum > 0 ? readingNum : undefined);
     setAmountPaid("");
     setUnitsReceived("");
+    setMeterReading("");
     toast.success(`Added ${roundUnits(unitsNum)} kWh for ${formatCurrency(amountNum)}`);
   };
 
@@ -112,31 +125,62 @@ export function AddPurchaseForm({
             </div>
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="date" className="text-xs">
-              Date
-            </Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="h-8 text-xs"
-            />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label htmlFor="date" className="text-xs">
+                Date
+              </Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="meterReading" className="flex items-center gap-1 text-xs">
+                <Activity className="h-3 w-3" />
+                Current Meter
+              </Label>
+              <Input
+                id="meterReading"
+                type="number"
+                placeholder="Optional"
+                value={meterReading}
+                onChange={(e) => setMeterReading(e.target.value)}
+                min="0"
+                step="0.1"
+                className="h-8 text-xs"
+              />
+            </div>
           </div>
 
-          {amountNum > 0 && unitsNum > 0 && (
+          {(amountNum > 0 && unitsNum > 0) || (readingNum > 0 && unitsNum > 0) ? (
             <div className="space-y-1 rounded-md bg-muted/30 p-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Effective Rate</span>
-                <span className="font-medium">{formatCurrency(effectiveRate)}/kWh</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Current Tier</span>
-                <span className="font-medium">{currentTier}</span>
-              </div>
+              {amountNum > 0 && unitsNum > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Effective Rate</span>
+                  <span className="font-medium">{formatCurrency(effectiveRate)}/kWh</span>
+                </div>
+              )}
+              {unitsNum > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Current Tier</span>
+                  <span className="font-medium">{currentTier}</span>
+                </div>
+              )}
+              {readingNum > 0 && unitsNum > 0 && (
+                <div className="mt-1 flex justify-between border-t border-border/50 pt-1">
+                  <span className="flex items-center gap-1 font-medium text-primary">
+                    <Zap className="h-3 w-3" />
+                    New Balance
+                  </span>
+                  <span className="font-bold">{roundUnits(readingNum + unitsNum)} kWh</span>
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
 
           <Button
             type="submit"

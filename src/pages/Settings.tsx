@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, ArrowLeft, Save, Loader2 } from "lucide-react";
+import { Zap, ArrowLeft, Save, Loader2, BellRing } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Settings() {
@@ -19,6 +19,7 @@ export default function Settings() {
     preferredName: "",
     meterNumber: "",
     monthlyBudget: "",
+    lowBalanceThreshold: "10",
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -28,6 +29,7 @@ export default function Settings() {
         preferredName: profile.preferredName || "",
         meterNumber: profile.meterNumber || "",
         monthlyBudget: profile.monthlyBudget?.toString() || "",
+        lowBalanceThreshold: profile.lowBalanceThreshold?.toString() || "10",
       });
     }
   }, [profile]);
@@ -47,6 +49,7 @@ export default function Settings() {
         preferredName: string;
         meterNumber: string;
         monthlyBudget?: number;
+        lowBalanceThreshold?: number;
       } = {
         preferredName: formData.preferredName,
         meterNumber: formData.meterNumber,
@@ -54,6 +57,10 @@ export default function Settings() {
 
       if (formData.monthlyBudget) {
         updates.monthlyBudget = parseFloat(formData.monthlyBudget);
+      }
+
+      if (formData.lowBalanceThreshold) {
+        updates.lowBalanceThreshold = parseFloat(formData.lowBalanceThreshold);
       }
 
       await updateProfile(updates);
@@ -137,8 +144,11 @@ export default function Settings() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Budgeting</CardTitle>
-              <CardDescription>Set a monthly budget to track your spending.</CardDescription>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BellRing className="h-4 w-4 text-primary" />
+                Alerts & Budgeting
+              </CardTitle>
+              <CardDescription>Configure notifications and spending limits.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -150,6 +160,22 @@ export default function Settings() {
                   value={formData.monthlyBudget}
                   onChange={(e) => setFormData({ ...formData, monthlyBudget: e.target.value })}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lowBalanceThreshold">Low Balance Threshold (kWh)</Label>
+                <Input
+                  id="lowBalanceThreshold"
+                  type="number"
+                  placeholder="e.g. 10"
+                  value={formData.lowBalanceThreshold}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lowBalanceThreshold: e.target.value })
+                  }
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  When your estimated balance falls below this, we'll show an alert (simulating your
+                  meter's beep).
+                </p>
               </div>
             </CardContent>
           </Card>
