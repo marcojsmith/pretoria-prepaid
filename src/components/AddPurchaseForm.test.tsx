@@ -89,4 +89,15 @@ describe("AddPurchaseForm", () => {
     expect(screen.getByText(/R 4.00\/kWh/i)).toBeInTheDocument();
     expect(screen.getByText(/Tier 1/i)).toBeInTheDocument();
   });
+
+  it("shows tier limit warning when purchase exceeds current tier capacity", () => {
+    render(<AddPurchaseForm unitsAlreadyBought={80} onAdd={vi.fn()} />);
+
+    // Tier 1 capacity: 100. unitsAlreadyBought: 80. Remaining: 20.
+    fireEvent.change(screen.getByLabelText(/kWh Received/i), { target: { value: "30" } });
+
+    expect(screen.getByText(/Next Tier reached/i)).toBeInTheDocument();
+    expect(screen.getByText(/This purchase exceeds the/i)).toBeInTheDocument();
+    expect(screen.getByText(/20 kWh/i)).toBeInTheDocument();
+  });
 });

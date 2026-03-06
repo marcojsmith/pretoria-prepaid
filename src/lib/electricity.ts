@@ -127,6 +127,82 @@ export function getTierProgress(
   });
 }
 
+/**
+ * Calculates the remaining capacity in the current pricing tier.
+ * @param unitsAlreadyBought Total units bought in the current period.
+ * @param rates The tiered pricing structure.
+ * @returns Object containing remaining units, tier label, and current rate.
+ */
+export function getRemainingTierCapacity(
+  unitsAlreadyBought: number,
+  rates: ElectricityRate[]
+): { units: number; label: string; rate: number } {
+  if (rates.length === 0) return { units: 0, label: "Unknown", rate: 0 };
+
+  const sortedRates = [...rates].sort((a, b) => a.tier_number - b.tier_number);
+
+  // Find the tier we are currently in or about to start
+  for (const rate of sortedRates) {
+    const tierEnd = rate.max_units ?? Infinity;
+
+    if (unitsAlreadyBought < tierEnd) {
+      return {
+        units: tierEnd - unitsAlreadyBought,
+        label: rate.tier_label,
+        rate: rate.rate,
+      };
+    }
+  }
+
+  // If we've passed all tiers
+  const lastRate = sortedRates[sortedRates.length - 1];
+  return {
+    units: 0,
+    label: lastRate.tier_label,
+    rate: lastRate.rate,
+  };
+}
+
+export interface RefillInterval {
+  date: string;
+  daysSinceLastRefill: number | null;
+  units: number;
+}
+
+/**
+ * Calculates the time elapsed between consecutive purchases.
+ * @param purchases Array of purchases to analyze.
+ * @returns Array of refill intervals.
+ */
+export function calculateRefillIntervals(purchases: Purchase[]): RefillInterval[] {
+  if (purchases.length === 0) return [];
+
+  const sortedPurchases = [...purchases].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  return sortedPurchases.map((purchase, index) => {
+    if (index === 0) {
+      return {
+        date: purchase.date,
+        daysSinceLastRefill: null,
+        units: purchase.units,
+      };
+    }
+
+    const current = new Date(purchase.date);
+    const previous = new Date(sortedPurchases[index - 1].date);
+    const diffTime = Math.abs(current.getTime() - previous.getTime());
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    return {
+      date: purchase.date,
+      daysSinceLastRefill: diffDays,
+      units: purchase.units,
+    };
+  });
+}
+
 // Get the tier label for a given number of units (absolute units, not already bought)
 export function getTierLabel(units: number, rates: ElectricityRate[]): string {
   if (rates.length === 0) return "Unknown";

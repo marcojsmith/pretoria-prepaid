@@ -43,17 +43,17 @@ export function DashboardStats({
 
   const actionCards = [
     {
-      label: "Calculator",
+      label: "Buy Units",
       icon: Calculator,
       onClick: () => navigate("/calculator"),
     },
     {
-      label: "Record",
+      label: "Log Purchase",
       icon: Plus,
       onClick: () => navigate("/history"),
     },
     {
-      label: "Meter",
+      label: "Meter Reading",
       icon: Activity,
       onClick: () => navigate("/history", { state: { showReadings: true } }),
     },

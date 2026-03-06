@@ -16,6 +16,17 @@ export default defineSchema({
     monthlyBudget: v.optional(v.number()),
     lowBalanceThreshold: v.optional(v.number()),
     preferredName: v.optional(v.string()),
+    pushNotificationsEnabled: v.optional(v.boolean()),
+    pushSubscription: v.optional(
+      v.object({
+        endpoint: v.string(),
+        expirationTime: v.union(v.number(), v.null()),
+        keys: v.object({
+          p256dh: v.string(),
+          auth: v.string(),
+        }),
+      })
+    ),
   }).index("by_userId", ["userId"]),
   purchases: defineTable({
     userId: v.string(),

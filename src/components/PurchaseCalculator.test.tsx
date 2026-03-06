@@ -107,4 +107,19 @@ describe("PurchaseCalculator", () => {
 
     vi.useRealTimers();
   });
+
+  it("displays tier limit warning when purchase exceeds current tier capacity", () => {
+    render(
+      <PurchaseCalculator unitsAlreadyBought={80} averageMonthlyUsage={300} daysLeftInMonth={15} />
+    );
+
+    // Tier 1 capacity: 100. unitsAlreadyBought: 80. Remaining: 20.
+    // If we want to buy 50, it exceeds 20.
+    fireEvent.change(screen.getByLabelText(/kWh to buy/i), { target: { value: "50" } });
+
+    expect(screen.getByText(/Tier Limit Warning/i)).toBeInTheDocument();
+    expect(screen.getByText(/Buying more than/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/R 68.52/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Tier 1/i).length).toBeGreaterThan(0);
+  });
 });

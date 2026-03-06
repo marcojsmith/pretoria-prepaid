@@ -1,15 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Settings from "./Settings";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
+import * as pushNotifications from "@/lib/push-notifications";
 import { Id } from "../../convex/_generated/dataModel";
 
 // Mock hooks
 vi.mock("@/hooks/useAuth");
 vi.mock("@/hooks/useProfile");
+vi.mock("@/lib/push-notifications", () => ({
+  subscribeUserToPush: vi.fn(),
+  unsubscribeUserFromPush: vi.fn(),
+  isPushSupported: vi.fn(() => true),
+}));
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -28,6 +34,7 @@ describe("Settings Page", () => {
     meterNumber: "1234567890",
     monthlyBudget: 500,
     lowBalanceThreshold: 10,
+    pushNotificationsEnabled: false,
   };
 
   const mockUpdateProfile = vi.fn();
@@ -95,10 +102,110 @@ describe("Settings Page", () => {
         meterNumber: "0987654321",
         monthlyBudget: 1000,
         lowBalanceThreshold: 20,
+        pushNotificationsEnabled: false,
+        pushSubscription: undefined,
       });
     });
 
     expect(toast.success).toHaveBeenCalledWith("Settings updated successfully");
+  });
+
+  it("subscribes to push notifications when enabled", async () => {
+    const mockSubscribe = vi.mocked(pushNotifications.subscribeUserToPush);
+    mockSubscribe.mockResolvedValue({ endpoint: "test-endpoint" } as any);
+
+    render(
+      <BrowserRouter>
+        <Settings />
+      </BrowserRouter>
+    );
+
+    const checkbox = screen.getByLabelText(/Push Notifications/i);
+    fireEvent.click(checkbox);
+
+    const submitButton = screen.getByRole("button", { name: /Save Settings/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    expect(mockSubscribe).toHaveBeenCalled();
+    expect(mockUpdateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pushNotificationsEnabled: true,
+        pushSubscription: { endpoint: "test-endpoint" },
+      })
+    );
+  });
+
+  it("unsubscribes from push notifications when disabled", async () => {
+    const mockUpdateProfile = vi.fn().mockResolvedValue("id");
+    const mockUnsubscribe = vi.mocked(pushNotifications.unsubscribeUserFromPush);
+    mockUnsubscribe.mockResolvedValue(true);
+
+    vi.mocked(useProfile).mockReturnValue({
+      profile: {
+        preferredName: "Test",
+        pushNotificationsEnabled: true,
+        pushSubscription: { endpoint: "old-endpoint" },
+      },
+      updateProfile: mockUpdateProfile,
+      loading: false,
+    } as any);
+
+    render(
+      <BrowserRouter>
+        <Settings />
+      </BrowserRouter>
+    );
+
+    const checkbox = screen.getByLabelText(/Push Notifications/i);
+    fireEvent.click(checkbox); // Toggle to false
+
+    const submitButton = screen.getByRole("button", { name: /Save Settings/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    expect(mockUnsubscribe).toHaveBeenCalled();
+    expect(mockUpdateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pushNotificationsEnabled: false,
+        pushSubscription: undefined,
+      })
+    );
+  });
+
+  it("handles push subscription failure gracefully", async () => {
+    const mockUpdateProfile = vi.fn();
+    const mockSubscribe = vi.mocked(pushNotifications.subscribeUserToPush);
+    mockSubscribe.mockResolvedValue(null); // Denied or error
+
+    vi.mocked(useProfile).mockReturnValue({
+      profile: {
+        preferredName: "Test",
+        pushNotificationsEnabled: false,
+      },
+      updateProfile: mockUpdateProfile,
+      loading: false,
+    } as any);
+
+    render(
+      <BrowserRouter>
+        <Settings />
+      </BrowserRouter>
+    );
+
+    const checkbox = screen.getByLabelText(/Push Notifications/i);
+    fireEvent.click(checkbox);
+
+    const submitButton = screen.getByRole("button", { name: /Save Settings/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    expect(mockSubscribe).toHaveBeenCalled();
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
+    expect(checkbox).not.toBeChecked();
   });
 
   it("handles submission errors", async () => {

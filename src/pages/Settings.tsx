@@ -9,6 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Zap, ArrowLeft, Save, Loader2, BellRing } from "lucide-react";
 import { toast } from "sonner";
+import {
+  subscribeUserToPush,
+  unsubscribeUserFromPush,
+  isPushSupported,
+} from "@/lib/push-notifications";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -20,8 +25,10 @@ export default function Settings() {
     meterNumber: "",
     monthlyBudget: "",
     lowBalanceThreshold: "10",
+    pushNotificationsEnabled: false,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [pushSupported] = useState(isPushSupported());
 
   useEffect(() => {
     if (profile) {
@@ -30,6 +37,7 @@ export default function Settings() {
         meterNumber: profile.meterNumber || "",
         monthlyBudget: profile.monthlyBudget?.toString() || "",
         lowBalanceThreshold: profile.lowBalanceThreshold?.toString() || "10",
+        pushNotificationsEnabled: profile.pushNotificationsEnabled || false,
       });
     }
   }, [profile]);
@@ -45,14 +53,37 @@ export default function Settings() {
     setIsSaving(true);
 
     try {
+      let pushSubscription = profile?.pushSubscription;
+
+      if (formData.pushNotificationsEnabled && !profile?.pushNotificationsEnabled) {
+        // User is enabling push notifications
+        const subscription = await subscribeUserToPush();
+        if (subscription) {
+          pushSubscription = subscription;
+        } else {
+          // Failed to subscribe (denied or error)
+          setFormData((prev) => ({ ...prev, pushNotificationsEnabled: false }));
+          setIsSaving(false);
+          return; // Stop submission if subscription failed when enabling
+        }
+      } else if (!formData.pushNotificationsEnabled && profile?.pushNotificationsEnabled) {
+        // User is disabling push notifications
+        await unsubscribeUserFromPush();
+        pushSubscription = undefined;
+      }
+
       const updates: {
         preferredName: string;
         meterNumber: string;
         monthlyBudget?: number;
         lowBalanceThreshold?: number;
+        pushNotificationsEnabled: boolean;
+        pushSubscription?: any;
       } = {
         preferredName: formData.preferredName,
         meterNumber: formData.meterNumber,
+        pushNotificationsEnabled: formData.pushNotificationsEnabled,
+        pushSubscription,
       };
 
       if (formData.monthlyBudget) {
@@ -176,6 +207,29 @@ export default function Settings() {
                   When your estimated balance falls below this, we'll show an alert (simulating your
                   meter's beep).
                 </p>
+              </div>
+
+              <div className="flex items-center justify-between space-x-2 rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="pushNotifications" className="text-sm font-medium">
+                    Push Notifications
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    {pushSupported
+                      ? "Get alerts on your device when your balance is low."
+                      : "Push notifications are not supported in this browser."}
+                  </p>
+                </div>
+                <input
+                  id="pushNotifications"
+                  type="checkbox"
+                  disabled={!pushSupported}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                  checked={formData.pushNotificationsEnabled}
+                  onChange={(e) =>
+                    setFormData({ ...formData, pushNotificationsEnabled: e.target.checked })
+                  }
+                />
               </div>
             </CardContent>
           </Card>

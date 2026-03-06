@@ -4,8 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRates } from "@/hooks/useRates";
-import { formatCurrency, roundUnits, roundCurrency } from "@/lib/electricity";
-import { Plus, Activity, Zap } from "lucide-react";
+import {
+  formatCurrency,
+  roundUnits,
+  roundCurrency,
+  getRemainingTierCapacity,
+  ElectricityRate,
+} from "@/lib/electricity";
+import { Plus, Activity, Zap, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface AddPurchaseFormProps {
@@ -51,6 +57,13 @@ export function AddPurchaseForm({
   const unitsNum = parseFloat(unitsReceived) || 0;
   const readingNum = parseFloat(meterReading) || 0;
   const effectiveRate = unitsNum > 0 ? amountNum / unitsNum : 0;
+
+  const tierCapacity = useMemo(() => {
+    if (ratesLoading || rates.length === 0) return null;
+    return getRemainingTierCapacity(unitsAlreadyBought, rates as ElectricityRate[]);
+  }, [unitsAlreadyBought, rates, ratesLoading]);
+
+  const exceedsTier = unitsNum > (tierCapacity?.units || 0);
 
   const currentTier = useMemo(() => {
     if (ratesLoading || rates.length === 0) return "Loading...";
@@ -155,6 +168,22 @@ export function AddPurchaseForm({
               />
             </div>
           </div>
+
+          {exceedsTier &&
+            tierCapacity &&
+            tierCapacity.units > 0 &&
+            tierCapacity.units !== Infinity && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-[10px] text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/30 dark:text-amber-400">
+                <div className="flex items-center gap-1 font-medium">
+                  <AlertTriangle className="h-3 w-3" />
+                  Next Tier reached
+                </div>
+                <p className="mt-0.5">
+                  This purchase exceeds the <strong>{roundUnits(tierCapacity.units)} kWh</strong>{" "}
+                  remaining in {tierCapacity.label}.
+                </p>
+              </div>
+            )}
 
           {(amountNum > 0 && unitsNum > 0) || (readingNum > 0 && unitsNum > 0) ? (
             <div className="space-y-1 rounded-md bg-muted/30 p-2 text-xs">

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ConsumptionStatsCard } from "./ConsumptionStatsCard";
 
@@ -42,5 +42,49 @@ describe("ConsumptionStatsCard", () => {
 
     render(<ConsumptionStatsCard stats={mockStats} />);
     expect(screen.getByText(/Estimate/i)).toBeInTheDocument();
+  });
+
+  it("shows stale warning when last reading is older than 7 days", () => {
+    // Set 'today' to a fixed date
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-10T12:00:00Z"));
+
+    const staleStats = {
+      lastReading: 100,
+      lastReadingDate: "2026-03-01", // 9 days ago
+      dailyBurnRate: 10,
+      estimatedBalance: 50,
+      daysRemaining: 5,
+      daysRemainingUntilLow: 4,
+      lowBalanceThreshold: 10,
+      isEstimatedBurnRate: false,
+    };
+
+    render(<ConsumptionStatsCard stats={staleStats} />);
+    expect(screen.getByText(/Stale Data/i)).toBeInTheDocument();
+    expect(screen.getByText(/9d old/i)).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it("does not show stale warning when last reading is recent", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-10T12:00:00Z"));
+
+    const recentStats = {
+      lastReading: 100,
+      lastReadingDate: "2026-03-08", // 2 days ago
+      dailyBurnRate: 10,
+      estimatedBalance: 50,
+      daysRemaining: 5,
+      daysRemainingUntilLow: 4,
+      lowBalanceThreshold: 10,
+      isEstimatedBurnRate: false,
+    };
+
+    render(<ConsumptionStatsCard stats={recentStats} />);
+    expect(screen.queryByText(/Stale Data/i)).not.toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 });

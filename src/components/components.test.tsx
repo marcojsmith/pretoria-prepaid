@@ -57,8 +57,8 @@ describe("Application Components", () => {
     expect(getByText(/100 kWh/)).toBeInTheDocument();
 
     // Test action cards
-    fireEvent.click(getByText(/Calculator/i));
-    fireEvent.click(getByText(/Record/i));
+    fireEvent.click(getByText(/Buy Units/i));
+    fireEvent.click(getByText(/Log Purchase/i));
   });
 
   it("renders DashboardStats with monthlyBudget and progress bar", () => {

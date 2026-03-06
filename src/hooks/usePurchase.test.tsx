@@ -245,4 +245,18 @@ describe("usePurchases Hook - Offline Actions", () => {
     expect(result.current.getDailyAverageUsage()).toBe(0);
     expect(result.current.getAverageMonthlyCost()).toBe(0);
   });
+
+  it("provides refill analysis correctly", () => {
+    const mockPurchases = [
+      { _id: "1", date: "2024-03-01", units: 100, amountPaid: 300, cost: 300, tierBreakdown: [] },
+      { _id: "2", date: "2024-03-05", units: 50, amountPaid: 150, cost: 150, tierBreakdown: [] },
+    ];
+    vi.mocked(convexReact.useQuery).mockReturnValue(mockPurchases);
+
+    const { result } = renderHook(() => usePurchases());
+    const analysis = result.current.getRefillAnalysis();
+
+    expect(analysis).toHaveLength(2);
+    expect(analysis[1].daysSinceLastRefill).toBe(4);
+  });
 });

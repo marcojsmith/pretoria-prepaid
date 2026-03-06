@@ -8,6 +8,17 @@ export interface TierBreakdown {
   cost: number;
 }
 
+export interface ConsumptionStats {
+  lastReading: number;
+  lastReadingDate: string;
+  dailyBurnRate: number;
+  estimatedBalance: number;
+  daysRemaining: number;
+  daysRemainingUntilLow: number;
+  lowBalanceThreshold: number;
+  isEstimatedBurnRate: boolean;
+}
+
 /**
  * Calculates the cost and tier breakdown for a given number of units,
  * considering the units already bought in the current month.
@@ -60,4 +71,68 @@ export function calculateTierBreakdown(
   }
 
   return { total, breakdown };
+}
+
+/**
+ * Calculates consumption stats based on readings and purchases.
+ */
+export function calculateConsumptionStats(
+  readings: Doc<"meter_readings">[],
+  purchases: Doc<"purchases">[],
+  lowBalanceThreshold: number
+): ConsumptionStats | null {
+  if (readings.length === 0) return null;
+
+  const lastReading = readings[0];
+  let dailyBurnRate = 0;
+
+  if (readings.length >= 2) {
+    const prevReading = readings[1];
+    const date1 = new Date(lastReading.date);
+    const date2 = new Date(prevReading.date);
+    const daysDiff = (date1.getTime() - date2.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (daysDiff > 0) {
+      // Purchases between these two readings
+      const purchasesBetween = purchases.filter(
+        (p) => p.date > prevReading.date && p.date <= lastReading.date
+      );
+
+      const totalPurchased = purchasesBetween.reduce((sum, p) => sum + p.units, 0);
+
+      // Usage = (Previous Reading + Purchases) - Current Reading
+      const usage = prevReading.reading + totalPurchased - lastReading.reading;
+      dailyBurnRate = usage / daysDiff;
+    }
+  }
+
+  // Estimate current balance based on last reading and time passed
+  const now = new Date();
+  const lastReadingDate = new Date(lastReading.date);
+  const daysSinceLastReading = (now.getTime() - lastReadingDate.getTime()) / (1000 * 60 * 60 * 24);
+
+  // Default burn rate if we don't have enough data (e.g. 10 kWh/day)
+  const effectiveBurnRate = dailyBurnRate > 0 ? dailyBurnRate : 10;
+  const estimatedUsageSinceLast = Math.max(0, daysSinceLastReading * effectiveBurnRate);
+  const estimatedBalance = Math.max(0, lastReading.reading - estimatedUsageSinceLast);
+
+  // Days until we hit ZERO
+  const daysRemaining = effectiveBurnRate > 0 ? estimatedBalance / effectiveBurnRate : 0;
+
+  // Days until we hit the LOW threshold (the beep)
+  const daysRemainingUntilLow =
+    effectiveBurnRate > 0
+      ? Math.max(0, (estimatedBalance - lowBalanceThreshold) / effectiveBurnRate)
+      : 0;
+
+  return {
+    lastReading: lastReading.reading,
+    lastReadingDate: lastReading.date,
+    dailyBurnRate,
+    estimatedBalance,
+    daysRemaining,
+    daysRemainingUntilLow,
+    lowBalanceThreshold,
+    isEstimatedBurnRate: dailyBurnRate === 0,
+  };
 }

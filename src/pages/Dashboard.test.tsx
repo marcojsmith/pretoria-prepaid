@@ -90,6 +90,7 @@ describe("Dashboard Page", () => {
       getCurrentMonthPurchases: () => [],
       getDailyAverageUsage: () => 10,
       getAverageMonthlyCost: () => 1000,
+      getRefillAnalysis: () => [],
       offlineCount: 0,
       ...overrides,
     } as ReturnType<typeof usePurchases>);
@@ -203,7 +204,7 @@ describe("Dashboard Page", () => {
       </BrowserRouter>
     );
 
-    fireEvent.click(screen.getByText("Calculator"));
+    fireEvent.click(screen.getByText("Buy Units"));
     expect(mockNavigate).toHaveBeenCalledWith("/calculator");
   });
 
@@ -226,7 +227,7 @@ describe("Dashboard Page", () => {
       </BrowserRouter>
     );
 
-    fireEvent.click(screen.getByText("Record"));
+    fireEvent.click(screen.getByText("Log Purchase"));
     expect(mockNavigate).toHaveBeenCalledWith("/history");
   });
 
@@ -249,7 +250,7 @@ describe("Dashboard Page", () => {
       </BrowserRouter>
     );
 
-    fireEvent.click(screen.getByText("Meter"));
+    fireEvent.click(screen.getByText("Meter Reading"));
     expect(mockNavigate).toHaveBeenCalledWith("/history", { state: { showReadings: true } });
   });
 

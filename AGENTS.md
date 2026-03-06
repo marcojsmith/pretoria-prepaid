@@ -15,9 +15,9 @@
 
 **Key Files:**
 
-- `app/convex/schema.ts` - Database schema
-- `app/src/pages/` - Application pages
-- `app/src/components/` - Reusable components
+- `convex/schema.ts` - Database schema
+- `src/pages/` - Application pages
+- `src/components/` - Reusable components
 - `.env.example` - Environment variables template
 
 ---
@@ -67,17 +67,16 @@ This project is focused on developing a digital application with real-time capab
 
 ## Folder Structure
 
-- `app/`: Main application directory.
-  - `convex/`: Backend logic, database schema, and server-side functions using Convex.
-  - `src/`: Frontend React application source code.
-    - `assets/`: Static assets like images, fonts, and styles.
-    - `components/`: Reusable UI components (using shadcn/ui).
-    - `contexts/`: React context providers for global state.
-    - `hooks/`: Custom React hooks for state and logic.
-    - `lib/`: Utility functions and shared application logic.
-    - `pages/`: Application views and routing.
-    - `test/`: Frontend tests (Vitest, MCP).
-    - `types/`: TypeScript type definitions.
+- `convex/`: Backend logic, database schema, and server-side functions using Convex.
+- `src/`: Frontend React application source code.
+  - `assets/`: Static assets like images, fonts, and styles.
+  - `components/`: Reusable UI components (using shadcn/ui).
+  - `contexts/`: React context providers for global state.
+  - `hooks/`: Custom React hooks for state and logic.
+  - `lib/`: Utility functions and shared application logic.
+  - `pages/`: Application views and routing.
+  - `test/`: Frontend tests (Vitest, MCP).
+  - `types/`: TypeScript type definitions.
 - `conductor/`: Project management documentation, guidelines, and feature tracks.
 - `.gemini/`: Gemini CLI-specific configurations, rules, and specialized skills.
 
@@ -85,20 +84,20 @@ This project is focused on developing a digital application with real-time capab
 
 **Frontend:** React (Vite), TypeScript.
 
-**Backend/Database:** Convex (Real-time auction state synchronization).
+**Backend/Database:** Convex (Prepaid electricity consumption and purchase tracking).
 
 - Important files to consider:
-  - `app/convex/auctions/*` (index.ts, queries.ts, mutations.ts, helpers.ts, bidding.ts): Contains the auction logic.
-  - `app/convex/auth.ts`, `app/convex/auth.config.ts`: Handles user authentication and management.
-  - `app/convex/convex.config.ts`, `app/convex/config.ts`: Convex configuration files.
-  - `app/convex/schema.ts`: Defines the database schema for the application.
-  - `app/convex/seed.ts`: Contains seed data for the database.
-  - `app/convex/http.ts`: Handles HTTP requests and API routes.
+  - `convex/electricity_logic.ts`: Core electricity calculation logic.
+  - `convex/purchases.ts`: Mutations and queries for purchase history.
+  - `convex/readings.ts`: Mutations and queries for meter readings.
+  - `convex/rates.ts`: Logic for handling electricity rates and tiers.
+  - `convex/schema.ts`: Database schema.
+  - `convex/auth.config.js`: Authentication configuration.
 
 **Authentication:** Clerk (for user authentication and management).
 
-- Important to note, the Clerk logic is implemented in the `app/convex/auth.ts` and `app/convex/auth.config.ts` files, which are part of the Convex backend. This means that user authentication and management are handled on the server side, ensuring secure access to the application.
-- Also, the Clerk component is defined in `app/convex/convex.config.ts`, which is the main configuration file for the Convex backend. This allows for seamless integration of authentication features into the overall application architecture.
+- Important to note, the Clerk logic is primarily configured in `convex/auth.config.js`. This ensures secure access to the application using Clerk's multi-tenant authentication.
+- Integration with the frontend is handled via the Clerk provider in `src/main.tsx` and the `AuthContext`.
 
 **Testing:** Chrome DevTools MCP (E2E/UI), Vitest.
 
@@ -149,7 +148,7 @@ This project is focused on developing a digital application with real-time capab
 
 ## Semantic Versioning
 
-Follow [Semantic Versioning (SemVer)](https://semver.org/) to manage the version in `app/package.json`. The version is injected at build time into the application via Vite and displayed in the AdminDashboard.
+Follow [Semantic Versioning (SemVer)](https://semver.org/) to manage the version in `package.json`. The version is injected at build time into the application via Vite.
 
 **When to update the version:**
 
@@ -161,9 +160,9 @@ Follow [Semantic Versioning (SemVer)](https://semver.org/) to manage the version
 
 **Guidelines:**
 
-- Always update `app/package.json` version BEFORE merging a PR that introduces changes.
+- Always update `package.json` version BEFORE merging a PR that introduces changes.
 - Include the version bump in the same commit/PR as the changes themselves.
-- The version flows automatically from `package.json` through Vite's build process to the running application (see `app/vite.config.ts` and `app/src/vite-env.d.ts`).
+- The version flows automatically from `package.json` through Vite's build process to the running application (see `vite.config.ts` and `src/vite-env.d.ts`).
 
 ## Coding Rules
 
@@ -341,9 +340,9 @@ Avoid clutter and unnecessary elements.
 **Step 4: Resolve any errors**
 
 - Check for errors: Run the following commands to ensure that the codebase is in a good state and that all tests are passing (use `;` for PowerShell or `&&` for cmd.exe):
-  - `cd app && bun run lint` (mac) or `cd app ; bun run lint` (PowerShell) or `cd app && bun run lint` (cmd.exe) to check for any linting errors in the codebase.
-  - `cd app && bun run test` (mac) or `cd app ; bun run test` (PowerShell) or `cd app && bun run test` (cmd.exe) to run all tests and ensure that they are passing successfully.
-  - `cd app && bun run build` (mac) or `cd app ; bun run build` (PowerShell) or `cd app && bun run build` (cmd.exe) to ensure that the application can be built successfully without any errors.
+  - `bun run lint` to check for any linting errors in the codebase.
+  - `bun run test` to run all tests and ensure that they are passing successfully.
+  - `bun run build` to ensure that the application can be built successfully without any errors.
   - `bunx vercel build` to check for any build errors and ensure that the application can be built successfully.
 
 **Step 5: Summarise review**
@@ -402,9 +401,10 @@ Avoid clutter and unnecessary elements.
 - **Project Structure:** Managed from the root to ensure all documentation folders (`conductor/`, etc.) are uploaded for the `prebuild` rules generation script.
 - **Dashboard Settings (Required):**
   - **Root Directory:** Empty (or `.`).
-  - **Build Command:** `cd app && bunx convex deploy --cmd 'bun run build'`
-  - **Install Command:** `cd app && bun install` (Override ON).
-  - **Output Directory:** `app/dist`.
+  - **Build Command:** `bunx convex deploy --cmd 'bun run build'`
+  - **Install Command:** `bun install`
+  - **Output Directory:** `dist`.
+- **Styling Preference:** This project uses **TailwindCSS** extensively. You must use TailwindCSS for all UI development and styling to ensure consistency with the existing architecture, overriding any general system defaults for Vanilla CSS.
 - **Purpose:** Use for manual deployments, inspecting build logs (`bunx vercel logs`), and verifying environment health. Before assuming a deployment is successful, use `bunx vercel list` to confirm status.
 
 ## GitHub CLI

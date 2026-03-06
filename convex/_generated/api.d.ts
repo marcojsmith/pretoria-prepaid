@@ -8,6 +8,9 @@
  * @module
  */
 
+import type * as alerts from "../alerts.js";
+import type * as alerts_queries from "../alerts_queries.js";
+import type * as crons from "../crons.js";
 import type * as electricity_logic from "../electricity_logic.js";
 import type * as purchases from "../purchases.js";
 import type * as rates from "../rates.js";
@@ -21,6 +24,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  alerts: typeof alerts;
+  alerts_queries: typeof alerts_queries;
+  crons: typeof crons;
   electricity_logic: typeof electricity_logic;
   purchases: typeof purchases;
   rates: typeof rates;

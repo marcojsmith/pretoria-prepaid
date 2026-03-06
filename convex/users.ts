@@ -94,6 +94,17 @@ export const updateProfile = mutation({
     meterNumber: v.optional(v.string()),
     monthlyBudget: v.optional(v.number()),
     lowBalanceThreshold: v.optional(v.number()),
+    pushNotificationsEnabled: v.optional(v.boolean()),
+    pushSubscription: v.optional(
+      v.object({
+        endpoint: v.string(),
+        expirationTime: v.union(v.number(), v.null()),
+        keys: v.object({
+          p256dh: v.string(),
+          auth: v.string(),
+        }),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -115,17 +126,69 @@ export const updateProfile = mutation({
       meterNumber?: string;
       monthlyBudget?: number;
       lowBalanceThreshold?: number;
+      pushNotificationsEnabled?: boolean;
+      pushSubscription?: any;
     } = {};
     if (args.preferredName !== undefined) updates.preferredName = args.preferredName;
     if (args.meterNumber !== undefined) updates.meterNumber = args.meterNumber;
     if (args.monthlyBudget !== undefined) updates.monthlyBudget = args.monthlyBudget;
     if (args.lowBalanceThreshold !== undefined)
       updates.lowBalanceThreshold = args.lowBalanceThreshold;
+    if (args.pushNotificationsEnabled !== undefined)
+      updates.pushNotificationsEnabled = args.pushNotificationsEnabled;
+    if (args.pushSubscription !== undefined) updates.pushSubscription = args.pushSubscription;
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(profile._id, updates);
     }
 
     return profile._id;
+  },
+});
+
+export const updatePushSubscription = mutation({
+  args: {
+    pushNotificationsEnabled: v.boolean(),
+    pushSubscription: v.optional(
+      v.object({
+        endpoint: v.string(),
+        expirationTime: v.union(v.number(), v.null()),
+        keys: v.object({
+          p256dh: v.string(),
+          auth: v.string(),
+        }),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+
+    if (!profile) throw new Error("Profile not found");
+
+    const patch: {
+      pushNotificationsEnabled: boolean;
+      pushSubscription?: {
+        endpoint: string;
+        expirationTime: number | null;
+        keys: {
+          p256dh: string;
+          auth: string;
+        };
+      };
+    } = {
+      pushNotificationsEnabled: args.pushNotificationsEnabled,
+    };
+
+    if (args.pushSubscription !== undefined) {
+      patch.pushSubscription = args.pushSubscription;
+    }
+
+    await ctx.db.patch(profile._id, patch);
   },
 });

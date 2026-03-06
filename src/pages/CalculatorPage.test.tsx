@@ -36,6 +36,7 @@ describe("CalculatorPage", () => {
       getDailyAverageUsage: vi.fn(() => 10),
       getAverageMonthlyCost: vi.fn(() => 1000),
       getCurrentMonthPurchases: vi.fn(() => []),
+      getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
     });
     vi.mocked(useRates).mockReturnValue({

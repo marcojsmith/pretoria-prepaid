@@ -10,6 +10,8 @@ import {
   getMonthName,
   getDaysLeftInMonth,
   getTierProgress,
+  calculateRefillIntervals,
+  Purchase,
   ElectricityRate,
 } from "./electricity";
 
@@ -127,6 +129,43 @@ describe("electricity calculator utilities", () => {
       expect(progress[1].progress).toBeGreaterThan(0); // Tier 2 started
       expect(progress[1].progress).toBeLessThan(100);
       expect(progress[2].progress).toBe(0); // Tier 3 not started
+    });
+  });
+
+  describe("calculateRefillIntervals", () => {
+    it("returns empty array for no purchases", () => {
+      expect(calculateRefillIntervals([])).toEqual([]);
+    });
+
+    it("calculates intervals correctly", () => {
+      const purchases: Purchase[] = [
+        { _id: "1", date: "2024-03-01", units: 100, cost: 0, amountPaid: 300, tierBreakdown: [] },
+        { _id: "2", date: "2024-03-05", units: 50, cost: 0, amountPaid: 150, tierBreakdown: [] },
+        { _id: "3", date: "2024-03-10", units: 80, cost: 0, amountPaid: 240, tierBreakdown: [] },
+      ];
+
+      const result = calculateRefillIntervals(purchases);
+
+      expect(result).toHaveLength(3);
+      expect(result[0].daysSinceLastRefill).toBeNull();
+      expect(result[1].daysSinceLastRefill).toBe(4);
+      expect(result[2].daysSinceLastRefill).toBe(5);
+    });
+
+    it("handles unsorted purchases", () => {
+      const purchases: Purchase[] = [
+        { _id: "3", date: "2024-03-10", units: 80, cost: 0, amountPaid: 240, tierBreakdown: [] },
+        { _id: "1", date: "2024-03-01", units: 100, cost: 0, amountPaid: 300, tierBreakdown: [] },
+        { _id: "2", date: "2024-03-05", units: 50, cost: 0, amountPaid: 150, tierBreakdown: [] },
+      ];
+
+      const result = calculateRefillIntervals(purchases);
+
+      expect(result[0].date).toBe("2024-03-01");
+      expect(result[1].date).toBe("2024-03-05");
+      expect(result[2].date).toBe("2024-03-10");
+      expect(result[1].daysSinceLastRefill).toBe(4);
+      expect(result[2].daysSinceLastRefill).toBe(5);
     });
   });
 });

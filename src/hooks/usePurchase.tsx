@@ -1,7 +1,12 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCallback, useEffect, useState, useRef, useMemo } from "react";
-import { Purchase, TierBreakdown, getCurrentMonth } from "@/lib/electricity";
+import {
+  Purchase,
+  TierBreakdown,
+  getCurrentMonth,
+  calculateRefillIntervals,
+} from "@/lib/electricity";
 import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
@@ -282,6 +287,10 @@ export function usePurchases() {
     return previousMonths.reduce((sum, s) => sum + s.cost, 0) / previousMonths.length;
   }, [getMonthlyStats]);
 
+  const getRefillAnalysis = useCallback(() => {
+    return calculateRefillIntervals(purchases);
+  }, [purchases]);
+
   const currentMonthPurchases = getCurrentMonthPurchases();
   const unitsThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.units, 0);
   const costThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.amountPaid, 0);
@@ -298,6 +307,7 @@ export function usePurchases() {
     getAverageMonthlyUsage,
     getDailyAverageUsage,
     getAverageMonthlyCost,
+    getRefillAnalysis,
     offlineCount: offlineQueue.length,
   };
 }

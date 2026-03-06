@@ -10,9 +10,10 @@ import {
   TIER_BG_CLASSES,
   TIER_TEXT_CLASSES,
   roundUnits,
+  getRemainingTierCapacity,
   ElectricityRate,
 } from "@/lib/electricity";
-import { Calculator, Lightbulb, Save, Loader2, Zap } from "lucide-react";
+import { Calculator, Lightbulb, Save, Loader2, Zap, AlertTriangle } from "lucide-react";
 
 interface PurchaseCalculatorProps {
   unitsAlreadyBought: number;
@@ -45,6 +46,17 @@ export function PurchaseCalculator({
 
   const targetNum = parseFloat(targetUnits) || 0;
   const balanceNum = parseFloat(currentBalance) || 0;
+
+  const tierCapacity = useMemo(() => {
+    if (ratesLoading || rates.length === 0) return null;
+    return getRemainingTierCapacity(unitsAlreadyBought, rates as ElectricityRate[]);
+  }, [unitsAlreadyBought, rates, ratesLoading]);
+
+  const exceedsTier = targetNum > (tierCapacity?.units || 0);
+  const costToStayInTier = useMemo(() => {
+    if (!exceedsTier || !tierCapacity || tierCapacity.units === Infinity) return 0;
+    return tierCapacity.units * tierCapacity.rate;
+  }, [exceedsTier, tierCapacity]);
 
   const calculation = useMemo(() => {
     if (targetNum <= 0 || ratesLoading || rates.length === 0) return null;
@@ -153,6 +165,26 @@ export function PurchaseCalculator({
             />
           </div>
         </div>
+
+        {exceedsTier &&
+          tierCapacity &&
+          tierCapacity.units > 0 &&
+          tierCapacity.units !== Infinity && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/30 dark:text-amber-400">
+              <div className="flex items-center gap-2 font-medium">
+                <AlertTriangle className="h-4 w-4" />
+                Tier Limit Warning
+              </div>
+              <p className="mt-1">
+                Buying more than <strong>{roundUnits(tierCapacity.units)} kWh</strong> will push you
+                into the next, more expensive tier.
+              </p>
+              <p className="mt-1">
+                Spend <strong>{formatCurrency(costToStayInTier)}</strong> to stay within{" "}
+                <strong>{tierCapacity.label}</strong>.
+              </p>
+            </div>
+          )}
 
         {targetNum > 0 && balanceNum > 0 && (
           <div className="rounded-md bg-primary/5 p-2 text-center">

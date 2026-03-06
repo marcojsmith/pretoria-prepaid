@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/electricity";
 import { DashboardStats } from "@/components/DashboardStats";
 import { TierProgress } from "@/components/TierProgress";
 import { MonthlyStats } from "@/components/MonthlyStats";
+import { PurchaseFrequencyChart } from "@/components/PurchaseFrequencyChart";
 import { PatreonBanner } from "@/components/PatreonBanner";
 import { ConsumptionStatsCard } from "@/components/ConsumptionStatsCard";
 import { NavMenu } from "@/components/NavMenu";
@@ -114,6 +115,12 @@ export default function Dashboard() {
             <MonthlyStats stats={monthlyStats} averageUsage={averageMonthlyUsage} />
           </div>
         </div>
+
+        {monthlyStats.length > 0 && (
+          <div className="lg:max-w-[600px]">
+            <PurchaseFrequencyChart stats={monthlyStats} />
+          </div>
+        )}
 
         <footer className="border-t border-border pt-3">
           <div className="space-y-1.5 text-center">

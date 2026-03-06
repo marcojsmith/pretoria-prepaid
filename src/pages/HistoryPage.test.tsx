@@ -49,6 +49,7 @@ describe("HistoryPage", () => {
       getDailyAverageUsage: vi.fn(() => 0),
       getAverageMonthlyCost: vi.fn(() => 0),
       getCurrentMonthPurchases: vi.fn(() => []),
+      getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
     });
     vi.mocked(useConsumption).mockReturnValue({
