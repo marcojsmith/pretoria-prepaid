@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { useIsMobile } from "./use-mobile";
 
 describe("useIsMobile", () => {
@@ -29,5 +29,37 @@ describe("useIsMobile", () => {
     vi.stubGlobal("innerWidth", 1024);
     const { result } = renderHook(() => useIsMobile());
     expect(result.current).toBe(false);
+  });
+
+  it("updates when window is resized", () => {
+    let matches = false;
+    let changeHandler: (() => void) | null = null;
+
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query) => ({
+        matches,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn((event, handler) => {
+          if (event === "change") changeHandler = handler;
+        }),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    );
+
+    const { result } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(false);
+
+    act(() => {
+      matches = true;
+      vi.stubGlobal("innerWidth", 500);
+      if (changeHandler) (changeHandler as () => void)();
+    });
+
+    expect(result.current).toBe(true);
   });
 });

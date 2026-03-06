@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, renderHook } from "@testing-library/react";
-import { AuthProvider, useAuth } from "./useAuth";
+import { useAuth } from "./useAuth";
+import { AuthProvider } from "../contexts/AuthContext";
 import * as clerkReact from "@clerk/clerk-react";
 import * as convexReact from "convex/react";
 
@@ -16,14 +17,19 @@ vi.mock("convex/react", () => ({
 
 describe("AuthProvider", () => {
   it("renders children when loaded", () => {
-    (clerkReact.useUser as any).mockReturnValue({
+    vi.mocked(clerkReact.useUser).mockReturnValue({
       isLoaded: true,
       isSignedIn: false,
       user: null,
-    });
-    (clerkReact.useAuth as any).mockReturnValue({
+    } as unknown as ReturnType<typeof clerkReact.useUser>);
+    vi.mocked(clerkReact.useAuth).mockReturnValue({
+      isLoaded: true,
+      isSignedIn: false,
+      userId: null,
+      sessionId: null,
       signOut: vi.fn(),
-    });
+      getToken: vi.fn(),
+    } as unknown as ReturnType<typeof clerkReact.useAuth>);
 
     render(
       <AuthProvider>
@@ -35,13 +41,20 @@ describe("AuthProvider", () => {
   });
 
   it("syncs user when signed in", () => {
-    const syncUserMock = vi.fn();
-    (convexReact.useMutation as any).mockReturnValue(syncUserMock);
-    (clerkReact.useUser as any).mockReturnValue({
+    const syncUserMock = Object.assign(vi.fn(), {
+      withOptimisticUpdate: vi.fn().mockReturnThis(),
+    });
+    vi.mocked(convexReact.useMutation).mockReturnValue(
+      syncUserMock as unknown as ReturnType<typeof convexReact.useMutation>
+    );
+    vi.mocked(clerkReact.useUser).mockReturnValue({
       isLoaded: true,
       isSignedIn: true,
-      user: { primaryEmailAddress: { emailAddress: "test@example.com" } },
-    });
+      user: {
+        primaryEmailAddress: { emailAddress: "test@example.com" },
+        firstName: "Test",
+      },
+    } as unknown as ReturnType<typeof clerkReact.useUser>);
 
     render(
       <AuthProvider>
@@ -49,7 +62,10 @@ describe("AuthProvider", () => {
       </AuthProvider>
     );
 
-    expect(syncUserMock).toHaveBeenCalledWith({ email: "test@example.com" });
+    expect(syncUserMock).toHaveBeenCalledWith({
+      email: "test@example.com",
+      preferredName: "Test",
+    });
   });
 
   it("useAuth throws error when outside provider", () => {

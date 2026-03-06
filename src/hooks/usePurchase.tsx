@@ -15,6 +15,7 @@ interface QueuedPurchase {
   amountPaid?: number;
   date?: string;
   purchaseId?: string; // For deletions
+  meterReading?: number | undefined;
 }
 
 export function usePurchases() {
@@ -68,6 +69,7 @@ export function usePurchases() {
               units: item.units!,
               cost: 0,
               amountPaid: item.amountPaid!,
+              ...(item.meterReading !== undefined ? { meterReading: item.meterReading } : {}),
             });
           } else if (item.type === "delete") {
             await deletePurchaseMutation({ id: item.purchaseId as Id<"purchases"> });
@@ -120,7 +122,7 @@ export function usePurchases() {
     const optimisticPurchases: Purchase[] = offlineQueue
       .filter((item) => item.type === "add")
       .map((item) => ({
-        _id: item.id as any,
+        _id: item.id,
         date: item.date!,
         units: item.units!,
         cost: 0,
@@ -135,7 +137,7 @@ export function usePurchases() {
   }, [confirmedPurchases, offlineQueue]);
 
   const addPurchase = useCallback(
-    async (units: number, amountPaid: number, date: string) => {
+    async (units: number, amountPaid: number, date: string, meterReading?: number) => {
       if (!navigator.onLine) {
         const newOfflineItem: QueuedPurchase = {
           id: `offline-${Date.now()}`,
@@ -143,6 +145,7 @@ export function usePurchases() {
           units,
           amountPaid,
           date,
+          meterReading,
         };
 
         setOfflineQueue((prev) => {
@@ -155,7 +158,13 @@ export function usePurchases() {
       }
 
       try {
-        await addPurchaseMutation({ date, units, cost: 0, amountPaid });
+        await addPurchaseMutation({
+          date,
+          units,
+          cost: 0,
+          amountPaid,
+          ...(meterReading !== undefined ? { meterReading } : {}),
+        });
       } catch (error) {
         console.warn("Mutation failed, queuing instead", error);
         const newOfflineItem: QueuedPurchase = {
@@ -164,6 +173,7 @@ export function usePurchases() {
           units,
           amountPaid,
           date,
+          meterReading,
         };
         setOfflineQueue((prev) => {
           const newQueue = [...prev, newOfflineItem];

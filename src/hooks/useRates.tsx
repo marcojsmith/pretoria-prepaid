@@ -51,9 +51,9 @@ export function useRates() {
     try {
       await updateRateMutation({ id: id as Id<"electricity_rates">, rate: newRate });
       return { error: null };
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating rate:", error);
-      return { error };
+      return { error: error as Error };
     }
   };
 
