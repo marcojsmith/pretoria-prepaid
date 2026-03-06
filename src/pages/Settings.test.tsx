@@ -178,7 +178,7 @@ describe("Settings Page", () => {
   it("handles push subscription failure gracefully", async () => {
     const mockUpdateProfile = vi.fn();
     const mockSubscribe = vi.mocked(pushNotifications.subscribeUserToPush);
-    mockSubscribe.mockResolvedValue(null); // Denied or error
+    mockSubscribe.mockRejectedValue(new Error("Notification permission denied")); // Denied or error
 
     vi.mocked(useProfile).mockReturnValue({
       profile: {
@@ -206,6 +206,7 @@ describe("Settings Page", () => {
     expect(mockSubscribe).toHaveBeenCalled();
     expect(mockUpdateProfile).not.toHaveBeenCalled();
     expect(checkbox).not.toBeChecked();
+    expect(toast.error).toHaveBeenCalledWith("Notification permission denied");
   });
 
   it("handles submission errors", async () => {

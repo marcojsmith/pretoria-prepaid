@@ -57,14 +57,16 @@ export default function Settings() {
 
       if (formData.pushNotificationsEnabled && !profile?.pushNotificationsEnabled) {
         // User is enabling push notifications
-        const subscription = await subscribeUserToPush();
-        if (subscription) {
+        try {
+          const subscription = await subscribeUserToPush();
           pushSubscription = subscription;
-        } else {
-          // Failed to subscribe (denied or error)
+        } catch (err: unknown) {
+          const errorMessage =
+            err instanceof Error ? err.message : "Failed to enable push notifications.";
+          toast.error(errorMessage);
           setFormData((prev) => ({ ...prev, pushNotificationsEnabled: false }));
           setIsSaving(false);
-          return; // Stop submission if subscription failed when enabling
+          return; // Stop submission if subscription failed
         }
       } else if (!formData.pushNotificationsEnabled && profile?.pushNotificationsEnabled) {
         // User is disabling push notifications

@@ -24,20 +24,19 @@ export function isPushSupported() {
 
 /**
  * Requests permission for notifications and subscribes the user to push.
- * @returns The subscription object or null if failed/denied.
+ * @returns The subscription object.
+ * @throws Error if failed or denied.
  */
 export async function subscribeUserToPush() {
   if (!isPushSupported()) {
-    console.error("Push notifications are not supported in this browser.");
-    return null;
+    throw new Error("Push notifications are not supported in this browser.");
   }
 
   try {
     // 1. Request permission
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
-      console.warn("Notification permission was denied.");
-      return null;
+      throw new Error("Notification permission was denied.");
     }
 
     // 2. Get the service worker registration
@@ -50,8 +49,9 @@ export async function subscribeUserToPush() {
       // 4. Subscribe the user
       const publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
       if (!publicKey) {
-        console.error("VITE_VAPID_PUBLIC_KEY is not defined in environment variables.");
-        return null;
+        throw new Error(
+          "VITE_VAPID_PUBLIC_KEY is missing in environment variables. Please check your configuration."
+        );
       }
 
       const applicationServerKey = urlBase64ToUint8Array(publicKey);
@@ -64,7 +64,11 @@ export async function subscribeUserToPush() {
     return JSON.parse(JSON.stringify(subscription));
   } catch (error) {
     console.error("Error subscribing to push notifications:", error);
-    return null;
+    // Rethrow to allow caller to handle/display the error
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("An unexpected error occurred while subscribing to push notifications.");
   }
 }
 

@@ -127,14 +127,16 @@ export const updateProfile = mutation({
       monthlyBudget?: number;
       lowBalanceThreshold?: number;
       pushNotificationsEnabled?: boolean;
-      pushSubscription?: {
-        endpoint: string;
-        expirationTime: number | null;
-        keys: {
-          p256dh: string;
-          auth: string;
-        };
-      };
+      pushSubscription?:
+        | {
+            endpoint: string;
+            expirationTime: number | null;
+            keys: {
+              p256dh: string;
+              auth: string;
+            };
+          }
+        | undefined;
     } = {};
     if (args.preferredName !== undefined) updates.preferredName = args.preferredName;
     if (args.meterNumber !== undefined) updates.meterNumber = args.meterNumber;
@@ -143,7 +145,12 @@ export const updateProfile = mutation({
       updates.lowBalanceThreshold = args.lowBalanceThreshold;
     if (args.pushNotificationsEnabled !== undefined)
       updates.pushNotificationsEnabled = args.pushNotificationsEnabled;
-    if (args.pushSubscription !== undefined) updates.pushSubscription = args.pushSubscription;
+
+    if (args.pushSubscription !== undefined) {
+      updates.pushSubscription = args.pushSubscription;
+    } else if (args.pushNotificationsEnabled === false) {
+      updates.pushSubscription = undefined;
+    }
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(profile._id, updates);

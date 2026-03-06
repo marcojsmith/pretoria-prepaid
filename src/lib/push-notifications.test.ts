@@ -62,10 +62,9 @@ describe("push-notifications", () => {
     expect(result).toEqual({ endpoint: "https://fcm.googleapis.com/fcm/send/test" });
   });
 
-  it("returns null when permission is denied", async () => {
+  it("throws error when permission is denied", async () => {
     mockNotification.requestPermission.mockResolvedValue("denied");
-    const result = await subscribeUserToPush();
-    expect(result).toBeNull();
+    await expect(subscribeUserToPush()).rejects.toThrow("Notification permission was denied.");
   });
 
   it("unsubscribes user from push", async () => {
@@ -104,17 +103,20 @@ describe("push-notifications", () => {
     expect(result).toEqual({ endpoint: "https://existing" });
   });
 
-  it("handles missing VAPID key", async () => {
+  it("throws error when missing VAPID key", async () => {
+    mockNotification.requestPermission.mockResolvedValue("granted");
     const registration = await mockServiceWorker.ready;
     vi.mocked(registration.pushManager.getSubscription).mockResolvedValue(null);
     vi.stubEnv("VITE_VAPID_PUBLIC_KEY", "");
-    const result = await subscribeUserToPush();
-    expect(result).toBeNull();
+    await expect(subscribeUserToPush()).rejects.toThrow(
+      "VITE_VAPID_PUBLIC_KEY is missing in environment variables. Please check your configuration."
+    );
   });
 
-  it("returns null when push not supported in subscribeUserToPush", async () => {
+  it("throws error when push not supported in subscribeUserToPush", async () => {
     vi.stubGlobal("navigator", {});
-    const result = await subscribeUserToPush();
-    expect(result).toBeNull();
+    await expect(subscribeUserToPush()).rejects.toThrow(
+      "Push notifications are not supported in this browser."
+    );
   });
 });
