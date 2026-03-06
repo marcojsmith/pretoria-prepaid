@@ -127,7 +127,14 @@ export const updateProfile = mutation({
       monthlyBudget?: number;
       lowBalanceThreshold?: number;
       pushNotificationsEnabled?: boolean;
-      pushSubscription?: any;
+      pushSubscription?: {
+        endpoint: string;
+        expirationTime: number | null;
+        keys: {
+          p256dh: string;
+          auth: string;
+        };
+      };
     } = {};
     if (args.preferredName !== undefined) updates.preferredName = args.preferredName;
     if (args.meterNumber !== undefined) updates.meterNumber = args.meterNumber;

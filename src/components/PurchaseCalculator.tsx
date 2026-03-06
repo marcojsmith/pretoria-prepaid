@@ -127,15 +127,17 @@ export function PurchaseCalculator({
                   const now = new Date();
                   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
                   const daysElapsed = Math.max(1, daysInMonth - daysLeftInMonth);
-                  const expectedDaily = averageMonthlyUsage / daysInMonth;
 
-                  let burnRate = expectedDaily;
-                  // Estimate consumed units. If unitsAlreadyBought > num, they used the difference.
-                  const consumed = unitsAlreadyBought - num;
+                  // Consumed units according to this reading.
+                  // (Previous reading would be better, but we only have unitsAlreadyBought here)
+                  // If we bought 100 units this month, and we have 20 left, we used 80.
+                  const estimatedConsumed = Math.max(0, unitsAlreadyBought - num);
 
-                  if (consumed > 0) {
-                    burnRate = consumed / daysElapsed;
-                  }
+                  // Use either estimated burn rate or historical average
+                  const burnRate =
+                    estimatedConsumed > 0
+                      ? estimatedConsumed / daysElapsed
+                      : averageMonthlyUsage / daysInMonth;
 
                   const neededRemaining = burnRate * daysLeftInMonth;
                   // We need 'neededRemaining' for the rest of the month, and we already have 'num'

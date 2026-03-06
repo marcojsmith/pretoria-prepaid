@@ -167,5 +167,31 @@ describe("electricity calculator utilities", () => {
       expect(result[1].daysSinceLastRefill).toBe(4);
       expect(result[2].daysSinceLastRefill).toBe(5);
     });
+
+    it("handles same day refills", () => {
+      const purchases: Purchase[] = [
+        {
+          _id: "1",
+          date: "2024-03-01T10:00:00Z",
+          units: 100,
+          cost: 0,
+          amountPaid: 300,
+          tierBreakdown: [],
+        },
+        {
+          _id: "2",
+          date: "2024-03-01T15:00:00Z",
+          units: 50,
+          cost: 0,
+          amountPaid: 150,
+          tierBreakdown: [],
+        },
+      ];
+
+      const result = calculateRefillIntervals(purchases);
+
+      expect(result).toHaveLength(2);
+      expect(result[1].daysSinceLastRefill).toBe(0);
+    });
   });
 });

@@ -54,3 +54,22 @@ export const removeExpiredSubscription = internalMutation({
     }
   },
 });
+
+/**
+ * Internal mutation to record when an alert was successfully sent.
+ */
+export const updateAlertTimestamp = internalMutation({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+
+    if (profile) {
+      await ctx.db.patch(profile._id, {
+        lastAlertSent: Date.now(),
+      });
+    }
+  },
+});

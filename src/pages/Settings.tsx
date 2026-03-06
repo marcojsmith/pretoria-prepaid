@@ -78,12 +78,19 @@ export default function Settings() {
         monthlyBudget?: number;
         lowBalanceThreshold?: number;
         pushNotificationsEnabled: boolean;
-        pushSubscription?: any;
+        pushSubscription?: {
+          endpoint: string;
+          expirationTime: number | null;
+          keys: {
+            p256dh: string;
+            auth: string;
+          };
+        };
       } = {
         preferredName: formData.preferredName,
         meterNumber: formData.meterNumber,
         pushNotificationsEnabled: formData.pushNotificationsEnabled,
-        pushSubscription,
+        pushSubscription: pushSubscription as any, // Cast to any because the browser type and Convex type might slightly differ in strictness
       };
 
       if (formData.monthlyBudget) {

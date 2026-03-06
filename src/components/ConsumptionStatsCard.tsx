@@ -25,8 +25,9 @@ export function ConsumptionStatsCard({ stats }: ConsumptionStatsCardProps) {
   if (readingDate && !isNaN(readingDate.getTime())) {
     readingDate.setHours(0, 0, 0, 0);
     const diffTime = today.getTime() - readingDate.getTime();
-    daysSinceLastReading = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    isStale = daysSinceLastReading > 7;
+    daysSinceLastReading = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+    // Stale if last reading is older than 7 days, OR if it's in the future (invalid)
+    isStale = daysSinceLastReading > 7 || diffTime < 0;
   } else {
     isStale = true; // Treat missing or invalid date as stale
   }

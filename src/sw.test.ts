@@ -33,7 +33,7 @@ describe("Service Worker", () => {
   it("handles push event correctly", async () => {
     const addEventListenerMock = vi.mocked(self.addEventListener) as any;
     const pushListener = addEventListenerMock.mock.calls.find(
-      (call: any) => call[0] === "push"
+      (call: any[]) => call[0] === "push"
     )?.[1];
 
     const mockEvent = {
@@ -54,7 +54,7 @@ describe("Service Worker", () => {
   it("handles notificationclick event correctly", async () => {
     const addEventListenerMock = vi.mocked(self.addEventListener) as any;
     const clickListener = addEventListenerMock.mock.calls.find(
-      (call: any) => call[0] === "notificationclick"
+      (call: any[]) => call[0] === "notificationclick"
     )?.[1];
 
     const mockEvent = {

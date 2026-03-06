@@ -13,18 +13,25 @@ export const checkLowBalances = action({
   handler: async (ctx) => {
     const publicKey = process.env.VITE_VAPID_PUBLIC_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
+    const contactEmail = process.env.VAPID_CONTACT_EMAIL;
 
-    if (!publicKey || !privateKey) {
-      console.error("VAPID keys are not configured in Convex environment variables.");
+    if (!publicKey || !privateKey || !contactEmail) {
+      console.error("VAPID keys or contact email are not configured.");
       return;
     }
 
-    webpush.setVapidDetails("mailto:marcojsmith@gmail.com", publicKey, privateKey);
+    webpush.setVapidDetails(`mailto:${contactEmail}`, publicKey, privateKey);
 
     const profiles = await ctx.runQuery(internal.alerts_queries.getProfilesForAlerts);
+    const nowTimestamp = Date.now();
 
     for (const profile of profiles) {
       if (!profile.pushSubscription) continue;
+
+      // Rate limit: 24 hours between alerts
+      if (profile.lastAlertSent && nowTimestamp - profile.lastAlertSent < 24 * 60 * 60 * 1000) {
+        continue;
+      }
 
       const { readings, purchases } = await ctx.runQuery(
         internal.alerts_queries.getUserDataForAlert,
@@ -51,7 +58,15 @@ export const checkLowBalances = action({
             },
           });
 
-          await webpush.sendNotification(profile.pushSubscription as any, payload);
+          await webpush.sendNotification(
+            profile.pushSubscription as webpush.PushSubscription,
+            payload
+          );
+
+          await ctx.runMutation(internal.alerts_queries.updateAlertTimestamp, {
+            userId: profile.userId,
+          });
+
           console.log(`Sent alert to user ${profile.userId}`);
         } catch (err) {
           const error = err as { statusCode?: number };

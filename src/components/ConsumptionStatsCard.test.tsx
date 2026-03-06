@@ -87,4 +87,25 @@ describe("ConsumptionStatsCard", () => {
 
     vi.useRealTimers();
   });
+
+  it("shows stale warning for future dates", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-10T12:00:00Z"));
+
+    const futureStats = {
+      lastReading: 100,
+      lastReadingDate: "2026-03-15", // 5 days in the future
+      dailyBurnRate: 10,
+      estimatedBalance: 50,
+      daysRemaining: 5,
+      daysRemainingUntilLow: 4,
+      lowBalanceThreshold: 10,
+      isEstimatedBurnRate: false,
+    };
+
+    render(<ConsumptionStatsCard stats={futureStats} />);
+    expect(screen.getByText(/Stale Data/i)).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
 });

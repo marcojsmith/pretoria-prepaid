@@ -112,7 +112,7 @@ describe("Settings Page", () => {
 
   it("subscribes to push notifications when enabled", async () => {
     const mockSubscribe = vi.mocked(pushNotifications.subscribeUserToPush);
-    mockSubscribe.mockResolvedValue({ endpoint: "test-endpoint" } as any);
+    mockSubscribe.mockResolvedValue({ endpoint: "test-endpoint" } as never);
 
     render(
       <BrowserRouter>
@@ -150,7 +150,7 @@ describe("Settings Page", () => {
       },
       updateProfile: mockUpdateProfile,
       loading: false,
-    } as any);
+    } as never);
 
     render(
       <BrowserRouter>
@@ -187,7 +187,7 @@ describe("Settings Page", () => {
       },
       updateProfile: mockUpdateProfile,
       loading: false,
-    } as any);
+    } as never);
 
     render(
       <BrowserRouter>

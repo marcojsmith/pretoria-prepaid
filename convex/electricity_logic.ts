@@ -109,17 +109,27 @@ export function calculateConsumptionStats(
   // Estimate current balance based on last reading and time passed
   const now = new Date();
   const lastReadingDate = new Date(lastReading.date);
+
+  // Purchases made strictly AFTER the last reading
+  const purchasesAfterReading = purchases.filter((p) => p.date > lastReading.date);
+  const totalPurchasedSinceLastReading = purchasesAfterReading.reduce((sum, p) => sum + p.units, 0);
+
   const daysSinceLastReading = (now.getTime() - lastReadingDate.getTime()) / (1000 * 60 * 60 * 24);
 
   // Default burn rate if we don't have enough data (e.g. 10 kWh/day)
   const effectiveBurnRate = dailyBurnRate > 0 ? dailyBurnRate : 10;
   const estimatedUsageSinceLast = Math.max(0, daysSinceLastReading * effectiveBurnRate);
-  const estimatedBalance = Math.max(0, lastReading.reading - estimatedUsageSinceLast);
+
+  // Balance = (Last Reading + New Purchases) - Usage Since Last Reading
+  const estimatedBalance = Math.max(
+    0,
+    lastReading.reading + totalPurchasedSinceLastReading - estimatedUsageSinceLast
+  );
 
   // Days until we hit ZERO
   const daysRemaining = effectiveBurnRate > 0 ? estimatedBalance / effectiveBurnRate : 0;
 
-  // Days until we hit the LOW threshold (the beep)
+  // Days until we hit the LOW threshold
   const daysRemainingUntilLow =
     effectiveBurnRate > 0
       ? Math.max(0, (estimatedBalance - lowBalanceThreshold) / effectiveBurnRate)

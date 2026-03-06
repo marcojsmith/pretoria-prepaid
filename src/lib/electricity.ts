@@ -97,7 +97,8 @@ export function getMonthName(monthKey: string): string {
 export function getDaysLeftInMonth(): number {
   const now = new Date();
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return lastDay.getDate() - now.getDate();
+  const diffTime = lastDay.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 }
 
 export function getTierProgress(
@@ -192,8 +193,13 @@ export function calculateRefillIntervals(purchases: Purchase[]): RefillInterval[
 
     const current = new Date(purchase.date);
     const previous = new Date(sortedPurchases[index - 1].date);
-    const diffTime = Math.abs(current.getTime() - previous.getTime());
-    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    // Set both to midnight for pure day difference
+    const d1 = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+    const d2 = new Date(previous.getFullYear(), previous.getMonth(), previous.getDate());
+
+    const diffTime = d1.getTime() - d2.getTime();
+    const diffDays = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
 
     return {
       date: purchase.date,

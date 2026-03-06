@@ -13,7 +13,7 @@ interface PurchaseFrequencyChartProps {
 }
 
 export function PurchaseFrequencyChart({ stats }: PurchaseFrequencyChartProps) {
-  // Take last 6 months and reverse to chronological order (oldest to newest)
+  // Take first 6 entries (most recent months) and reverse to chronological order (oldest to newest)
   const displayData = [...stats].slice(0, 6).reverse();
 
   if (displayData.length === 0) return null;

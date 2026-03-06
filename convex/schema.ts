@@ -17,6 +17,7 @@ export default defineSchema({
     lowBalanceThreshold: v.optional(v.number()),
     preferredName: v.optional(v.string()),
     pushNotificationsEnabled: v.optional(v.boolean()),
+    lastAlertSent: v.optional(v.number()), // Timestamp of last alert
     pushSubscription: v.optional(
       v.object({
         endpoint: v.string(),

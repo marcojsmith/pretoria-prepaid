@@ -9,6 +9,7 @@ import {
   roundUnits,
   roundCurrency,
   getRemainingTierCapacity,
+  getTierLabel,
   ElectricityRate,
 } from "@/lib/electricity";
 import { Plus, Activity, Zap, AlertTriangle } from "lucide-react";
@@ -67,15 +68,7 @@ export function AddPurchaseForm({
 
   const currentTier = useMemo(() => {
     if (ratesLoading || rates.length === 0) return "Loading...";
-    const totalUnits = unitsAlreadyBought + unitsNum;
-    const sortedRates = [...rates].sort((a, b) => a.tier_number - b.tier_number);
-
-    for (let i = sortedRates.length - 1; i >= 0; i--) {
-      if (totalUnits >= sortedRates[i].min_units) {
-        return sortedRates[i].tier_label;
-      }
-    }
-    return sortedRates[0].tier_label;
+    return getTierLabel(unitsAlreadyBought + unitsNum, rates as ElectricityRate[]);
   }, [unitsAlreadyBought, unitsNum, rates, ratesLoading]);
 
   const handleSubmit = (e: React.FormEvent) => {
