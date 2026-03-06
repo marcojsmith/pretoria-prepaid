@@ -6,10 +6,27 @@ import { usePurchases } from "../hooks/usePurchase";
 import { useAuth } from "../hooks/useAuth";
 import { useRates } from "../hooks/useRates";
 
+interface MockDropdownMenuProps {
+  children?: React.ReactNode;
+  onClick?: () => void;
+}
+
 // Mock everything
 vi.mock("../hooks/usePurchase");
 vi.mock("../hooks/useAuth");
 vi.mock("../hooks/useRates");
+
+// Mock DropdownMenu to render children directly for easier testing
+vi.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onClick }: MockDropdownMenuProps) => (
+    <button onClick={onClick}>{children}</button>
+  ),
+  DropdownMenuLabel: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
+}));
 
 describe("CalculatorPage", () => {
   const mockSignOut = vi.fn();
@@ -19,8 +36,9 @@ describe("CalculatorPage", () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {
         id: "1",
+        firstName: "Test",
         primaryEmailAddress: { emailAddress: "test@example.com" },
-      } as unknown as ReturnType<typeof useAuth>["user"],
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: mockSignOut,
     });
@@ -28,6 +46,7 @@ describe("CalculatorPage", () => {
       loading: false,
       purchases: [],
       addPurchase: vi.fn(),
+      addBatchPurchases: vi.fn(),
       deletePurchase: vi.fn(),
       unitsThisMonth: 0,
       costThisMonth: 0,
@@ -38,7 +57,7 @@ describe("CalculatorPage", () => {
       getCurrentMonthPurchases: vi.fn(() => []),
       getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
-    });
+    } as ReturnType<typeof usePurchases>);
     vi.mocked(useRates).mockReturnValue({
       loading: false,
       rates: [],
@@ -77,11 +96,11 @@ describe("CalculatorPage", () => {
       </BrowserRouter>
     );
 
-    const logoutButton = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-log-out"));
+    const logoutButton = screen.getByText(/Log out/i);
+    expect(logoutButton).toBeInTheDocument();
+
     await act(async () => {
-      fireEvent.click(logoutButton!);
+      fireEvent.click(logoutButton);
     });
 
     expect(mockSignOut).toHaveBeenCalled();
@@ -102,9 +121,8 @@ describe("CalculatorPage", () => {
   });
 
   it("handles navigation state for reading prefill", () => {
-    // This handles the useEffect that sets reading
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1" } as any,
+      user: { id: "1" } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: vi.fn(),
     });
@@ -114,6 +132,5 @@ describe("CalculatorPage", () => {
         <CalculatorPage />
       </BrowserRouter>
     );
-    // Logic is exercised
   });
 });

@@ -10,15 +10,16 @@ import { DashboardStats } from "@/components/DashboardStats";
 import { TierProgress } from "@/components/TierProgress";
 import { MonthlyStats } from "@/components/MonthlyStats";
 import { PurchaseFrequencyChart } from "@/components/PurchaseFrequencyChart";
+import { YearlyConsumptionChart } from "@/components/YearlyConsumptionChart";
 import { PatreonBanner } from "@/components/PatreonBanner";
 import { ConsumptionStatsCard } from "@/components/ConsumptionStatsCard";
-import { NavMenu } from "@/components/NavMenu";
+import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { LogOut, Zap, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { rates, loading: ratesLoading } = useRates();
   const { stats: consumptionStats, loading: consumptionLoading } = useConsumption();
@@ -55,11 +56,6 @@ export default function Dashboard() {
   const dailyAverage = useMemo(() => getDailyAverageUsage(), [getDailyAverageUsage]);
   const averageMonthlyCost = useMemo(() => getAverageMonthlyCost(), [getAverageMonthlyCost]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
-
   if (authLoading || purchasesLoading || profileLoading || consumptionLoading) {
     return (
       <div
@@ -75,23 +71,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container mx-auto flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-2">
-            <NavMenu offlineCount={offlineCount} />
-            <Zap className="h-4 w-4 text-primary" />
-            <span className="text-xs font-semibold">PowerTracker</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-[10px] text-muted-foreground sm:inline">
-              {profile?.preferredName || user.primaryEmailAddress?.emailAddress}
-            </span>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleSignOut}>
-              <LogOut className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header offlineCount={offlineCount} />
 
       <main className="container mx-auto space-y-3 px-4 py-3">
         <PatreonBanner />
@@ -116,11 +96,19 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {monthlyStats.length > 0 && (
-          <div className="lg:max-w-[600px]">
-            <PurchaseFrequencyChart stats={monthlyStats} />
-          </div>
-        )}
+        <div className="grid grid-cols-1 gap-3 lg:max-w-[1212px] lg:grid-cols-2">
+          {monthlyStats.length > 0 && (
+            <div className="w-full">
+              <YearlyConsumptionChart />
+            </div>
+          )}
+
+          {monthlyStats.length > 0 && (
+            <div className="w-full">
+              <PurchaseFrequencyChart stats={monthlyStats} />
+            </div>
+          )}
+        </div>
 
         <footer className="border-t border-border pt-3">
           <div className="space-y-1.5 text-center">

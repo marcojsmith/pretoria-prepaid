@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { NavMenu } from "@/components/NavMenu";
+import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, ArrowLeft, Save, Loader2, BellRing } from "lucide-react";
+import { Save, Loader2, BellRing } from "lucide-react";
 import { toast } from "sonner";
 import {
   subscribeUserToPush,
@@ -90,6 +90,7 @@ export default function Settings() {
         preferredName: formData.preferredName,
         meterNumber: formData.meterNumber,
         pushNotificationsEnabled: formData.pushNotificationsEnabled,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pushSubscription: pushSubscription as any, // Cast to any because the browser type and Convex type might slightly differ in strictness
       };
 
@@ -126,23 +127,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container mx-auto flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-2">
-            <NavMenu />
-            <Zap className="h-4 w-4 text-primary" />
-            <span className="text-xs font-semibold">PowerTracker</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0"
-            onClick={() => navigate("/dashboard")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
+      <Header />
 
       <main className="container mx-auto max-w-2xl space-y-4 px-4 py-6">
         <div className="space-y-1">

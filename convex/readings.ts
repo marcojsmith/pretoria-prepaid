@@ -40,7 +40,8 @@ export const deleteReading = mutation({
     if (!identity) throw new Error("Not authenticated");
 
     const reading = await ctx.db.get(args.id);
-    if (!reading || reading.userId !== identity.subject) {
+    if (!reading) return;
+    if (reading.userId !== identity.subject) {
       throw new Error("Unauthorized");
     }
 

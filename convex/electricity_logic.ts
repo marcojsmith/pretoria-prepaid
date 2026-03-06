@@ -114,11 +114,20 @@ export function calculateConsumptionStats(
   const purchasesAfterReading = purchases.filter((p) => p.date > lastReading.date);
   const totalPurchasedSinceLastReading = purchasesAfterReading.reduce((sum, p) => sum + p.units, 0);
 
-  const daysSinceLastReading = (now.getTime() - lastReadingDate.getTime()) / (1000 * 60 * 60 * 24);
+  const todayStr = now.toISOString().split("T")[0];
+  let daysSinceLastReading = 0;
+
+  if (lastReading.date !== todayStr) {
+    // Only apply estimated burn rate if the reading wasn't taken today
+    daysSinceLastReading = Math.max(
+      0,
+      (now.getTime() - lastReadingDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+  }
 
   // Default burn rate if we don't have enough data (e.g. 10 kWh/day)
   const effectiveBurnRate = dailyBurnRate > 0 ? dailyBurnRate : 10;
-  const estimatedUsageSinceLast = Math.max(0, daysSinceLastReading * effectiveBurnRate);
+  const estimatedUsageSinceLast = daysSinceLastReading * effectiveBurnRate;
 
   // Balance = (Last Reading + New Purchases) - Usage Since Last Reading
   const estimatedBalance = Math.max(

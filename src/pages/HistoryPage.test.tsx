@@ -8,6 +8,19 @@ import { useAuth } from "../hooks/useAuth";
 import { useRates } from "../hooks/useRates";
 import { Id } from "../../convex/_generated/dataModel";
 
+interface MockDropdownMenuProps {
+  children?: React.ReactNode;
+  onClick?: () => void;
+}
+
+interface MockSelectProps {
+  children?: React.ReactNode;
+  onValueChange?: (value: string) => void;
+  value?: string;
+  id?: string;
+  placeholder?: string;
+}
+
 // Mock the hooks
 vi.mock("../hooks/usePurchase");
 vi.mock("../hooks/useConsumption");
@@ -18,6 +31,35 @@ vi.mock("sonner", () => ({
     success: vi.fn(),
     error: vi.fn(),
   },
+}));
+
+// Mock DropdownMenu to render children directly for easier testing
+vi.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onClick }: MockDropdownMenuProps) => (
+    <button onClick={onClick}>{children}</button>
+  ),
+  DropdownMenuLabel: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
+}));
+
+// Mock Select to render as a simple select for easier testing
+vi.mock("@/components/ui/select", () => ({
+  Select: ({ children, onValueChange, value }: MockSelectProps) => (
+    <select
+      value={value}
+      onChange={(e) => onValueChange?.(e.target.value)}
+      data-testid="mock-select"
+    >
+      {children}
+    </select>
+  ),
+  SelectTrigger: ({ children, id }: MockSelectProps) => <div id={id}>{children}</div>,
+  SelectValue: ({ placeholder }: MockSelectProps) => <span>{placeholder}</span>,
+  SelectContent: ({ children }: MockSelectProps) => <>{children}</>,
+  SelectItem: ({ children, value }: MockSelectProps) => <option value={value}>{children}</option>,
 }));
 
 describe("HistoryPage", () => {
@@ -32,8 +74,9 @@ describe("HistoryPage", () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {
         id: "1",
+        firstName: "Test",
         primaryEmailAddress: { emailAddress: "test@example.com" },
-      } as unknown as ReturnType<typeof useAuth>["user"],
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: mockSignOut,
     });
@@ -41,6 +84,7 @@ describe("HistoryPage", () => {
       loading: false,
       purchases: [],
       addPurchase: mockAddPurchase,
+      addBatchPurchases: vi.fn(),
       deletePurchase: mockDeletePurchase,
       unitsThisMonth: 0,
       costThisMonth: 0,
@@ -51,7 +95,7 @@ describe("HistoryPage", () => {
       getCurrentMonthPurchases: vi.fn(() => []),
       getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
-    });
+    } as unknown as ReturnType<typeof usePurchases>);
     vi.mocked(useConsumption).mockReturnValue({
       loading: false,
       readings: [],
@@ -145,13 +189,11 @@ describe("HistoryPage", () => {
       </BrowserRouter>
     );
 
-    const logoutButton = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-log-out"));
+    const logoutButton = screen.getByText(/Log out/i);
     expect(logoutButton).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(logoutButton!);
+      fireEvent.click(logoutButton);
     });
 
     expect(mockSignOut).toHaveBeenCalled();
@@ -180,6 +222,7 @@ describe("HistoryPage", () => {
 
   it("filters purchases and readings by date", async () => {
     const marchPurchase = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       _id: "p1" as any,
       date: "2024-03-15",
       units: 100,
@@ -188,6 +231,7 @@ describe("HistoryPage", () => {
       tierBreakdown: [],
     };
     const februaryPurchase = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       _id: "p2" as any,
       date: "2024-02-15",
       units: 50,
@@ -200,6 +244,7 @@ describe("HistoryPage", () => {
       loading: false,
       purchases: [marchPurchase, februaryPurchase],
       addPurchase: mockAddPurchase,
+      addBatchPurchases: vi.fn(),
       deletePurchase: mockDeletePurchase,
       unitsThisMonth: 100,
       costThisMonth: 200,
@@ -210,7 +255,7 @@ describe("HistoryPage", () => {
       getCurrentMonthPurchases: vi.fn(() => [marchPurchase]),
       getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
-    });
+    } as unknown as ReturnType<typeof usePurchases>);
 
     render(
       <BrowserRouter>
@@ -223,14 +268,26 @@ describe("HistoryPage", () => {
     expect(screen.getByText("50 kWh")).toBeInTheDocument();
 
     // Now try to filter
-    // We need to click the filter toggle button first
-    const filterBtn = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-filter"));
+    const filterBtn = screen.getByText(/FILTERS/i);
     expect(filterBtn).toBeInTheDocument();
-    fireEvent.click(filterBtn!);
+    fireEvent.click(filterBtn);
+
+    const selects = screen.getAllByTestId("mock-select");
+    const monthSelect = selects[0];
+    const yearSelect = selects[1];
+
+    // Filter to March 2024
+    fireEvent.change(yearSelect, { target: { value: "2024" } });
+    fireEvent.change(monthSelect, { target: { value: "03" } });
+
+    // Should show march, not february
+    expect(screen.getByText("100 kWh")).toBeInTheDocument();
+    expect(screen.queryByText("50 kWh")).not.toBeInTheDocument();
   });
 
   it("calculates availableYears from both purchases and readings", () => {
     const marchPurchase = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       _id: "p1" as any,
       date: "2024-03-15",
       units: 100,
@@ -239,6 +296,7 @@ describe("HistoryPage", () => {
       tierBreakdown: [],
     };
     const oldReading = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       _id: "r1" as any,
       date: "2023-12-15",
       reading: 100,
@@ -250,6 +308,7 @@ describe("HistoryPage", () => {
       loading: false,
       purchases: [marchPurchase],
       addPurchase: mockAddPurchase,
+      addBatchPurchases: vi.fn(),
       deletePurchase: mockDeletePurchase,
       unitsThisMonth: 100,
       costThisMonth: 200,
@@ -260,7 +319,7 @@ describe("HistoryPage", () => {
       getCurrentMonthPurchases: vi.fn(() => [marchPurchase]),
       getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
-    });
+    } as unknown as ReturnType<typeof usePurchases>);
 
     vi.mocked(useConsumption).mockReturnValue({
       loading: false,
@@ -277,11 +336,10 @@ describe("HistoryPage", () => {
     );
 
     // Filter button to show filters
-    const filterBtn = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-filter"));
-    fireEvent.click(filterBtn!);
+    const filterBtn = screen.getByText(/FILTERS/i);
+    fireEvent.click(filterBtn);
 
-    // Should show 2024 and 2023 in the years
-    // Select is hard to check content of options without opening it,
-    // but the logic is exercised.
+    expect(screen.getByRole("option", { name: "2024" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "2023" })).toBeInTheDocument();
   });
 });

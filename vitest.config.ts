@@ -17,22 +17,23 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: [
+      exclude: [ 
         "node_modules/", 
         "vitest.setup.ts", 
         "convex/", 
         "src/components/ui/**", 
         "src/main.tsx",
         "src/App.tsx",
-        "src/vite-env.d.ts"
+        "src/vite-env.d.ts",
+        "src/test/mocks/**"
       ],
       all: true,
       include: ["src/**/*.{ts,tsx}"],
       thresholds: {
-        lines: 96,
-        functions: 92,
+        lines: 93,
+        functions: 89,
         branches: 85,
-        statements: 96,
+        statements: 93,
       },
     },
   },

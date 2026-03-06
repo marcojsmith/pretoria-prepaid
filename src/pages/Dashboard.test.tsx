@@ -10,6 +10,11 @@ import { useRates, ElectricityRate } from "../hooks/useRates";
 import { useConsumption } from "../hooks/useConsumption";
 import { Id } from "../../convex/_generated/dataModel";
 
+interface MockDropdownMenuProps {
+  children?: React.ReactNode;
+  onClick?: () => void;
+}
+
 // Mock the hooks
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -24,6 +29,18 @@ vi.mock("../hooks/usePurchase");
 vi.mock("../hooks/useUserRole");
 vi.mock("../hooks/useRates");
 vi.mock("../hooks/useConsumption");
+
+// Mock DropdownMenu to render children directly for easier testing
+vi.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onClick }: MockDropdownMenuProps) => (
+    <button onClick={onClick}>{children}</button>
+  ),
+  DropdownMenuLabel: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
+}));
 
 const MOCK_RATES: ElectricityRate[] = [
   { _id: "1", tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.42585 },
@@ -82,6 +99,7 @@ describe("Dashboard Page", () => {
       loading: false,
       purchases: [],
       addPurchase: vi.fn(),
+      addBatchPurchases: vi.fn(),
       deletePurchase: vi.fn(),
       unitsThisMonth: 100,
       costThisMonth: 342,
@@ -116,7 +134,7 @@ describe("Dashboard Page", () => {
       user: {
         firstName: "Marco",
         primaryEmailAddress: { emailAddress: "marco@example.com" },
-      } as unknown as ReturnType<typeof useAuth>["user"],
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: vi.fn(),
     });
@@ -140,7 +158,7 @@ describe("Dashboard Page", () => {
       user: {
         firstName: "Admin",
         primaryEmailAddress: { emailAddress: "admin@example.com" },
-      } as unknown as ReturnType<typeof useAuth>["user"],
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: vi.fn(),
     });
@@ -163,7 +181,7 @@ describe("Dashboard Page", () => {
       user: {
         firstName: "Admin",
         primaryEmailAddress: { emailAddress: "admin@example.com" },
-      } as unknown as ReturnType<typeof useAuth>["user"],
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut,
     });
@@ -177,11 +195,9 @@ describe("Dashboard Page", () => {
       </BrowserRouter>
     );
 
-    const logoutButton = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-log-out"));
+    const logoutButton = screen.getByText(/Log out/i);
     expect(logoutButton).toBeInTheDocument();
-    fireEvent.click(logoutButton!);
+    fireEvent.click(logoutButton);
     expect(signOut).toHaveBeenCalled();
   });
 
@@ -190,7 +206,7 @@ describe("Dashboard Page", () => {
       user: {
         firstName: "Marco",
         primaryEmailAddress: { emailAddress: "marco@example.com" },
-      } as unknown as ReturnType<typeof useAuth>["user"],
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: vi.fn(),
     });
@@ -213,7 +229,7 @@ describe("Dashboard Page", () => {
       user: {
         firstName: "Marco",
         primaryEmailAddress: { emailAddress: "marco@example.com" },
-      } as unknown as ReturnType<typeof useAuth>["user"],
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: vi.fn(),
     });
@@ -236,7 +252,7 @@ describe("Dashboard Page", () => {
       user: {
         firstName: "Marco",
         primaryEmailAddress: { emailAddress: "marco@example.com" },
-      } as unknown as ReturnType<typeof useAuth>["user"],
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: vi.fn(),
     });
@@ -259,7 +275,7 @@ describe("Dashboard Page", () => {
       user: {
         firstName: "Marco",
         primaryEmailAddress: { emailAddress: "marco@example.com" },
-      } as unknown as ReturnType<typeof useAuth>["user"],
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: vi.fn(),
     });

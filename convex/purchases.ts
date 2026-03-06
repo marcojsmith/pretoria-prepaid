@@ -132,7 +132,8 @@ export const deletePurchase = mutation({
     if (!identity) throw new Error("Not authenticated");
 
     const purchase = await ctx.db.get(args.id);
-    if (!purchase || purchase.userId !== identity.subject) {
+    if (!purchase) return;
+    if (purchase.userId !== identity.subject) {
       throw new Error("Unauthorized");
     }
 

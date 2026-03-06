@@ -111,4 +111,10 @@ describe("push-notifications", () => {
     const result = await subscribeUserToPush();
     expect(result).toBeNull();
   });
+
+  it("returns null when push not supported in subscribeUserToPush", async () => {
+    vi.stubGlobal("navigator", {});
+    const result = await subscribeUserToPush();
+    expect(result).toBeNull();
+  });
 });

@@ -7,14 +7,14 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { NavMenu } from "@/components/NavMenu";
-import { Pencil, Check, X, Loader2, Zap, LogOut } from "lucide-react";
+import { Header } from "@/components/Header";
+import { Pencil, Check, X, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/electricity";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Rates() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { rates, loading: ratesLoading, updateRate } = useRates();
   const { offlineCount } = usePurchases();
   const { isAdmin, loading: roleLoading } = useUserRole();
@@ -22,11 +22,6 @@ export default function Rates() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
 
   if (authLoading || ratesLoading || roleLoading) {
     return (
@@ -84,23 +79,7 @@ export default function Rates() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container mx-auto flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-2">
-            <NavMenu offlineCount={offlineCount} />
-            <Zap className="h-4 w-4 text-primary" />
-            <span className="text-xs font-semibold">PowerTracker</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-[10px] text-muted-foreground sm:inline">
-              {user.primaryEmailAddress?.emailAddress}
-            </span>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleSignOut}>
-              <LogOut className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header offlineCount={offlineCount} />
 
       <main className="container mx-auto px-4 py-6">
         <div className="mx-auto max-w-[600px]">

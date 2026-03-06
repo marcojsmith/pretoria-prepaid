@@ -31,8 +31,10 @@ describe("Service Worker", () => {
   });
 
   it("handles push event correctly", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const addEventListenerMock = vi.mocked(self.addEventListener) as any;
     const pushListener = addEventListenerMock.mock.calls.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (call: any[]) => call[0] === "push"
     )?.[1];
 
@@ -52,8 +54,10 @@ describe("Service Worker", () => {
   });
 
   it("handles notificationclick event correctly", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const addEventListenerMock = vi.mocked(self.addEventListener) as any;
     const clickListener = addEventListenerMock.mock.calls.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (call: any[]) => call[0] === "notificationclick"
     )?.[1];
 
@@ -67,7 +71,34 @@ describe("Service Worker", () => {
 
     clickListener(mockEvent);
     expect(mockEvent.notification.close).toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((self as any).clients.openWindow).toHaveBeenCalledWith("/test");
+  });
+
+  it("handles push event with invalid JSON data", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const addEventListenerMock = vi.mocked(self.addEventListener) as any;
+    const pushListener = addEventListenerMock.mock.calls.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (call: any[]) => call[0] === "push"
+    )?.[1];
+
+    const mockEvent = {
+      data: {
+        json: () => {
+          throw new Error("Invalid JSON");
+        },
+      },
+      waitUntil: vi.fn(),
+    };
+
+    pushListener(mockEvent);
+    expect(mockEvent.waitUntil).toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((self as any).registration.showNotification).toHaveBeenCalledWith("Pretoria Prepaid", {
+      body: "You have a new electricity alert.",
+      icon: "/icons/icon-192x192.png",
+    });
   });
 
   it("defines WB_MANIFEST placeholder", () => {

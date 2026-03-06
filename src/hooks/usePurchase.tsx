@@ -191,6 +191,72 @@ export function usePurchases() {
     [addPurchaseMutation]
   );
 
+  const addBatchPurchases = useCallback(
+    async (items: { units: number; amountPaid: number; date: string; meterReading?: number }[]) => {
+      const offlineItems: QueuedPurchase[] = [];
+      let successCount = 0;
+
+      if (!navigator.onLine) {
+        items.forEach((item, index) => {
+          offlineItems.push({
+            id: `offline-${Date.now()}-${index}`,
+            type: "add",
+            units: item.units,
+            amountPaid: item.amountPaid,
+            date: item.date,
+            meterReading: item.meterReading,
+          });
+        });
+
+        setOfflineQueue((prev) => {
+          const newQueue = [...prev, ...offlineItems];
+          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
+          return newQueue;
+        });
+        toast.info(`${items.length} purchases saved offline.`);
+        return;
+      }
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        try {
+          await addPurchaseMutation({
+            date: item.date,
+            units: item.units,
+            cost: 0,
+            amountPaid: item.amountPaid,
+            ...(item.meterReading !== undefined ? { meterReading: item.meterReading } : {}),
+          });
+          successCount++;
+        } catch (error) {
+          console.warn("Batch item failed, queuing instead", error);
+          offlineItems.push({
+            id: `offline-${Date.now()}-${i}`,
+            type: "add",
+            units: item.units,
+            amountPaid: item.amountPaid,
+            date: item.date,
+            meterReading: item.meterReading,
+          });
+        }
+      }
+
+      if (offlineItems.length > 0) {
+        setOfflineQueue((prev) => {
+          const newQueue = [...prev, ...offlineItems];
+          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
+          return newQueue;
+        });
+        toast.info(
+          `Imported ${successCount} items. ${offlineItems.length} items queued for retry.`
+        );
+      } else {
+        toast.success(`Imported all ${successCount} purchases.`);
+      }
+    },
+    [addPurchaseMutation]
+  );
+
   const deletePurchase = useCallback(
     async (id: string) => {
       // If it's a pending addition, just remove it from the queue
@@ -301,6 +367,7 @@ export function usePurchases() {
     costThisMonth,
     loading: purchasesData === undefined && confirmedPurchases.length === 0,
     addPurchase,
+    addBatchPurchases,
     deletePurchase,
     getCurrentMonthPurchases,
     getMonthlyStats,

@@ -7,16 +7,17 @@ import { PurchaseHistory } from "@/components/PurchaseHistory";
 import { ReadingHistory } from "@/components/ReadingHistory";
 import { AddPurchaseForm } from "@/components/AddPurchaseForm";
 import { AddReadingForm } from "@/components/AddReadingForm";
-import { NavMenu } from "@/components/NavMenu";
+import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MonthYearFilter } from "@/components/MonthYearFilter";
-import { LogOut, Zap, Receipt, Activity, Filter, X } from "lucide-react";
+import { Receipt, Activity, Filter, X, ChevronDown, ChevronUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const {
     loading: purchasesLoading,
     addPurchase,
@@ -98,11 +99,6 @@ export default function HistoryPage() {
 
   const isFiltered = selectedMonth !== "All" || selectedYear !== "All";
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
-
   const handleAddPurchase = async (
     units: number,
     amountPaid: number,
@@ -127,23 +123,7 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container mx-auto flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-2">
-            <NavMenu offlineCount={offlineCount} />
-            <Zap className="h-4 w-4 text-primary" />
-            <span className="text-xs font-semibold">PowerTracker</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-[10px] text-muted-foreground sm:inline">
-              {user.primaryEmailAddress?.emailAddress}
-            </span>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleSignOut}>
-              <LogOut className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header offlineCount={offlineCount} />
 
       <main className="container mx-auto space-y-4 px-4 py-4">
         <div className="mx-auto max-w-[600px] space-y-4">
@@ -168,64 +148,91 @@ export default function HistoryPage() {
                 Readings
               </Button>
             </div>
-            <Button
-              variant={showFilters ? "secondary" : "outline"}
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className={`h-4 w-4 ${isFiltered ? "fill-primary text-primary" : ""}`} />
-            </Button>
           </div>
 
-          {showFilters && (
-            <Card className="bg-secondary/20">
-              <CardContent className="space-y-4 p-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider">Filters</h3>
-                  {isFiltered && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 gap-1 px-2 text-[10px]"
-                      onClick={resetFilters}
-                    >
-                      <X className="h-3 w-3" />
-                      Reset
-                    </Button>
-                  )}
-                </div>
-                <MonthYearFilter
-                  selectedMonth={selectedMonth}
-                  selectedYear={selectedYear}
-                  availableYears={availableYears}
-                  onMonthChange={setSelectedMonth}
-                  onYearChange={setSelectedYear}
-                />
-              </CardContent>
-            </Card>
+          {activeTab === "purchases" ? (
+            <AddPurchaseForm
+              unitsAlreadyBought={unitsThisMonth}
+              onAdd={handleAddPurchase}
+              prefillAmount={prefillData?.prefillAmount}
+              prefillUnits={prefillData?.prefillUnits}
+              prefillReading={prefillData?.prefillReading}
+            />
+          ) : (
+            <AddReadingForm onAdd={addReading} />
           )}
 
+          <div className="space-y-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-full justify-between gap-2 px-2 font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <div className="flex items-center gap-2">
+                <Filter
+                  className={`h-3.5 w-3.5 ${isFiltered ? "fill-primary text-primary" : ""}`}
+                />
+                <span className="text-xs uppercase tracking-wider">
+                  {isFiltered ? "Filters Active" : "Filters"}
+                </span>
+              </div>
+              {showFilters ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+            </Button>
+
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <Card className="border-none bg-transparent shadow-none">
+                    <CardContent className="space-y-4 p-2 pb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-medium text-muted-foreground">
+                          Select period to narrow results
+                        </span>
+                        {isFiltered && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 gap-1 px-2 text-[10px]"
+                            onClick={resetFilters}
+                          >
+                            <X className="h-3 w-3" />
+                            Reset
+                          </Button>
+                        )}
+                      </div>
+                      <MonthYearFilter
+                        selectedMonth={selectedMonth}
+                        selectedYear={selectedYear}
+                        availableYears={availableYears}
+                        onMonthChange={setSelectedMonth}
+                        onYearChange={setSelectedYear}
+                      />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {activeTab === "purchases" ? (
-            <>
-              <AddPurchaseForm
-                unitsAlreadyBought={unitsThisMonth}
-                onAdd={handleAddPurchase}
-                prefillAmount={prefillData?.prefillAmount}
-                prefillUnits={prefillData?.prefillUnits}
-                prefillReading={prefillData?.prefillReading}
-              />
-              <PurchaseHistory purchases={filteredPurchases} onDelete={deletePurchase} />
-            </>
+            <PurchaseHistory purchases={filteredPurchases} onDelete={deletePurchase} />
           ) : (
-            <>
-              <AddReadingForm onAdd={addReading} />
-              <ReadingHistory
-                readings={filteredReadings}
-                onDelete={deleteReading}
-                isFiltered={isFiltered}
-              />
-            </>
+            <ReadingHistory
+              readings={filteredReadings}
+              onDelete={deleteReading}
+              isFiltered={isFiltered}
+            />
           )}
         </div>
       </main>

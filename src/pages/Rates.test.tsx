@@ -7,17 +7,34 @@ import { useUserRole } from "../hooks/useUserRole";
 import { useAuth } from "../hooks/useAuth";
 import { usePurchases } from "../hooks/usePurchase";
 
+interface MockDropdownMenuProps {
+  children?: React.ReactNode;
+  onClick?: () => void;
+}
+
 // Mock the hooks
 vi.mock("../hooks/useRates");
 vi.mock("../hooks/useUserRole");
 vi.mock("../hooks/useAuth");
 vi.mock("../hooks/usePurchase");
 
+// Mock DropdownMenu to render children directly for easier testing
+vi.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onClick }: MockDropdownMenuProps) => (
+    <button onClick={onClick}>{children}</button>
+  ),
+  DropdownMenuLabel: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
+}));
+
 describe("Rates Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1" } as unknown as ReturnType<typeof useAuth>["user"],
+      user: { id: "1" } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: vi.fn(),
     });
@@ -25,6 +42,7 @@ describe("Rates Page", () => {
       loading: false,
       purchases: [],
       addPurchase: vi.fn(),
+      addBatchPurchases: vi.fn(),
       deletePurchase: vi.fn(),
       unitsThisMonth: 0,
       costThisMonth: 0,
@@ -35,7 +53,7 @@ describe("Rates Page", () => {
       getCurrentMonthPurchases: vi.fn(() => []),
       getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
-    });
+    } as unknown as ReturnType<typeof usePurchases>);
   });
 
   it("renders loading state", () => {
@@ -109,7 +127,7 @@ describe("Rates Page", () => {
       </BrowserRouter>
     );
 
-    // There are multiple buttons (menu, logout, pencil), we check that we have some buttons
+    // There are multiple buttons
     expect(screen.getAllByRole("button").length).toBeGreaterThan(0);
   });
 
@@ -201,14 +219,12 @@ describe("Rates Page", () => {
     await act(async () => {
       fireEvent.click(saveButton!);
     });
-
-    // Verification of updateRate call would require more mocking of internal handleSave
   });
 
   it("handles logout click", async () => {
     const signOut = vi.fn();
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1" } as unknown as ReturnType<typeof useAuth>["user"],
+      user: { id: "1" } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut,
     });
@@ -226,13 +242,11 @@ describe("Rates Page", () => {
       </BrowserRouter>
     );
 
-    const logoutButton = screen
-      .getAllByRole("button")
-      .find((b) => b.querySelector(".lucide-log-out"));
+    const logoutButton = screen.getByText(/Log out/i);
     expect(logoutButton).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(logoutButton!);
+      fireEvent.click(logoutButton);
     });
 
     expect(signOut).toHaveBeenCalled();

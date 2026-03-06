@@ -12,6 +12,11 @@
 | `bunx coderabbit review --prompt-only --base main` | Run CodeRabbit review on PR changes against main branch |
 | `bun run format`                                   | Format code with Prettier                               |
 
+**URLs:**
+
+- **Development:** `http://localhost:5174`
+- **Production:** `https://pretoria-prepaid.vercel.app`
+
 **Key Files:**
 
 - `convex/schema.ts` - Database schema

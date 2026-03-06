@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { usePurchases } from "./usePurchase";
 import * as convexReact from "convex/react";
+import { toast } from "sonner";
+
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
 const mockAddPurchase = vi.fn();
 const mockDeletePurchase = vi.fn();
@@ -258,5 +267,86 @@ describe("usePurchases Hook - Offline Actions", () => {
 
     expect(analysis).toHaveLength(2);
     expect(analysis[1].daysSinceLastRefill).toBe(4);
+  });
+});
+
+describe("usePurchases Hook - addBatchPurchases", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-02-25T10:00:00.000Z"));
+    mutationCallCount = 0;
+
+    vi.mocked(convexReact.useQuery).mockReturnValue([]);
+    Object.defineProperty(window.navigator, "onLine", { value: true, configurable: true });
+    mockAddPurchase.mockResolvedValue({ success: true });
+    mockDeletePurchase.mockResolvedValue({ success: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("addBatchPurchases queues items when offline", async () => {
+    Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
+
+    const { result } = renderHook(() => usePurchases());
+
+    const batchItems = [
+      { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z" },
+      { units: 50, amountPaid: 150, date: "2024-02-26T10:00:00.000Z" },
+    ];
+
+    await act(async () => {
+      await result.current.addBatchPurchases(batchItems);
+    });
+
+    const queue = JSON.parse(localStorage.getItem("offline_purchases_queue") || "[]");
+    expect(queue).toHaveLength(2);
+    expect(queue[0].type).toBe("add");
+    expect(queue[0].units).toBe(100);
+    expect(queue[1].units).toBe(50);
+    expect(result.current.purchases).toHaveLength(2);
+    expect(result.current.purchases[0].isOffline).toBe(true);
+    expect(result.current.purchases[1].isOffline).toBe(true);
+  });
+
+  it("addBatchPurchases handles partial failures when online", async () => {
+    Object.defineProperty(window.navigator, "onLine", { value: true, configurable: true });
+
+    mockAddPurchase.mockImplementation(async () => {
+      throw new Error("Network Error");
+    });
+
+    const { result } = renderHook(() => usePurchases());
+
+    const batchItems = [
+      { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z" },
+      { units: 50, amountPaid: 150, date: "2024-02-26T10:00:00.000Z" },
+      { units: 75, amountPaid: 225, date: "2024-02-27T10:00:00.000Z" },
+    ];
+
+    await act(async () => {
+      await result.current.addBatchPurchases(batchItems);
+    });
+
+    const queue = JSON.parse(localStorage.getItem("offline_purchases_queue") || "[]");
+    expect(queue).toHaveLength(3);
+  });
+
+  it("addBatchPurchases shows success toast when all succeed", async () => {
+    const { result } = renderHook(() => usePurchases());
+
+    const batchItems = [
+      { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z" },
+      { units: 50, amountPaid: 150, date: "2024-02-26T10:00:00.000Z" },
+    ];
+
+    await act(async () => {
+      await result.current.addBatchPurchases(batchItems);
+    });
+
+    expect(toast.success).toHaveBeenCalledWith("Imported all 2 purchases.");
   });
 });
