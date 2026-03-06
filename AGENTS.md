@@ -4,12 +4,14 @@
 | -------------------------------------------------- | ------------------------------------------------------- |
 | `bun run dev`                                      | Start development server                                |
 | `bun run lint`                                     | Check code for errors                                   |
-| `bun run test`                                     | Run tests                                               |
+| `bun run test --run`                               | Run tests                                               |
+| `bun run test:coverage`                            | Run tests with coverage report                          |
 | `bun run build`                                    | Production build                                        |
 | `bunx vercel`                                      | Deploy to staging                                       |
 | `bunx vercel --prod`                               | Deploy to production                                    |
 | `bunx coderabbit --prompt-only --type uncommitted` | Run CodeRabbit review on uncommitted code               |
 | `bunx coderabbit review --prompt-only --base main` | Run CodeRabbit review on PR changes against main branch |
+| `bun run format`                                   | Format code with Prettier                               |
 
 **Key Files:**
 

@@ -8,6 +8,12 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     globals: true,
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        isolate: true,
+      },
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
@@ -23,10 +29,10 @@ export default defineConfig({
       all: true,
       include: ["src/**/*.{ts,tsx}"],
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 80,
-        statements: 80,
+        lines: 96,
+        functions: 92,
+        branches: 85,
+        statements: 96,
       },
     },
   },
