@@ -37,3 +37,9 @@
   - [x] Integrate a web push library (e.g., `web-push`) in the Convex backend to dispatch the notification to the stored subscription if the threshold is met and notifications are enabled.
 - [x] Task: Conductor - User Manual Verification 'Web Push Notifications for Low Balance' (Protocol in workflow.md)
 - [x] Task: Address User Feedback on UI and Graph visibility.
+- [x] Task: Comprehensive Code Review & Refactoring
+  - [x] Fix logic in `calculateRefillIntervals` and `calculateConsumptionStats`.
+  - [x] Add 24-hour rate limiting to backend alerts.
+  - [x] Resolve type safety issues in push notification settings.
+  - [x] Verify and fix Service Worker unit tests.
+  - [x] Merge into main branch.
