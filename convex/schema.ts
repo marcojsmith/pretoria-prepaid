@@ -14,6 +14,7 @@ export default defineSchema({
     email: v.union(v.string(), v.null()),
     meterNumber: v.optional(v.string()),
     monthlyBudget: v.optional(v.number()),
+    lowBalanceThreshold: v.optional(v.number()),
     preferredName: v.optional(v.string()),
   }).index("by_userId", ["userId"]),
   purchases: defineTable({
@@ -31,6 +32,11 @@ export default defineSchema({
         cost: v.number(),
       })
     ),
+  }).index("by_userId", ["userId"]),
+  meter_readings: defineTable({
+    userId: v.string(),
+    date: v.string(),
+    reading: v.number(), // Units remaining on meter
   }).index("by_userId", ["userId"]),
   user_roles: defineTable({
     userId: v.string(),

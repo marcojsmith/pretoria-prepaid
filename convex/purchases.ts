@@ -68,6 +68,7 @@ export const addPurchase = mutation({
     units: v.number(),
     cost: v.number(),
     amountPaid: v.number(),
+    meterReading: v.optional(v.number()), // Current reading before purchase
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -104,6 +105,15 @@ export const addPurchase = mutation({
       amountPaid: args.amountPaid, // Store what they actually paid
       tierBreakdown: breakdown,
     });
+
+    // If a meter reading was provided, log a NEW reading that accounts for the purchase
+    if (args.meterReading !== undefined) {
+      await ctx.db.insert("meter_readings", {
+        userId: identity.subject,
+        date: args.date,
+        reading: args.meterReading + args.units, // Reading AFTER purchase
+      });
+    }
 
     // Trigger sequential recalculation for the entire month to be safe
     await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {

@@ -93,6 +93,7 @@ export const updateProfile = mutation({
     preferredName: v.optional(v.string()),
     meterNumber: v.optional(v.string()),
     monthlyBudget: v.optional(v.number()),
+    lowBalanceThreshold: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -113,10 +114,13 @@ export const updateProfile = mutation({
       preferredName?: string;
       meterNumber?: string;
       monthlyBudget?: number;
+      lowBalanceThreshold?: number;
     } = {};
     if (args.preferredName !== undefined) updates.preferredName = args.preferredName;
     if (args.meterNumber !== undefined) updates.meterNumber = args.meterNumber;
     if (args.monthlyBudget !== undefined) updates.monthlyBudget = args.monthlyBudget;
+    if (args.lowBalanceThreshold !== undefined)
+      updates.lowBalanceThreshold = args.lowBalanceThreshold;
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(profile._id, updates);
