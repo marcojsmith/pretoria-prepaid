@@ -16,3 +16,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Purchase Optimization & Smart Alerts**
       _Link: [./tracks/purchase_optimization_20260306/](./tracks/purchase_optimization_20260306/)_
+
+---
+
+- [ ] **Track: Historical Data Exploration and Portability**
+      _Link: [./tracks/history_and_portability_20260306/](./tracks/history_and_portability_20260306/)_
