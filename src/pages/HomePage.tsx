@@ -68,15 +68,18 @@ export default function HomePage() {
 
       {/* Features */}
       <section className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto max-w-2xl space-y-4">
           {features.map((feature) => (
-            <Card key={feature.title} className="text-center">
-              <CardContent className="pb-4 pt-4">
-                <feature.icon className="mx-auto mb-2 h-8 w-8 text-primary" />
-                <h3 className="mb-1 text-sm font-medium">{feature.title}</h3>
-                <p className="text-xs text-muted-foreground">{feature.description}</p>
-              </CardContent>
-            </Card>
+            <div
+              key={feature.title}
+              className="flex items-start gap-4 border-b border-border pb-4 last:border-0"
+            >
+              <feature.icon className="mt-1 h-5 w-5 shrink-0 text-primary" />
+              <div>
+                <h3 className="text-sm font-medium">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
+              </div>
+            </div>
           ))}
         </div>
       </section>
@@ -91,14 +94,16 @@ export default function HomePage() {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="mx-auto max-w-lg divide-y border-t">
                 {rates.map((rate) => (
-                  <div key={rate._id} className="rounded-md bg-primary-foreground p-2 text-center">
-                    <p className="text-xs text-muted-foreground">{rate.tier_label}</p>
-                    <p className="text-sm font-medium">{formatCurrency(rate.rate)}/kWh</p>
-                    <p className="text-xs text-muted-foreground">
-                      {rate.min_units}-{rate.max_units === null ? "∞" : rate.max_units} units
-                    </p>
+                  <div key={rate._id} className="flex items-center justify-between py-2 text-sm">
+                    <div>
+                      <span className="font-medium">{rate.tier_label}</span>
+                      <span className="ml-2 text-muted-foreground">
+                        ({rate.min_units}-{rate.max_units === null ? "∞" : rate.max_units} units)
+                      </span>
+                    </div>
+                    <div className="font-medium">{formatCurrency(rate.rate)}/kWh</div>
                   </div>
                 ))}
               </div>

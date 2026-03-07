@@ -91,7 +91,7 @@ export function PurchaseCalculator({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-1 rounded-lg border bg-background p-3 text-sm">
+        <div className="space-y-1 border-l-2 border-primary py-1 pl-3 text-sm">
           <div className="flex items-center gap-2">
             <Lightbulb className="h-4 w-4 text-primary" />
             <span className="font-medium">Current Position</span>
@@ -172,7 +172,7 @@ export function PurchaseCalculator({
           tierCapacity &&
           tierCapacity.units > 0 &&
           tierCapacity.units !== Infinity && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/30 dark:text-amber-400">
+            <div className="border-l-2 border-amber-500 py-1 pl-3 text-xs text-amber-700 dark:text-amber-400">
               <div className="flex items-center gap-2 font-medium">
                 <AlertTriangle className="h-4 w-4" />
                 Tier Limit Warning
@@ -203,7 +203,7 @@ export function PurchaseCalculator({
             <div className="text-sm font-medium">Price Breakdown</div>
 
             {/* Visual tier bar */}
-            <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+            <div className="flex h-3 overflow-hidden rounded-md bg-muted">
               {calculation.breakdown.map((item) => {
                 const percentage = (item.units / targetNum) * 100;
                 return (

@@ -166,7 +166,7 @@ export function AddPurchaseForm({
             tierCapacity &&
             tierCapacity.units > 0 &&
             tierCapacity.units !== Infinity && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-[10px] text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/30 dark:text-amber-400">
+              <div className="border-l-2 border-amber-500 py-1 pl-2 text-[10px] text-amber-700 dark:text-amber-400">
                 <div className="flex items-center gap-1 font-medium">
                   <AlertTriangle className="h-3 w-3" />
                   Next Tier reached

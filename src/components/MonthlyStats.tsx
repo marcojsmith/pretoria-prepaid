@@ -94,9 +94,9 @@ export function MonthlyStats({ stats, averageUsage }: MonthlyStatsProps) {
                   </div>
 
                   {/* Tier-segmented progress bar */}
-                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div className="h-1.5 overflow-hidden rounded-md bg-muted">
                     <div
-                      className="flex h-full overflow-hidden rounded-full"
+                      className="flex h-full overflow-hidden rounded-md"
                       style={{ width: `${totalWidth}%` }}
                     >
                       {tierBreakdown.map((item) => {

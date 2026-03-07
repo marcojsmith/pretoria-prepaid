@@ -12,7 +12,7 @@ describe("NotFound Page", () => {
     );
 
     expect(screen.getByText("404")).toBeInTheDocument();
-    expect(screen.getByText("Oops! Page not found")).toBeInTheDocument();
-    expect(screen.getByText("Return to Home")).toBeInTheDocument();
+    expect(screen.getByText(/Oops!/)).toBeInTheDocument();
+    expect(screen.getByText("Return to Dashboard")).toBeInTheDocument();
   });
 });

@@ -14,7 +14,7 @@
 
 **URLs:**
 
-- **Development:** `http://localhost:5174`
+- **Development:** `https://localhost:5173`
 - **Production:** `https://pretoria-prepaid.vercel.app`
 
 **Key Files:**

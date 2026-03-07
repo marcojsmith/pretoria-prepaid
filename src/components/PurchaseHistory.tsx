@@ -129,7 +129,7 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
               {hasValidBreakdown && (
                 <div className="space-y-1">
                   {/* Visual bar */}
-                  <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div className="flex h-1.5 overflow-hidden rounded-md bg-muted">
                     {purchase.tierBreakdown.map((item) => {
                       const percentage = (item.units / purchase.units) * 100;
                       return (

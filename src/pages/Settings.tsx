@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Save, Loader2, BellRing } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   subscribeUserToPush,
@@ -169,10 +169,7 @@ export default function Settings() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BellRing className="h-4 w-4 text-primary" />
-                Alerts & Budgeting
-              </CardTitle>
+              <CardTitle className="text-lg">Alerts & Budgeting</CardTitle>
               <CardDescription>Configure notifications and spending limits.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
