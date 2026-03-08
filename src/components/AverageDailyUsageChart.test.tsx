@@ -27,7 +27,7 @@ describe("AverageDailyUsageChart", () => {
   it("renders correctly with rolling 12 months", () => {
     vi.mocked(usePurchases).mockReturnValue({
       getMonthlyStats: () => mockMonthlyStats,
-    } as any);
+    } as unknown as ReturnType<typeof usePurchases>);
 
     render(<AverageDailyUsageChart />);
 
@@ -41,11 +41,11 @@ describe("AverageDailyUsageChart", () => {
   it("handles zero data correctly", () => {
     vi.mocked(usePurchases).mockReturnValue({
       getMonthlyStats: () => [],
-    } as any);
+    } as unknown as ReturnType<typeof usePurchases>);
 
     render(<AverageDailyUsageChart />);
 
-    // All bars should show 0 or be empty
-    expect(screen.queryByText(/[1-9]\./)).not.toBeInTheDocument();
+    // All bars should show 0 or be empty (ignoring "0.0" in tooltips)
+    expect(screen.queryByText(/[1-9]/)).not.toBeInTheDocument();
   });
 });

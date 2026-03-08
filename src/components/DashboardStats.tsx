@@ -15,13 +15,12 @@ export function DashboardStats({
 }: DashboardStatsProps) {
   return (
     <Card className="border-border bg-card">
-      <CardContent className="space-y-6 pt-4">
-        <CardHeader className="p-0 pb-2">
-          <CardTitle className="text-sm font-semibold text-muted-foreground">
-            Past 3 Months Average
-          </CardTitle>
-        </CardHeader>
-
+      <CardHeader className="p-4 pb-2">
+        <CardTitle className="text-sm font-semibold text-muted-foreground">
+          Past 3 Months Average
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6 pt-0">
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 sm:gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
