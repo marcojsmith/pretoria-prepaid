@@ -13,7 +13,6 @@ export default defineSchema({
     userId: v.string(), // Clerk's user ID
     email: v.union(v.string(), v.null()),
     meterNumber: v.optional(v.string()),
-    monthlyBudget: v.optional(v.number()),
     lowBalanceThreshold: v.optional(v.number()),
     preferredName: v.optional(v.string()),
     pushNotificationsEnabled: v.optional(v.boolean()),

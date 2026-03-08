@@ -62,8 +62,13 @@ describe("PurchaseHistory", () => {
         cost: 342,
         amountPaid: 342,
         tierBreakdown: [
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          { tier: 99 as any, label: "Unknown Tier", units: 100, rate: 3.42, cost: 342 },
+          {
+            tier: 99 as number,
+            label: "Unknown Tier",
+            units: 100,
+            rate: 3.42,
+            cost: 342,
+          },
         ],
       },
     ];

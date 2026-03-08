@@ -82,7 +82,6 @@ describe("Dashboard Page", () => {
       loading: false,
       profile: {
         preferredName: "Marco",
-        monthlyBudget: 500,
         lowBalanceThreshold: 50,
         _id: "user1" as unknown as Id<"profiles">,
         _creationTime: Date.now(),

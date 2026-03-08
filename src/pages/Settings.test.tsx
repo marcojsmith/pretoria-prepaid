@@ -32,7 +32,6 @@ describe("Settings Page", () => {
   const mockProfile = {
     preferredName: "Test User",
     meterNumber: "1234567890",
-    monthlyBudget: 500,
     lowBalanceThreshold: 10,
     pushNotificationsEnabled: false,
   };
@@ -68,7 +67,6 @@ describe("Settings Page", () => {
 
     expect(screen.getByLabelText(/preferred name/i)).toHaveValue("Test User");
     expect(screen.getByLabelText(/meter number/i)).toHaveValue("1234567890");
-    expect(screen.getByLabelText(/monthly budget/i)).toHaveValue(500);
     expect(screen.getByLabelText(/low balance threshold/i)).toHaveValue(10);
   });
 
@@ -87,9 +85,6 @@ describe("Settings Page", () => {
     fireEvent.change(screen.getByLabelText(/meter number/i), {
       target: { value: "0987654321" },
     });
-    fireEvent.change(screen.getByLabelText(/monthly budget/i), {
-      target: { value: "1000" },
-    });
     fireEvent.change(screen.getByLabelText(/low balance threshold/i), {
       target: { value: "20" },
     });
@@ -100,7 +95,6 @@ describe("Settings Page", () => {
       expect(mockUpdateProfile).toHaveBeenCalledWith({
         preferredName: "New Name",
         meterNumber: "0987654321",
-        monthlyBudget: 1000,
         lowBalanceThreshold: 20,
         pushNotificationsEnabled: false,
         pushSubscription: undefined,

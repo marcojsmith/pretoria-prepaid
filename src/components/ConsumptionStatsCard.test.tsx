@@ -4,7 +4,9 @@ import { ConsumptionStatsCard } from "./ConsumptionStatsCard";
 
 describe("ConsumptionStatsCard", () => {
   it("returns null when stats are null", () => {
-    const { container } = render(<ConsumptionStatsCard stats={null} />);
+    const { container } = render(
+      <ConsumptionStatsCard stats={null} unitsThisMonth={0} costThisMonth={0} />
+    );
     expect(container.firstChild).toBeNull();
   });
 
@@ -20,7 +22,7 @@ describe("ConsumptionStatsCard", () => {
       isEstimatedBurnRate: false,
     };
 
-    render(<ConsumptionStatsCard stats={mockStats} />);
+    render(<ConsumptionStatsCard stats={mockStats} unitsThisMonth={100} costThisMonth={342} />);
 
     expect(screen.getByText(/80.2/)).toBeInTheDocument();
     expect(screen.getByText(/5.5/)).toBeInTheDocument();
@@ -41,7 +43,7 @@ describe("ConsumptionStatsCard", () => {
       isEstimatedBurnRate: true,
     };
 
-    render(<ConsumptionStatsCard stats={mockStats} />);
+    render(<ConsumptionStatsCard stats={mockStats} unitsThisMonth={0} costThisMonth={0} />);
     expect(screen.getByText(/Based on estimate/i)).toBeInTheDocument();
   });
 
@@ -61,7 +63,7 @@ describe("ConsumptionStatsCard", () => {
       isEstimatedBurnRate: false,
     };
 
-    render(<ConsumptionStatsCard stats={staleStats} />);
+    render(<ConsumptionStatsCard stats={staleStats} unitsThisMonth={0} costThisMonth={0} />);
     expect(screen.getByText(/Data may be stale/i)).toBeInTheDocument();
     expect(screen.getByText(/9 days ago/i)).toBeInTheDocument();
 
@@ -83,7 +85,7 @@ describe("ConsumptionStatsCard", () => {
       isEstimatedBurnRate: false,
     };
 
-    render(<ConsumptionStatsCard stats={recentStats} />);
+    render(<ConsumptionStatsCard stats={recentStats} unitsThisMonth={0} costThisMonth={0} />);
     expect(screen.queryByText(/Data may be stale/i)).not.toBeInTheDocument();
 
     vi.useRealTimers();
@@ -104,7 +106,7 @@ describe("ConsumptionStatsCard", () => {
       isEstimatedBurnRate: false,
     };
 
-    render(<ConsumptionStatsCard stats={futureStats} />);
+    render(<ConsumptionStatsCard stats={futureStats} unitsThisMonth={0} costThisMonth={0} />);
     expect(screen.getByText(/Data may be stale/i)).toBeInTheDocument();
 
     vi.useRealTimers();

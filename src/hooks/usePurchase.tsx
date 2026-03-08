@@ -340,8 +340,15 @@ export function usePurchases() {
     const currentMonth = getCurrentMonth();
     const previousMonths = monthlyStats.filter((s) => s.month !== currentMonth).slice(0, 3);
     if (previousMonths.length === 0) return 0;
+
     const totalUnits = previousMonths.reduce((sum, s) => sum + s.units, 0);
-    const totalDays = previousMonths.length * 30;
+
+    const totalDays = previousMonths.reduce((sum, s) => {
+      const [year, month] = s.month.split("-").map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      return sum + daysInMonth;
+    }, 0);
+
     return totalUnits / totalDays;
   }, [getMonthlyStats]);
 

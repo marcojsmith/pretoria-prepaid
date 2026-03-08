@@ -1,77 +1,32 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, roundUnits } from "@/lib/electricity";
-import { Receipt, BarChart3, History } from "lucide-react";
+import { Receipt, BarChart3, Zap } from "lucide-react";
 
 interface DashboardStatsProps {
-  unitsThisMonth: number;
-  costThisMonth: number;
   averageMonthlyUsage: number;
   dailyAverage: number;
   averageMonthlyCost: number;
-  monthlyBudget?: number | undefined;
 }
 
 export function DashboardStats({
-  unitsThisMonth,
-  costThisMonth,
   averageMonthlyUsage,
   dailyAverage,
   averageMonthlyCost,
-  monthlyBudget,
 }: DashboardStatsProps) {
-  const hasBudget = typeof monthlyBudget === "number" && monthlyBudget > 0;
-  const budgetProgress = hasBudget ? Math.min((costThisMonth / monthlyBudget) * 100, 100) : 0;
-
   return (
     <Card className="border-border bg-card">
       <CardContent className="space-y-6 pt-4">
-        {hasBudget && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <Receipt className="h-3.5 w-3.5 text-primary" />
-                <span>Monthly Budget</span>
-              </div>
-              <span className="text-sm font-bold tabular-nums">
-                {formatCurrency(costThisMonth)}{" "}
-                <span className="text-xs font-normal text-muted-foreground">
-                  / {formatCurrency(monthlyBudget)}
-                </span>
-              </span>
-            </div>
-            <div className="space-y-1.5">
-              <Progress value={budgetProgress} className="h-2" />
-              <div className="flex justify-end">
-                <span className="text-[10px] font-medium text-muted-foreground">
-                  {budgetProgress >= 100
-                    ? "Budget exceeded"
-                    : `${Math.round(100 - budgetProgress)}% remaining`}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+        <CardHeader className="p-0 pb-2">
+          <CardTitle className="text-sm font-semibold text-muted-foreground">
+            Past 3 Months Average
+          </CardTitle>
+        </CardHeader>
 
-        <div className="grid grid-cols-3 gap-4 border-t pt-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 sm:gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <BarChart3 className="h-3.5 w-3.5 text-primary" />
-              <span>Usage</span>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-sm font-bold tracking-tight">
-                {roundUnits(unitsThisMonth)}{" "}
-                <span className="text-[10px] font-normal text-muted-foreground">kWh</span>
-              </p>
-              <p className="text-[10px] text-muted-foreground">{formatCurrency(costThisMonth)}</p>
-            </div>
-          </div>
-
-          <div className="space-y-1 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <History className="h-3.5 w-3.5 text-primary" />
-              <span>Average</span>
+              <span>Average Usage</span>
             </div>
             <div className="space-y-0.5">
               <p className="text-sm font-bold tracking-tight">
@@ -84,17 +39,30 @@ export function DashboardStats({
             </div>
           </div>
 
-          <div className="space-y-1 text-right">
-            <div className="flex items-center justify-end gap-1.5 text-xs font-medium text-muted-foreground">
-              <Receipt className="h-3.5 w-3.5" />
-              <span>Spend</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Receipt className="h-3.5 w-3.5 text-primary" />
+              <span>Average Spend</span>
             </div>
             <div className="space-y-0.5">
               <p className="text-sm font-bold tracking-tight">
                 {formatCurrency(averageMonthlyCost)}
                 <span className="text-[10px] font-normal text-muted-foreground"> /mo</span>
               </p>
-              <p className="text-[10px] text-muted-foreground">Last 3 months</p>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Zap className="h-3.5 w-3.5 text-primary" />
+              <span>Avg Cost/kWh</span>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-sm font-bold tracking-tight">
+                {averageMonthlyUsage > 0
+                  ? formatCurrency(averageMonthlyCost / averageMonthlyUsage)
+                  : formatCurrency(0)}
+              </p>
             </div>
           </div>
         </div>

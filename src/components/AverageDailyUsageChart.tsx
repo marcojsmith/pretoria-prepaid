@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function YearlyConsumptionChart() {
+export function AverageDailyUsageChart() {
   const { getMonthlyStats } = usePurchases();
   const allMonthlyStats = useMemo(() => getMonthlyStats(), [getMonthlyStats]);
 
@@ -13,9 +13,8 @@ export function YearlyConsumptionChart() {
     const data = [];
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-indexed
+    const currentMonth = now.getMonth();
 
-    // Generate last 12 months (including current)
     for (let i = 11; i >= 0; i--) {
       const d = new Date(currentYear, currentMonth - i, 1);
       const year = d.getFullYear();
@@ -23,9 +22,12 @@ export function YearlyConsumptionChart() {
       const monthKey = `${year}-${(month + 1).toString().padStart(2, "0")}`;
 
       const stats = allMonthlyStats.find((s) => s.month === monthKey);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const avgDaily = stats ? stats.units / daysInMonth : 0;
+
       data.push({
         month: MONTHS[month],
-        units: stats?.units || 0,
+        avgDaily,
         monthKey,
       });
     }
@@ -33,63 +35,61 @@ export function YearlyConsumptionChart() {
     return data;
   }, [allMonthlyStats]);
 
-  const maxUnits = useMemo(() => {
-    const max = Math.max(...rollingData.map((d) => d.units));
-    return max === 0 ? 100 : max * 1.1; // Add 10% headroom
+  const maxAvg = useMemo(() => {
+    const max = Math.max(...rollingData.map((d) => d.avgDaily));
+    return max === 0 ? 10 : max * 1.2;
   }, [rollingData]);
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader>
         <CardTitle className="text-lg font-semibold tracking-tight">
-          Monthly Consumption (kWh)
+          Average Daily Consumption (kWh/d)
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex h-[180px] justify-between gap-1 pt-4 sm:gap-2">
           {rollingData.map((data, index) => {
-            const height = (data.units / maxUnits) * 100;
+            const height = (data.avgDaily / maxAvg) * 100;
             return (
               <div
                 key={data.monthKey}
                 className="group relative flex h-full flex-1 flex-col items-center"
               >
-                {/* Tooltip on hover */}
                 <div className="absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground group-hover:block">
-                  {data.units.toFixed(1)} kWh
+                  {data.avgDaily.toFixed(1)} kWh/d
                 </div>
 
                 {/* Bar Value (above bar) */}
-                {data.units > 0 && (
-                  <span className="mb-1 text-[9px] font-bold text-primary">
-                    {Math.round(data.units)}
+                {data.avgDaily > 0 && (
+                  <span className="mb-1 text-[9px] font-bold text-orange-500">
+                    {data.avgDaily.toFixed(1)}
                   </span>
                 )}
 
-                {/* Bar */}
                 <div className="relative flex w-full flex-1 flex-col justify-end overflow-hidden rounded-t-sm bg-muted/30">
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: `${height}%` }}
                     transition={{ duration: 0.5, delay: index * 0.03 }}
-                    className="w-full bg-primary/80 transition-colors group-hover:bg-primary"
+                    className="w-full bg-orange-500/80 transition-colors group-hover:bg-orange-500"
                   />
                 </div>
 
-                {/* Month Label */}
                 <span className="mt-2 text-[10px] font-medium text-muted-foreground sm:text-[11px]">
                   {data.month}
                 </span>
 
-                {/* Desktop-only value label */}
                 <span className="mt-0.5 hidden h-3 text-[9px] text-muted-foreground/70 lg:block">
-                  {data.units > 0 ? `${Math.round(data.units)}` : ""}
+                  {data.avgDaily > 0 ? `${data.avgDaily.toFixed(1)}` : ""}
                 </span>
               </div>
             );
           })}
         </div>
-        <p className="mt-4 text-center text-[10px] text-muted-foreground">Last 12 rolling months</p>
+        <p className="mt-4 text-center text-[10px] text-muted-foreground">
+          Monthly units / days in month
+        </p>
       </CardContent>
     </Card>
   );

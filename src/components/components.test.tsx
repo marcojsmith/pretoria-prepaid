@@ -43,37 +43,21 @@ describe("Application Components", () => {
   });
 
   it("renders DashboardStats correctly", () => {
-    const { getAllByText } = render(
+    const { getAllByText, rerender } = render(
       <BrowserRouter>
-        <DashboardStats
-          unitsThisMonth={100}
-          costThisMonth={342}
-          averageMonthlyUsage={300}
-          dailyAverage={10}
-          averageMonthlyCost={1000}
-        />
+        <DashboardStats averageMonthlyUsage={300} dailyAverage={10} averageMonthlyCost={1000} />
       </BrowserRouter>
     );
-    expect(getAllByText(/100/).length).toBeGreaterThan(0);
-    expect(getAllByText(/kWh/i).length).toBeGreaterThan(0);
-  });
+    expect(getAllByText(/300/).length).toBeGreaterThan(0);
+    expect(getAllByText(/kWh\/mo/i).length).toBeGreaterThan(0);
 
-  it("renders DashboardStats with monthlyBudget and progress bar", () => {
-    const { getByText, getByRole, getAllByText } = render(
+    // Test zero usage path
+    rerender(
       <BrowserRouter>
-        <DashboardStats
-          unitsThisMonth={100}
-          costThisMonth={342}
-          averageMonthlyUsage={300}
-          dailyAverage={10}
-          averageMonthlyCost={1000}
-          monthlyBudget={1000}
-        />
+        <DashboardStats averageMonthlyUsage={0} dailyAverage={0} averageMonthlyCost={0} />
       </BrowserRouter>
     );
-    expect(getByText(/Monthly Budget/i)).toBeInTheDocument();
-    expect(getAllByText(/1000.00/)[0]).toBeInTheDocument();
-    expect(getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getAllByText(/R 0.00/i).length).toBeGreaterThanOrEqual(2);
   });
 
   it("renders TierProgress", () => {

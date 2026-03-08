@@ -92,7 +92,6 @@ export const updateProfile = mutation({
   args: {
     preferredName: v.optional(v.string()),
     meterNumber: v.optional(v.string()),
-    monthlyBudget: v.optional(v.number()),
     lowBalanceThreshold: v.optional(v.number()),
     pushNotificationsEnabled: v.optional(v.boolean()),
     pushSubscription: v.optional(
@@ -124,7 +123,6 @@ export const updateProfile = mutation({
     const updates: {
       preferredName?: string;
       meterNumber?: string;
-      monthlyBudget?: number;
       lowBalanceThreshold?: number;
       pushNotificationsEnabled?: boolean;
       pushSubscription?:
@@ -140,7 +138,6 @@ export const updateProfile = mutation({
     } = {};
     if (args.preferredName !== undefined) updates.preferredName = args.preferredName;
     if (args.meterNumber !== undefined) updates.meterNumber = args.meterNumber;
-    if (args.monthlyBudget !== undefined) updates.monthlyBudget = args.monthlyBudget;
     if (args.lowBalanceThreshold !== undefined)
       updates.lowBalanceThreshold = args.lowBalanceThreshold;
     if (args.pushNotificationsEnabled !== undefined)

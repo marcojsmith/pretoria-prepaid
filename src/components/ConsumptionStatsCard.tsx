@@ -1,13 +1,19 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Zap, Calendar, TrendingDown, AlertTriangle } from "lucide-react";
-import { roundUnits } from "@/lib/electricity";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Zap, Calendar, TrendingDown, AlertTriangle, BarChart3 } from "lucide-react";
+import { roundUnits, formatCurrency } from "@/lib/electricity";
 import { ConsumptionStats } from "@/hooks/useConsumption";
 
 interface ConsumptionStatsCardProps {
   stats: ConsumptionStats | null;
+  unitsThisMonth: number;
+  costThisMonth: number;
 }
 
-export function ConsumptionStatsCard({ stats }: ConsumptionStatsCardProps) {
+export function ConsumptionStatsCard({
+  stats,
+  unitsThisMonth,
+  costThisMonth,
+}: ConsumptionStatsCardProps) {
   if (!stats) return null;
 
   const isLow = stats.estimatedBalance <= stats.lowBalanceThreshold;
@@ -35,7 +41,26 @@ export function ConsumptionStatsCard({ stats }: ConsumptionStatsCardProps) {
   return (
     <Card className={`border-border bg-card`}>
       <CardContent className="space-y-4 pt-4">
-        <div className="grid grid-cols-3 gap-4">
+        <CardHeader className="p-0 pb-2">
+          <CardTitle className="text-sm font-semibold text-muted-foreground">
+            Current Month
+          </CardTitle>
+        </CardHeader>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 sm:gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <BarChart3 className="h-3.5 w-3.5 text-primary" />
+              <span>Usage</span>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-lg font-bold tracking-tight text-foreground">
+                {roundUnits(unitsThisMonth)}{" "}
+                <span className="text-xs font-normal text-muted-foreground">kWh</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground">{formatCurrency(costThisMonth)}</p>
+            </div>
+          </div>
+
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Zap className={`h-3.5 w-3.5 ${isLow ? "text-destructive" : "text-primary"}`} />
@@ -54,8 +79,8 @@ export function ConsumptionStatsCard({ stats }: ConsumptionStatsCardProps) {
             </div>
           </div>
 
-          <div className="space-y-1 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <TrendingDown className="h-3.5 w-3.5 text-primary" />
               <span>Daily Usage</span>
             </div>
@@ -70,8 +95,8 @@ export function ConsumptionStatsCard({ stats }: ConsumptionStatsCardProps) {
             </div>
           </div>
 
-          <div className="space-y-1 text-right">
-            <div className="flex items-center justify-end gap-1.5 text-xs font-medium text-muted-foreground">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Calendar className="h-3.5 w-3.5 text-primary" />
               <span>Days Left</span>
             </div>

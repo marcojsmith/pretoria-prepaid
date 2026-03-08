@@ -1,50 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { YearlyConsumptionChart } from "./YearlyConsumptionChart";
 import { usePurchases } from "@/hooks/usePurchase";
-
-interface MockSelectProps {
-  children?: React.ReactNode;
-  onValueChange?: (value: string) => void;
-  value?: string;
-}
-
-interface MockSelectTriggerProps {
-  children?: React.ReactNode;
-  id?: string;
-}
-
-interface MockSelectValueProps {
-  placeholder?: string;
-}
-
-interface MockSelectContentProps {
-  children?: React.ReactNode;
-}
-
-interface MockSelectItemProps {
-  children?: React.ReactNode;
-  value?: string;
-}
 
 // Mock the hook
 vi.mock("@/hooks/usePurchase", () => ({
   usePurchases: vi.fn(),
-}));
-
-// Mock Select component
-vi.mock("@/components/ui/select", () => ({
-  Select: ({ children, onValueChange, value }: MockSelectProps) => (
-    <select role="combobox" value={value} onChange={(e) => onValueChange?.(e.target.value)}>
-      {children}
-    </select>
-  ),
-  SelectTrigger: ({ children, id }: MockSelectTriggerProps) => <button id={id}>{children}</button>,
-  SelectValue: ({ placeholder }: MockSelectValueProps) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: MockSelectContentProps) => <>{children}</>,
-  SelectItem: ({ children, value }: MockSelectItemProps) => (
-    <option value={value}>{children}</option>
-  ),
 }));
 
 describe("YearlyConsumptionChart", () => {
@@ -55,50 +16,43 @@ describe("YearlyConsumptionChart", () => {
     { month: "2025-12", units: 700, cost: 2800, purchases: 4 },
   ];
 
-  it("renders correctly for the current year", () => {
-    vi.mocked(usePurchases).mockReturnValue({
-      getMonthlyStats: () => mockMonthlyStats,
-    } as ReturnType<typeof usePurchases>);
-
-    render(<YearlyConsumptionChart />);
-
-    expect(screen.getByText("Yearly Consumption")).toBeInTheDocument();
-
-    // Check for values (they appear in tooltips and sometimes below bars)
-    expect(screen.getAllByText(/500/)).toHaveLength(2); // tooltip + label
-    expect(screen.getAllByText(/450/)).toHaveLength(2);
-    expect(screen.getAllByText(/600/)).toHaveLength(2);
-
-    // 2025 data should not be visible initially
-    expect(screen.queryByText(/700/)).not.toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-10T12:00:00Z"));
   });
 
-  it("allows switching years", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("renders correctly with rolling 12 months", () => {
     vi.mocked(usePurchases).mockReturnValue({
       getMonthlyStats: () => mockMonthlyStats,
     } as ReturnType<typeof usePurchases>);
 
     render(<YearlyConsumptionChart />);
 
-    const yearSelect = screen.getByRole("combobox");
-    expect(yearSelect).toHaveValue("2026");
+    expect(screen.getByText("Monthly Consumption (kWh)")).toBeInTheDocument();
+    expect(screen.getByText("Last 12 rolling months")).toBeInTheDocument();
 
-    // Switch to 2025
-    fireEvent.change(yearSelect, { target: { value: "2025" } });
-
-    // Now 2025 data (700) should be visible
-    expect(screen.getAllByText(/700/)).toHaveLength(2);
+    // Check for values (they appear in tooltips, bar value text, and sometimes below bars for desktop)
+    // 500: tooltip (500.0), bar value (500), desktop label (500) -> 3 occurrences
+    expect(screen.getAllByText(/500/)).toHaveLength(3);
+    expect(screen.getAllByText(/450/)).toHaveLength(3);
+    expect(screen.getAllByText(/600/)).toHaveLength(3);
+    expect(screen.getAllByText(/700/)).toHaveLength(3); // Should be visible as it's within rolling 12 months
   });
 
   it("shows zero usage for months with no data", () => {
     vi.mocked(usePurchases).mockReturnValue({
-      getMonthlyStats: () => [{ month: "2026-01", units: 100, cost: 400, purchases: 1 }],
+      getMonthlyStats: () => [{ month: "2026-03", units: 100, cost: 400, purchases: 1 }],
     } as ReturnType<typeof usePurchases>);
 
     render(<YearlyConsumptionChart />);
 
-    // Should show 100 for Jan
-    expect(screen.getAllByText(/100/)).toHaveLength(2);
+    // Should show 100 for current month (tooltip, bar value, desktop label)
+    expect(screen.getAllByText(/100/)).toHaveLength(3);
     // Should show 0.0 in tooltips for others
     const zeroTooltips = screen.getAllByText(/\b0\.0\b/);
     expect(zeroTooltips.length).toBe(11); // 11 months with zero

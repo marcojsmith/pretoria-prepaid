@@ -23,7 +23,6 @@ export default function Settings() {
   const [formData, setFormData] = useState({
     preferredName: "",
     meterNumber: "",
-    monthlyBudget: "",
     lowBalanceThreshold: "10",
     pushNotificationsEnabled: false,
   });
@@ -35,7 +34,6 @@ export default function Settings() {
       setFormData({
         preferredName: profile.preferredName || "",
         meterNumber: profile.meterNumber || "",
-        monthlyBudget: profile.monthlyBudget?.toString() || "",
         lowBalanceThreshold: profile.lowBalanceThreshold?.toString() || "10",
         pushNotificationsEnabled: profile.pushNotificationsEnabled || false,
       });
@@ -77,7 +75,6 @@ export default function Settings() {
       const updates: {
         preferredName: string;
         meterNumber: string;
-        monthlyBudget?: number;
         lowBalanceThreshold?: number;
         pushNotificationsEnabled: boolean;
         pushSubscription?: {
@@ -95,10 +92,6 @@ export default function Settings() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pushSubscription: pushSubscription as any, // Cast to any because the browser type and Convex type might slightly differ in strictness
       };
-
-      if (formData.monthlyBudget) {
-        updates.monthlyBudget = parseFloat(formData.monthlyBudget);
-      }
 
       if (formData.lowBalanceThreshold) {
         updates.lowBalanceThreshold = parseFloat(formData.lowBalanceThreshold);
@@ -169,20 +162,10 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Alerts & Budgeting</CardTitle>
-              <CardDescription>Configure notifications and spending limits.</CardDescription>
+              <CardTitle className="text-lg">Alerts & Thresholds</CardTitle>
+              <CardDescription>Configure notifications and low balance alerts.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="monthlyBudget">Monthly Budget (R)</Label>
-                <Input
-                  id="monthlyBudget"
-                  type="number"
-                  placeholder="e.g. 500"
-                  value={formData.monthlyBudget}
-                  onChange={(e) => setFormData({ ...formData, monthlyBudget: e.target.value })}
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="lowBalanceThreshold">Low Balance Threshold (kWh)</Label>
                 <Input

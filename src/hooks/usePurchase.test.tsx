@@ -236,9 +236,9 @@ describe("usePurchases Hook - Offline Actions", () => {
     expect(stats[1].month).toBe("2024-01");
     expect(stats[1].units).toBe(300);
 
-    // Averages (should use Jan stats as previous month)
+    // Averages (should use Jan stats as previous month: 300 units in Jan which has 31 days)
     expect(result.current.getAverageMonthlyUsage()).toBe(300);
-    expect(result.current.getDailyAverageUsage()).toBe(10); // 300 / 30
+    expect(result.current.getDailyAverageUsage()).toBeCloseTo(9.68, 2);
     expect(result.current.getAverageMonthlyCost()).toBe(900);
   });
 

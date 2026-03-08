@@ -11,6 +11,7 @@ import { TierProgress } from "@/components/TierProgress";
 import { MonthlyStats } from "@/components/MonthlyStats";
 import { PurchaseFrequencyChart } from "@/components/PurchaseFrequencyChart";
 import { YearlyConsumptionChart } from "@/components/YearlyConsumptionChart";
+import { AverageDailyUsageChart } from "@/components/AverageDailyUsageChart";
 import { PatreonBanner } from "@/components/PatreonBanner";
 import { ConsumptionStatsCard } from "@/components/ConsumptionStatsCard";
 import { Header } from "@/components/Header";
@@ -21,7 +22,7 @@ import { Loader2 } from "lucide-react";
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
+  const { loading: profileLoading } = useProfile();
   const { rates, loading: ratesLoading } = useRates();
   const { stats: consumptionStats, loading: consumptionLoading } = useConsumption();
   const {
@@ -85,14 +86,15 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <ConsumptionStatsCard stats={consumptionStats} />
-              <DashboardStats
+              <ConsumptionStatsCard
+                stats={consumptionStats}
                 unitsThisMonth={unitsThisMonth}
                 costThisMonth={costThisMonth}
+              />
+              <DashboardStats
                 averageMonthlyUsage={averageMonthlyUsage}
                 dailyAverage={dailyAverage}
                 averageMonthlyCost={averageMonthlyCost}
-                monthlyBudget={profile?.monthlyBudget}
               />
             </div>
           </section>
@@ -108,6 +110,12 @@ export default function Dashboard() {
             {monthlyStats.length > 0 && (
               <div className="w-full">
                 <YearlyConsumptionChart />
+              </div>
+            )}
+
+            {monthlyStats.length > 0 && (
+              <div className="w-full">
+                <AverageDailyUsageChart />
               </div>
             )}
 
