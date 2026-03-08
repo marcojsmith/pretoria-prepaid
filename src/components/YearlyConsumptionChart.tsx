@@ -60,7 +60,7 @@ export function YearlyConsumptionChart() {
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-semibold tracking-tight">Yearly Consumption</CardTitle>
         <Select value={selectedYear} onValueChange={setSelectedYear}>
           <SelectTrigger className="h-8 w-[100px] text-xs">
@@ -75,7 +75,7 @@ export function YearlyConsumptionChart() {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent>
         <div className="flex h-[180px] justify-between gap-1 pt-4 sm:gap-2">
           {yearData.map((data, index) => {
             const height = (data.units / maxUnits) * 100;

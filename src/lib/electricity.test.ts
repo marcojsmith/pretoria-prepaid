@@ -70,6 +70,10 @@ describe("electricity calculator utilities", () => {
       expect(getTierLabel(700, MOCK_RATES)).toBe("Tier 4");
       expect(getTierLabel(0, MOCK_RATES)).toBe("Tier 1");
     });
+
+    it("returns 'Unknown' for empty rates array", () => {
+      expect(getTierLabel(50, [])).toBe("Unknown");
+    });
   });
 
   describe("getTierBreakdownForUnits", () => {

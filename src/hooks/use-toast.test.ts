@@ -109,4 +109,17 @@ describe("useToast hook and logic", () => {
     const nextState = reducer(initialState, action);
     expect(nextState.toasts[0].open).toBe(false);
   });
+
+  it("reducer handles REMOVE_TOAST with specific toastId", () => {
+    const initialState: State = {
+      toasts: [
+        { id: "1", title: "T1" },
+        { id: "2", title: "T2" },
+      ],
+    };
+    const action: Action = { type: "REMOVE_TOAST", toastId: "1" };
+    const nextState = reducer(initialState, action);
+    expect(nextState.toasts.length).toBe(1);
+    expect(nextState.toasts[0].id).toBe("2");
+  });
 });

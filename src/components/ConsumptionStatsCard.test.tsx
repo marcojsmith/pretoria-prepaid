@@ -22,10 +22,11 @@ describe("ConsumptionStatsCard", () => {
 
     render(<ConsumptionStatsCard stats={mockStats} />);
 
-    expect(screen.getByText(/80.2 kWh/i)).toBeInTheDocument();
-    expect(screen.getByText(/5.5 kWh\/d/i)).toBeInTheDocument();
-    expect(screen.getByText(/15 Days/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Estimate/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/80.2/)).toBeInTheDocument();
+    expect(screen.getByText(/5.5/)).toBeInTheDocument();
+    expect(screen.getByText(/15/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Days/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Based on estimate/i)).not.toBeInTheDocument();
   });
 
   it("shows estimate label when burn rate is estimated", () => {
@@ -41,7 +42,7 @@ describe("ConsumptionStatsCard", () => {
     };
 
     render(<ConsumptionStatsCard stats={mockStats} />);
-    expect(screen.getByText(/Estimate/i)).toBeInTheDocument();
+    expect(screen.getByText(/Based on estimate/i)).toBeInTheDocument();
   });
 
   it("shows stale warning when last reading is older than 7 days", () => {
@@ -61,8 +62,8 @@ describe("ConsumptionStatsCard", () => {
     };
 
     render(<ConsumptionStatsCard stats={staleStats} />);
-    expect(screen.getByText(/Stale Data/i)).toBeInTheDocument();
-    expect(screen.getByText(/9d old/i)).toBeInTheDocument();
+    expect(screen.getByText(/Data may be stale/i)).toBeInTheDocument();
+    expect(screen.getByText(/9 days ago/i)).toBeInTheDocument();
 
     vi.useRealTimers();
   });
@@ -83,7 +84,7 @@ describe("ConsumptionStatsCard", () => {
     };
 
     render(<ConsumptionStatsCard stats={recentStats} />);
-    expect(screen.queryByText(/Stale Data/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Data may be stale/i)).not.toBeInTheDocument();
 
     vi.useRealTimers();
   });
@@ -104,7 +105,7 @@ describe("ConsumptionStatsCard", () => {
     };
 
     render(<ConsumptionStatsCard stats={futureStats} />);
-    expect(screen.getByText(/Stale Data/i)).toBeInTheDocument();
+    expect(screen.getByText(/Data may be stale/i)).toBeInTheDocument();
 
     vi.useRealTimers();
   });

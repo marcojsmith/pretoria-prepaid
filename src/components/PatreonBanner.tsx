@@ -8,10 +8,10 @@ export function PatreonBanner() {
   if (dismissed) return null;
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/10 p-3">
-      <div className="flex min-w-0 items-center gap-3">
-        <Heart className="h-5 w-5 flex-shrink-0 text-primary" />
-        <p className="text-sm text-foreground">
+    <div className="flex items-center justify-between gap-3 border-b border-primary/20 bg-primary/5 px-4 py-2">
+      <div className="flex w-full items-center justify-center gap-2 text-xs">
+        <Heart className="h-4 w-4 text-primary" />
+        <span>
           Has this app helped you?{" "}
           <a
             href="https://www.patreon.com/MarcoSmith"
@@ -20,17 +20,17 @@ export function PatreonBanner() {
             className="font-medium text-primary hover:underline"
           >
             Support on Patreon
-          </a>{" "}
-          to help keep it running!
-        </p>
+          </a>
+        </span>
       </div>
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 flex-shrink-0"
+        className="h-6 w-6 shrink-0"
         onClick={() => setDismissed(true)}
+        aria-label="Dismiss Patreon banner"
       >
-        <X className="h-4 w-4" />
+        <X className="h-3 w-3" />
       </Button>
     </div>
   );

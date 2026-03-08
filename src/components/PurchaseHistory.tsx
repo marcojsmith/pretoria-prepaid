@@ -81,90 +81,79 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
           return (
             <div
               key={purchase._id}
-              className={`space-y-1.5 rounded-md border p-2.5 ${
+              className={`space-y-2 rounded-md border p-3 ${
                 purchase.isOffline
-                  ? "border-amber-200 bg-amber-50/30"
-                  : "border-border bg-secondary-foreground"
+                  ? "border-amber-200 bg-amber-50/30 dark:border-amber-800 dark:bg-amber-950/30"
+                  : "border-border bg-card"
               }`}
             >
-              {/* Header row with date top-right */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium">{roundUnits(purchase.units)} kWh</span>
-                  {purchase.isOffline && (
-                    <Badge
-                      variant="outline"
-                      className="flex h-4 gap-1 border-amber-300 bg-amber-100/50 px-1 text-[9px] font-normal text-amber-700"
-                    >
-                      <Clock className="h-2 w-2" />
-                      Pending Sync
-                    </Badge>
-                  )}
-                </div>
-                <span className="text-[10px] text-muted-foreground">
+              <div className="flex justify-between text-xs">
+                <span className="font-medium">
                   {new Date(purchase.date).toLocaleDateString("en-ZA", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
                   })}
+                  {purchase.isOffline && (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 inline-flex h-4 gap-1 border-amber-300 bg-amber-100/50 px-1 text-[8px] font-normal text-amber-700 dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-400"
+                    >
+                      <Clock className="h-2 w-2" />
+                      Syncing
+                    </Badge>
+                  )}
                 </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">
+                    {roundUnits(purchase.units)} kWh • {formatCurrency(purchase.amountPaid)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                    onClick={() => onDelete(purchase._id)}
+                    aria-label="Delete purchase"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
 
-              {/* Amount and delete */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-primary">
-                  {formatCurrency(purchase.amountPaid)}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => onDelete(purchase._id)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-
-              {/* Tier breakdown */}
+              {/* Tier-segmented progress bar */}
               {hasValidBreakdown && (
-                <div className="space-y-1">
-                  {/* Visual bar */}
-                  <div className="flex h-1.5 overflow-hidden rounded-md bg-muted">
+                <div className="h-1.5 overflow-hidden rounded-md bg-muted">
+                  <div className="flex h-full overflow-hidden rounded-md">
                     {purchase.tierBreakdown.map((item) => {
-                      const percentage = (item.units / purchase.units) * 100;
+                      const segmentWidth = (item.units / purchase.units) * 100;
                       return (
                         <div
                           key={item.tier}
-                          className={`h-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES]}`}
-                          style={{
-                            width: `${percentage}%`,
-                          }}
+                          className={`h-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES] || "bg-primary"}`}
+                          style={{ width: `${segmentWidth}%` }}
                         />
                       );
                     })}
                   </div>
-
-                  {/* Text breakdown */}
-                  <div className="flex flex-wrap gap-x-1.5 text-[10px]">
-                    {purchase.tierBreakdown.map((item, index) => (
-                      <span key={item.tier}>
-                        <span
-                          className={TIER_TEXT_CLASSES[item.tier as keyof typeof TIER_TEXT_CLASSES]}
-                        >
-                          {roundUnits(item.units)} {item.label}
-                        </span>
-                        {index < purchase.tierBreakdown.length - 1 && (
-                          <span className="text-muted-foreground"> + </span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
                 </div>
               )}
 
-              <p className="text-[10px] text-muted-foreground">
-                @ {formatCurrency(effectiveRate)}/kWh effective
-              </p>
+              {/* Tier breakdown text */}
+              <div className="flex flex-wrap gap-x-1.5 text-[10px] text-muted-foreground">
+                {hasValidBreakdown &&
+                  purchase.tierBreakdown.map((item, index) => (
+                    <span key={item.tier}>
+                      <span
+                        className={`font-medium ${TIER_TEXT_CLASSES[item.tier as keyof typeof TIER_TEXT_CLASSES]}`}
+                      >
+                        {roundUnits(item.units)}
+                      </span>
+                      <span> {item.label}</span>
+                      {index < purchase.tierBreakdown.length - 1 && <span> •</span>}
+                    </span>
+                  ))}
+                <span className="ml-auto">@ {formatCurrency(effectiveRate)}/kWh</span>
+              </div>
             </div>
           );
         })}

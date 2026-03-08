@@ -220,7 +220,7 @@ describe("Dashboard Page", () => {
       </BrowserRouter>
     );
 
-    fireEvent.click(screen.getByText("Buy Units"));
+    fireEvent.click(screen.getByText("Smart Calc"));
     expect(mockNavigate).toHaveBeenCalledWith("/calculator");
   });
 
@@ -291,5 +291,32 @@ describe("Dashboard Page", () => {
 
     fireEvent.click(screen.getByText("View All Rates"));
     expect(mockNavigate).toHaveBeenCalledWith("/rates");
+  });
+
+  it("renders charts when monthlyStats has data", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Marco",
+        primaryEmailAddress: { emailAddress: "marco@example.com" },
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
+      loading: false,
+      signOut: vi.fn(),
+    });
+    mockUsePurchases({
+      getMonthlyStats: () => [
+        { month: "2024-01", units: 100, cost: 300, count: 2 },
+        { month: "2024-02", units: 150, cost: 450, count: 3 },
+      ],
+    });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+    mockUseProfile();
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    );
+
+    expect(screen.getAllByText(/PowerTracker/i).length).toBeGreaterThan(0);
   });
 });

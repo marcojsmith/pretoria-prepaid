@@ -32,6 +32,30 @@ describe("CSV utilities", () => {
     expect(convertToCSV([])).toBe("");
   });
 
+  it("handles values with commas", () => {
+    const data = [{ name: "Hello, World" }];
+    const csv = convertToCSV(data);
+    expect(csv).toBe('name\n"Hello, World"');
+  });
+
+  it("handles values with quotes", () => {
+    const data = [{ description: 'He said "hi"' }];
+    const csv = convertToCSV(data);
+    expect(csv).toBe('description\n"He said ""hi"""');
+  });
+
+  it("handles values with newlines", () => {
+    const data = [{ note: "line1\nline2" }];
+    const csv = convertToCSV(data);
+    expect(csv).toBe('note\n"line1\nline2"');
+  });
+
+  it("handles null and undefined values", () => {
+    const data = [{ name: "John", age: null, city: undefined }];
+    const csv = convertToCSV(data);
+    expect(csv).toBe("name,age,city\nJohn,,");
+  });
+
   it("triggers download", () => {
     // Mock DOM elements and methods
     const mockElement = {

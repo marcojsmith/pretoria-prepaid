@@ -27,14 +27,14 @@ export function TierProgress({ unitsBought }: TierProgressProps) {
   // Map tier index to the correct bg class for the progress bar
   const tierProgressClasses = [
     "bg-primary/20 [&>div]:bg-primary",
-    "bg-teal-500/20 [&>div]:bg-teal-500",
+    "bg-sky-500/20 [&>div]:bg-sky-500",
     "bg-amber-500/20 [&>div]:bg-amber-500",
     "bg-destructive/20 [&>div]:bg-destructive",
   ];
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Layers className="h-4 w-4 text-primary" />
           Tier Progress

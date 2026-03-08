@@ -12,7 +12,7 @@ import {
   getTierLabel,
   ElectricityRate,
 } from "@/lib/electricity";
-import { Plus, Activity, Zap, AlertTriangle } from "lucide-react";
+import { Plus, Zap, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface AddPurchaseFormProps {
@@ -90,17 +90,17 @@ export function AddPurchaseForm({
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <Plus className="h-3 w-3 text-primary" />
           Record Purchase
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label htmlFor="amount" className="text-xs">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="amount" className="text-xs font-medium">
                 Amount Paid (R)
               </Label>
               <Input
@@ -111,11 +111,11 @@ export function AddPurchaseForm({
                 onChange={(e) => setAmountPaid(e.target.value)}
                 min="0.01"
                 step="0.01"
-                className="h-8 text-xs"
+                className="h-9 text-xs"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="units" className="text-xs">
+            <div className="space-y-1.5">
+              <Label htmlFor="units" className="text-xs font-medium">
                 kWh Received
               </Label>
               <Input
@@ -126,14 +126,12 @@ export function AddPurchaseForm({
                 onChange={(e) => setUnitsReceived(e.target.value)}
                 min="0.1"
                 step="0.1"
-                className="h-8 text-xs"
+                className="h-9 text-xs"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label htmlFor="date" className="text-xs">
+            <div className="space-y-1.5">
+              <Label htmlFor="date" className="text-xs font-medium">
                 Date
               </Label>
               <Input
@@ -141,12 +139,11 @@ export function AddPurchaseForm({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="h-8 text-xs"
+                className="h-9 text-xs"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="meterReading" className="flex items-center gap-1 text-xs">
-                <Activity className="h-3 w-3" />
+            <div className="space-y-1.5">
+              <Label htmlFor="meterReading" className="text-xs font-medium">
                 Current Meter
               </Label>
               <Input
@@ -157,7 +154,7 @@ export function AddPurchaseForm({
                 onChange={(e) => setMeterReading(e.target.value)}
                 min="0"
                 step="0.1"
-                className="h-8 text-xs"
+                className="h-9 text-xs"
               />
             </div>
           </div>
@@ -206,7 +203,7 @@ export function AddPurchaseForm({
 
           <Button
             type="submit"
-            className="h-8 w-full text-xs"
+            className="h-9 w-full text-xs"
             disabled={amountNum <= 0 || unitsNum <= 0}
           >
             Add Purchase

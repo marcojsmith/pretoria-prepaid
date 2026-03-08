@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Zap, LogOut, ArrowLeft, User } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface HeaderProps {
   offlineCount?: number;
@@ -57,6 +58,8 @@ export function Header({ offlineCount = 0 }: HeaderProps) {
               <span className="xs:inline hidden">Dashboard</span>
             </Button>
           )}
+
+          <ThemeToggle />
 
           {user && (
             <DropdownMenu>

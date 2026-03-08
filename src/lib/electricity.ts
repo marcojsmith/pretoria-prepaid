@@ -233,14 +233,14 @@ export function getTierBreakdownForUnits(
 // Tier colors for visual display
 export const TIER_BG_CLASSES = {
   1: "bg-primary",
-  2: "bg-teal-500",
+  2: "bg-sky-500",
   3: "bg-amber-500",
   4: "bg-destructive",
 } as const;
 
 export const TIER_TEXT_CLASSES = {
   1: "text-primary",
-  2: "text-teal-500",
+  2: "text-sky-500",
   3: "text-amber-500",
   4: "text-destructive",
 } as const;

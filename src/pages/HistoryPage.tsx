@@ -194,7 +194,7 @@ export default function HistoryPage() {
                   className="overflow-hidden"
                 >
                   <Card className="border-none bg-transparent shadow-none">
-                    <CardContent className="space-y-4 p-2 pb-4">
+                    <CardContent className="space-y-4 pt-4">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-medium text-muted-foreground">
                           Select period to narrow results

@@ -41,10 +41,7 @@ export function MonthYearFilter({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
       <div className="flex-1 space-y-1.5">
-        <Label
-          htmlFor="month-select"
-          className="text-[10px] uppercase tracking-wider text-muted-foreground"
-        >
+        <Label htmlFor="month-select" className="text-xs font-medium text-muted-foreground">
           Select Month
         </Label>
         <Select value={selectedMonth} onValueChange={onMonthChange}>
@@ -62,10 +59,7 @@ export function MonthYearFilter({
       </div>
 
       <div className="flex-1 space-y-1.5">
-        <Label
-          htmlFor="year-select"
-          className="text-[10px] uppercase tracking-wider text-muted-foreground"
-        >
+        <Label htmlFor="year-select" className="text-xs font-medium text-muted-foreground">
           Select Year
         </Label>
         <Select value={selectedYear} onValueChange={onYearChange}>
