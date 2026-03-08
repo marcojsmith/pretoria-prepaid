@@ -1,22 +1,18 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
 import { usePurchases } from "@/hooks/usePurchase";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Download,
   Copy,
   Loader2,
-  Shield,
   FileSpreadsheet,
   Printer,
   FileJson,
-  Upload,
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
@@ -36,7 +32,6 @@ interface ImportItem {
 export default function ExportPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
   const { offlineCount, addBatchPurchases } = usePurchases();
   const { toast } = useToast();
 
@@ -49,8 +44,6 @@ export default function ExportPage() {
 
   // Import state
   const [importData, setImportData] = useState<ImportItem[]>([]);
-  const [rawCsvText, setRawCsvText] = useState<string>("");
-  const [perUnitCost, setPerUnitCost] = useState<string>("");
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,7 +53,7 @@ export default function ExportPage() {
     }
   }, [user, authLoading, navigate]);
 
-  const parseCsv = useCallback((text: string, costStr: string): ImportItem[] => {
+  const parseCsv = useCallback((text: string): ImportItem[] => {
     if (!text) return [];
 
     const lines = text.split(/\r?\n/).filter((line) => line.trim());
@@ -90,10 +83,10 @@ export default function ExportPage() {
     const dateIdx = headers.findIndex((h) => h.includes("date"));
     const amountIdx = headers.findIndex((h) => h.includes("amount") || h.includes("paid"));
     const kwhIdx = headers.findIndex((h) => h.includes("kwh") || h.includes("unit"));
+    const priceIdx = headers.findIndex((h) => h.includes("price") || h.includes("rate"));
 
     if (dateIdx === -1 || (amountIdx === -1 && kwhIdx === -1)) return [];
 
-    const cost = parseFloat(costStr);
     const parsed: ImportItem[] = [];
 
     for (let i = 1; i < lines.length; i++) {
@@ -101,12 +94,15 @@ export default function ExportPage() {
       const date = cols[dateIdx];
       let amount = parseFloat(cols[amountIdx]);
       let units = parseFloat(cols[kwhIdx]);
+      const pricePerUnit = priceIdx !== -1 ? parseFloat(cols[priceIdx]) : NaN;
 
-      // Attempt to calculate if missing
-      if (isNaN(units) && !isNaN(amount) && !isNaN(cost) && cost > 0) {
-        units = amount / cost;
-      } else if (isNaN(amount) && !isNaN(units) && !isNaN(cost) && cost > 0) {
-        amount = units * cost;
+      // Handle missing values if pricePerUnit is available
+      if (!isNaN(pricePerUnit) && pricePerUnit > 0) {
+        if (isNaN(units) && !isNaN(amount)) {
+          units = amount / pricePerUnit;
+        } else if (isNaN(amount) && !isNaN(units)) {
+          amount = units * pricePerUnit;
+        }
       }
 
       if (date && !isNaN(amount) && !isNaN(units)) {
@@ -115,14 +111,6 @@ export default function ExportPage() {
     }
     return parsed;
   }, []);
-
-  // Re-parse when cost or raw text changes
-  useEffect(() => {
-    if (rawCsvText) {
-      const parsed = parseCsv(rawCsvText, perUnitCost);
-      setImportData(parsed);
-    }
-  }, [rawCsvText, perUnitCost, parseCsv]);
 
   const exportUserData = async () => {
     setLoadingUser(true);
@@ -188,15 +176,16 @@ export default function ExportPage() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      setRawCsvText(text);
 
-      const parsed = parseCsv(text, perUnitCost);
+      const parsed = parseCsv(text);
       if (parsed.length === 0) {
         toast({
           title: "Import Error",
           description: "No valid rows found. Check your CSV headers (Date, Amount, kWh).",
           variant: "destructive",
         });
+      } else {
+        setImportData(parsed);
       }
     };
     reader.readAsText(file);
@@ -212,7 +201,6 @@ export default function ExportPage() {
         description: `Successfully initiated import of ${importData.length} records.`,
       });
       setImportData([]);
-      setRawCsvText("");
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -233,7 +221,7 @@ export default function ExportPage() {
     toast({ title: "Copied", description: "JSON copied to clipboard" });
   };
 
-  if (authLoading || roleLoading) {
+  if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
@@ -250,9 +238,9 @@ export default function ExportPage() {
       <main className="container mx-auto space-y-6 px-4 py-6">
         <div className="mx-auto max-w-[800px] space-y-6">
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">Data Portability</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Import and Export Data</h1>
             <p className="text-muted-foreground">
-              Download your data or generate a printable report for your records.
+              Download your data, generate a printable report, or import past transactions.
             </p>
           </div>
 
@@ -275,14 +263,14 @@ export default function ExportPage() {
             {/* CSV Tab */}
             <TabsContent value="csv" className="space-y-4 pt-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Card className="no-print">
-                  <CardHeader>
-                    <CardTitle className="text-base">Export Purchases</CardTitle>
-                    <CardDescription>
+                <div className="no-print space-y-3 rounded-lg border p-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">Export Purchases</h3>
+                    <p className="text-xs text-muted-foreground">
                       All token purchase history and tier breakdowns.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                    </p>
+                  </div>
+                  <div>
                     <Button
                       onClick={exportPurchasesCSV}
                       className="w-full"
@@ -292,15 +280,17 @@ export default function ExportPage() {
                       <Download className="mr-2 h-4 w-4" />
                       Download CSV
                     </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card className="no-print">
-                  <CardHeader>
-                    <CardTitle className="text-base">Export Readings</CardTitle>
-                    <CardDescription>All manual meter readings and dates.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <div className="no-print space-y-3 rounded-lg border p-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">Export Readings</h3>
+                    <p className="text-xs text-muted-foreground">
+                      All manual meter readings and dates.
+                    </p>
+                  </div>
+                  <div>
                     <Button
                       onClick={exportReadingsCSV}
                       className="w-full"
@@ -310,45 +300,38 @@ export default function ExportPage() {
                       <Download className="mr-2 h-4 w-4" />
                       Download CSV
                     </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
 
               {/* Import Section */}
-              <Card className="no-print">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Upload className="h-4 w-4" />
-                    Import Transactions
-                  </CardTitle>
-                  <CardDescription>Upload a CSV file to import past transactions.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="per-unit-cost">Per Unit Cost (R/kWh) - Optional</Label>
-                      <Input
-                        id="per-unit-cost"
-                        type="number"
-                        placeholder="e.g. 3.50"
-                        value={perUnitCost}
-                        onChange={(e) => setPerUnitCost(e.target.value)}
-                      />
-                      <p className="text-[10px] text-muted-foreground">
-                        Used to calculate missing kWh or Amount values.
-                      </p>
-                    </div>
-                    <div className="space-y-2">
+              <div className="no-print space-y-4 border-t pt-4">
+                <div>
+                  <h3 className="text-base font-semibold">Import Transactions</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Upload a CSV file to import past transactions.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
                       <Label htmlFor="csv-upload">Select CSV File</Label>
-                      <Input
-                        id="csv-upload"
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileUpload}
-                        className="cursor-pointer"
-                        ref={fileInputRef}
-                      />
+                      <a
+                        href="/import_template.csv"
+                        download
+                        className="text-[10px] text-primary underline-offset-4 hover:underline"
+                      >
+                        Download Template
+                      </a>
                     </div>
+                    <Input
+                      id="csv-upload"
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileUpload}
+                      className="cursor-pointer"
+                      ref={fileInputRef}
+                    />
                   </div>
 
                   {importData.length > 0 && (
@@ -405,13 +388,15 @@ export default function ExportPage() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle className="text-xs">CSV Format Requirement</AlertTitle>
                     <AlertDescription className="text-[10px]">
-                      Your CSV must include headers: <code className="font-bold">Date</code>,{" "}
-                      <code className="font-bold">Amount</code>, and{" "}
-                      <code className="font-bold">kWh</code>. Dates should be YYYY-MM-DD or similar.
+                      Required: <code className="font-bold">Date</code> and at least one of{" "}
+                      <code className="font-bold">Amount</code> or{" "}
+                      <code className="font-bold">kWh</code>. Optional:{" "}
+                      <code className="font-bold">PricePerUnit</code> (used to calculate missing
+                      Amount/kWh).
                     </AlertDescription>
                   </Alert>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </TabsContent>
 
             {/* Print Tab */}
@@ -486,14 +471,14 @@ export default function ExportPage() {
 
             {/* JSON Tab */}
             <TabsContent value="json" className="space-y-4 pt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Raw System Export</CardTitle>
-                  <CardDescription>
+              <div className="space-y-4 border-t pt-4">
+                <div>
+                  <h3 className="text-base font-semibold">Raw System Export</h3>
+                  <p className="text-sm text-muted-foreground">
                     Export your complete profile and history in JSON format.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                  </p>
+                </div>
+                <div className="space-y-4">
                   <Button onClick={exportUserData} disabled={loadingUser} size="sm">
                     {loadingUser ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -519,23 +504,10 @@ export default function ExportPage() {
                       </pre>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
-
-          {/* Admin Dashboard info */}
-          {isAdmin && (
-            <Card className="no-print">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Shield className="h-4 w-4 text-primary" />
-                  Admin Resources
-                </CardTitle>
-                <CardDescription>Access full system logs via the Convex Dashboard.</CardDescription>
-              </CardHeader>
-            </Card>
-          )}
         </div>
       </main>
     </div>

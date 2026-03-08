@@ -14,6 +14,7 @@ import { YearlyConsumptionChart } from "@/components/YearlyConsumptionChart";
 import { PatreonBanner } from "@/components/PatreonBanner";
 import { ConsumptionStatsCard } from "@/components/ConsumptionStatsCard";
 import { Header } from "@/components/Header";
+import { QuickActions } from "@/components/QuickActions";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
@@ -70,49 +71,57 @@ export default function Dashboard() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-6">
       <Header offlineCount={offlineCount} />
+      <PatreonBanner />
 
-      <main className="container mx-auto space-y-3 px-4 py-3">
-        <PatreonBanner />
+      <main className="container mx-auto space-y-6 px-4 py-6">
+        <div className="flex flex-col gap-6">
+          {/* KPI Section */}
+          <section className="space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <h1 className="text-xl font-bold tracking-tight">Overview</h1>
+              <QuickActions />
+            </div>
 
-        <ConsumptionStatsCard stats={consumptionStats} />
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <ConsumptionStatsCard stats={consumptionStats} />
+              <DashboardStats
+                unitsThisMonth={unitsThisMonth}
+                costThisMonth={costThisMonth}
+                averageMonthlyUsage={averageMonthlyUsage}
+                dailyAverage={dailyAverage}
+                averageMonthlyCost={averageMonthlyCost}
+                monthlyBudget={profile?.monthlyBudget}
+              />
+            </div>
+          </section>
 
-        <DashboardStats
-          unitsThisMonth={unitsThisMonth}
-          costThisMonth={costThisMonth}
-          averageMonthlyUsage={averageMonthlyUsage}
-          dailyAverage={dailyAverage}
-          averageMonthlyCost={averageMonthlyCost}
-          monthlyBudget={profile?.monthlyBudget}
-        />
-
-        <div className="flex flex-col gap-3 lg:flex-row">
-          <div className="flex-1 lg:max-w-[600px]">
+          {/* Tier and Monthly Stats */}
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <TierProgress unitsBought={unitsThisMonth} />
-          </div>
-          <div className="flex-1 lg:max-w-[600px]">
             <MonthlyStats stats={monthlyStats} averageUsage={averageMonthlyUsage} />
-          </div>
+          </section>
+
+          {/* Charts Section */}
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {monthlyStats.length > 0 && (
+              <div className="w-full">
+                <YearlyConsumptionChart />
+              </div>
+            )}
+
+            {monthlyStats.length > 0 && (
+              <div className="w-full">
+                <PurchaseFrequencyChart stats={monthlyStats} />
+              </div>
+            )}
+          </section>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:max-w-[1212px] lg:grid-cols-2">
-          {monthlyStats.length > 0 && (
-            <div className="w-full">
-              <YearlyConsumptionChart />
-            </div>
-          )}
-
-          {monthlyStats.length > 0 && (
-            <div className="w-full">
-              <PurchaseFrequencyChart stats={monthlyStats} />
-            </div>
-          )}
-        </div>
-
-        <footer className="border-t border-border pt-3">
-          <div className="space-y-1.5 text-center">
-            <p className="text-[10px] text-muted-foreground">
+        <footer className="border-t border-border pt-4">
+          <div className="space-y-2 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Current Electricity Rates (VAT inclusive)
             </p>
             {ratesLoading ? (
@@ -120,11 +129,13 @@ export default function Dashboard() {
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="flex flex-wrap justify-center gap-2">
+              <div className="flex flex-wrap justify-center gap-3">
                 {rates.map((rate) => (
                   <div key={rate._id} className="text-[10px]">
                     <span className="text-muted-foreground">{rate.tier_label}:</span>{" "}
-                    <span className="font-medium">{formatCurrency(rate.rate)}/kWh</span>
+                    <span className="font-bold text-foreground">
+                      {formatCurrency(rate.rate)}/kWh
+                    </span>
                   </div>
                 ))}
               </div>
@@ -132,7 +143,7 @@ export default function Dashboard() {
             <Button
               variant="link"
               size="sm"
-              className="h-auto p-0 text-[10px]"
+              className="h-auto p-0 text-[10px] font-medium text-primary"
               onClick={() => navigate("/rates")}
             >
               View All Rates

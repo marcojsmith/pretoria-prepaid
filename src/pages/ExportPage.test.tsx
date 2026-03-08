@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 
 // Hoist mocks before imports
@@ -19,7 +19,6 @@ vi.mock("@/lib/utils", async (importOriginal) => {
 
 import ExportPage from "./ExportPage";
 import { useAuth } from "../hooks/useAuth";
-import { useUserRole } from "../hooks/useUserRole";
 import { usePurchases } from "../hooks/usePurchase";
 import { useToast } from "../hooks/use-toast";
 import { useQuery } from "convex/react";
@@ -37,7 +36,6 @@ interface MockTabsProps {
 
 // Mock everything
 vi.mock("../hooks/useAuth");
-vi.mock("../hooks/useUserRole");
 vi.mock("../hooks/usePurchase");
 vi.mock("../hooks/use-toast");
 vi.mock("convex/react", () => ({
@@ -100,7 +98,6 @@ describe("ExportPage", () => {
       loading: false,
       signOut: mockSignOut,
     });
-    vi.mocked(useUserRole).mockReturnValue({ isAdmin: false, loading: false });
     vi.mocked(usePurchases).mockReturnValue({
       loading: false,
       offlineCount: 0,
@@ -112,11 +109,15 @@ describe("ExportPage", () => {
       dismiss: vi.fn(),
     } as unknown as ReturnType<typeof useToast>);
 
-    // Order of calls in ExportPage: 1. getProfile, 2. getPurchases, 3. getReadings
-    vi.mocked(useQuery)
-      .mockReturnValueOnce({ preferredName: "Test User" })
-      .mockReturnValueOnce(mockPurchases)
-      .mockReturnValueOnce(mockReadings);
+    let queryCallCount = 0;
+    vi.mocked(useQuery).mockImplementation(() => {
+      const index = queryCallCount % 3;
+      queryCallCount++;
+      if (index === 0) return { preferredName: "Test User" };
+      if (index === 1) return mockPurchases;
+      if (index === 2) return mockReadings;
+      return undefined;
+    });
 
     Object.assign(navigator, {
       clipboard: {
@@ -133,7 +134,7 @@ describe("ExportPage", () => {
         <ExportPage />
       </BrowserRouter>
     );
-    expect(screen.getByText(/Data Portability/i)).toBeInTheDocument();
+    expect(screen.getByText(/Import and Export Data/i)).toBeInTheDocument();
   });
 
   it("handles purchase CSV export", async () => {
@@ -146,8 +147,8 @@ describe("ExportPage", () => {
     const downloadBtn = screen.getByTestId("download-purchases-csv");
     fireEvent.click(downloadBtn);
 
-    // We verify the logic is hit by checking toast success
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Success" }));
+    expect(mockConvertToCSV).toHaveBeenCalled();
+    expect(mockDownloadCSV).toHaveBeenCalled();
   });
 
   it("handles reading CSV export", async () => {
@@ -160,8 +161,8 @@ describe("ExportPage", () => {
     const downloadBtn = screen.getByTestId("download-readings-csv");
     fireEvent.click(downloadBtn);
 
-    // We verify the logic is hit by checking toast success
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Success" }));
+    expect(mockConvertToCSV).toHaveBeenCalled();
+    expect(mockDownloadCSV).toHaveBeenCalled();
   });
 
   it("handles print action", () => {
@@ -218,15 +219,39 @@ describe("ExportPage", () => {
     expect(mockSignOut).toHaveBeenCalled();
   });
 
-  it("shows admin card when user is admin", async () => {
-    vi.mocked(useUserRole).mockReturnValue({ isAdmin: true, loading: false });
-
+  it("handles CSV import with PricePerUnit calculations", async () => {
     render(
       <BrowserRouter>
         <ExportPage />
       </BrowserRouter>
     );
 
-    expect(screen.getByText(/Admin Resources/i)).toBeInTheDocument();
+    const fileInput = screen.getByLabelText(/Select CSV File/i);
+    const csvContent = `Date,Amount,kWh,PricePerUnit
+2026-03-01,100,,2.0
+2026-03-02,,50,3.0`;
+    const file = new File([csvContent], "import.csv", { type: "text/csv" });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Preview \(2 records\)/i)).toBeInTheDocument();
+    });
+
+    // We can't rely on exact text "50.0 kWh" if units and values are split,
+    // but in this test we are just checking if calculation works.
+    // The amount 150 (50 * 3.0) should be calculated and displayed
+    expect(screen.getByText(/R 150.00/i)).toBeInTheDocument();
+
+    const importButton = screen.getByRole("button", { name: /Finalize Import/i });
+    await act(async () => {
+      fireEvent.click(importButton);
+    });
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Success" }));
+    });
   });
 });

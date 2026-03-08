@@ -141,7 +141,7 @@ export default function Settings() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader>
               <CardTitle className="text-lg">Profile Information</CardTitle>
               <CardDescription>How we should address you and your meter details.</CardDescription>
             </CardHeader>
@@ -168,7 +168,7 @@ export default function Settings() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader>
               <CardTitle className="text-lg">Alerts & Budgeting</CardTitle>
               <CardDescription>Configure notifications and spending limits.</CardDescription>
             </CardHeader>

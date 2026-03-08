@@ -1,8 +1,7 @@
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency, roundUnits } from "@/lib/electricity";
-import { Calculator, Plus, Activity } from "lucide-react";
+import { Receipt, BarChart3, History } from "lucide-react";
 
 interface DashboardStatsProps {
   unitsThisMonth: number;
@@ -21,101 +20,85 @@ export function DashboardStats({
   averageMonthlyCost,
   monthlyBudget,
 }: DashboardStatsProps) {
-  const navigate = useNavigate();
-
-  const stats = [
-    {
-      label: "This Month",
-      value: `${roundUnits(unitsThisMonth)} kWh`,
-      subValue: formatCurrency(costThisMonth),
-    },
-    {
-      label: "Average Usage",
-      value: `${roundUnits(averageMonthlyUsage)} kWh/mo`,
-      subValue: `${roundUnits(dailyAverage)} kWh/day`,
-    },
-    {
-      label: "Average Spend",
-      value: `${formatCurrency(averageMonthlyCost)}/mo`,
-      subValue: "Based on last 3 months",
-    },
-  ];
-
-  const actionCards = [
-    {
-      label: "Buy Units",
-      icon: Calculator,
-      onClick: () => navigate("/calculator"),
-    },
-    {
-      label: "Log Purchase",
-      icon: Plus,
-      onClick: () => navigate("/history"),
-    },
-    {
-      label: "Meter Reading",
-      icon: Activity,
-      onClick: () => navigate("/history", { state: { showReadings: true } }),
-    },
-  ];
-
   const hasBudget = typeof monthlyBudget === "number" && monthlyBudget > 0;
   const budgetProgress = hasBudget ? Math.min((costThisMonth / monthlyBudget) * 100, 100) : 0;
 
   return (
-    <div className="space-y-2">
-      {hasBudget && (
-        <Card>
-          <CardContent className="p-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="font-bold uppercase tracking-wider text-muted-foreground">
-                  Monthly Budget
-                </span>
-                <span className="font-medium">
-                  {formatCurrency(costThisMonth)} / {formatCurrency(monthlyBudget)}
-                </span>
+    <Card className="border-border bg-card">
+      <CardContent className="space-y-6 pt-4">
+        {hasBudget && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Receipt className="h-3.5 w-3.5 text-primary" />
+                <span>Monthly Budget</span>
               </div>
-              <Progress value={budgetProgress} className="h-1.5" />
+              <span className="text-sm font-bold tabular-nums">
+                {formatCurrency(costThisMonth)}{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  / {formatCurrency(monthlyBudget)}
+                </span>
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              <Progress value={budgetProgress} className="h-2" />
               <div className="flex justify-end">
-                <span className="text-[10px] italic text-muted-foreground">
+                <span className="text-[10px] font-medium text-muted-foreground">
                   {budgetProgress >= 100
-                    ? "Budget exceeded!"
+                    ? "Budget exceeded"
                     : `${Math.round(100 - budgetProgress)}% remaining`}
                 </span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      <div className="grid grid-cols-3 gap-2">
-        {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="p-3">
-              <div className="space-y-0.5">
-                <p className="truncate text-[10px] text-muted-foreground">{stat.label}</p>
-                <p className="truncate text-sm font-bold">{stat.value}</p>
-                <p className="truncate text-[10px] text-muted-foreground">{stat.subValue}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {actionCards.map((action) => (
-          <Card
-            key={action.label}
-            className="cursor-pointer transition-colors hover:bg-muted/50"
-            onClick={action.onClick}
-          >
-            <CardContent className="flex flex-col items-center justify-center gap-1 p-3">
-              <action.icon className="h-5 w-5 text-primary" />
-              <span className="text-[10px] font-medium">{action.label}</span>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+        <div className="grid grid-cols-3 gap-4 border-t pt-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <BarChart3 className="h-3.5 w-3.5 text-primary" />
+              <span>Usage</span>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-sm font-bold tracking-tight">
+                {roundUnits(unitsThisMonth)}{" "}
+                <span className="text-[10px] font-normal text-muted-foreground">kWh</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground">{formatCurrency(costThisMonth)}</p>
+            </div>
+          </div>
+
+          <div className="space-y-1 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <History className="h-3.5 w-3.5 text-primary" />
+              <span>Average</span>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-sm font-bold tracking-tight">
+                {roundUnits(averageMonthlyUsage)}{" "}
+                <span className="text-[10px] font-normal text-muted-foreground">kWh/mo</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {roundUnits(dailyAverage)} kWh/day
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-1 text-right">
+            <div className="flex items-center justify-end gap-1.5 text-xs font-medium text-muted-foreground">
+              <Receipt className="h-3.5 w-3.5" />
+              <span>Spend</span>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-sm font-bold tracking-tight">
+                {formatCurrency(averageMonthlyCost)}
+                <span className="text-[10px] font-normal text-muted-foreground"> /mo</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground">Last 3 months</p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -87,7 +87,7 @@ export default function HomePage() {
       {/* Current Rates Preview */}
       <section className="container mx-auto px-4 py-8">
         <Card>
-          <CardContent className="pb-4 pt-4">
+          <CardContent className="pt-4">
             <h2 className="mb-3 text-center text-sm font-semibold">Current Electricity Rates</h2>
             {ratesLoading ? (
               <div className="flex justify-center py-4">

@@ -36,3 +36,6 @@ supabase/.temp
 .vercel
 .env*.local
 dev-dist/
+
+.gemini/
+gha-creds-*.json

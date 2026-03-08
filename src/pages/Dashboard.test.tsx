@@ -220,7 +220,7 @@ describe("Dashboard Page", () => {
       </BrowserRouter>
     );
 
-    fireEvent.click(screen.getByText("Buy Units"));
+    fireEvent.click(screen.getByText("Smart Calc"));
     expect(mockNavigate).toHaveBeenCalledWith("/calculator");
   });
 

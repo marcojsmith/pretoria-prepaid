@@ -33,61 +33,70 @@ export function ConsumptionStatsCard({ stats }: ConsumptionStatsCardProps) {
   }
 
   return (
-    <Card
-      className={`border-primary/20 ${isLow ? "border-destructive/30 bg-destructive/10" : "bg-primary/5"}`}
-    >
-      <CardContent className="space-y-2 p-3">
-        <div className="grid grid-cols-3 gap-2">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              {isLow ? (
-                <AlertTriangle className="h-3 w-3 animate-pulse text-destructive" />
-              ) : (
-                <Zap className="h-3 w-3 text-primary" />
-              )}
+    <Card className={`border-border bg-card`}>
+      <CardContent className="space-y-4 pt-4">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Zap className={`h-3.5 w-3.5 ${isLow ? "text-destructive" : "text-primary"}`} />
               <span>Est. Balance</span>
             </div>
-            <p className={`text-sm font-bold ${isLow ? "text-destructive" : ""}`}>
-              {roundUnits(stats.estimatedBalance)} kWh
-            </p>
-            <p className="text-[9px] text-muted-foreground">
-              Threshold: {stats.lowBalanceThreshold}
-            </p>
+            <div className="space-y-0.5">
+              <p
+                className={`text-lg font-bold tracking-tight ${isLow ? "text-destructive" : "text-foreground"}`}
+              >
+                {roundUnits(stats.estimatedBalance)}{" "}
+                <span className="text-xs font-normal text-muted-foreground">kWh</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Threshold: {stats.lowBalanceThreshold} kWh
+              </p>
+            </div>
           </div>
 
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <TrendingDown className="h-3 w-3 text-primary" />
+          <div className="space-y-1 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <TrendingDown className="h-3.5 w-3.5 text-primary" />
               <span>Daily Usage</span>
             </div>
-            <p className="text-sm font-bold">{roundUnits(stats.dailyBurnRate)} kWh/d</p>
-            {stats.isEstimatedBurnRate && (
-              <p className="text-[9px] italic text-muted-foreground">Estimate</p>
-            )}
+            <div className="space-y-0.5">
+              <p className="text-lg font-bold tracking-tight text-foreground">
+                {roundUnits(stats.dailyBurnRate)}{" "}
+                <span className="text-xs font-normal text-muted-foreground">kWh/d</span>
+              </p>
+              {stats.isEstimatedBurnRate && (
+                <p className="text-[10px] italic text-muted-foreground">Based on estimate</p>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Calendar className="h-3 w-3 text-primary" />
+          <div className="space-y-1 text-right">
+            <div className="flex items-center justify-end gap-1.5 text-xs font-medium text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
               <span>Days Left</span>
             </div>
-            <p className={`text-sm font-bold ${isLow ? "text-destructive" : ""}`}>
-              {Math.ceil(stats.daysRemainingUntilLow)} Days
-            </p>
-            <p className="text-[9px] text-muted-foreground">
-              Until {stats.lowBalanceThreshold} kWh
-            </p>
+            <div className="space-y-0.5">
+              <p
+                className={`text-lg font-bold tracking-tight ${isLow ? "text-destructive" : "text-foreground"}`}
+              >
+                {Math.ceil(stats.daysRemainingUntilLow)}{" "}
+                <span className="text-xs font-normal text-muted-foreground">Days</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Until {stats.lowBalanceThreshold} kWh
+              </p>
+            </div>
           </div>
         </div>
 
         {isStale && (
-          <div className="flex items-center justify-between rounded border border-amber-200 bg-amber-100/50 px-2 py-1 dark:border-amber-900/30 dark:bg-amber-950/30">
-            <div className="flex items-center gap-1.5 text-[10px] font-medium text-amber-800 dark:text-amber-400">
-              <AlertTriangle className="h-3 w-3" />
-              <span>Stale Data</span>
+          <div className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-500">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>Data may be stale</span>
             </div>
-            <span className="text-[9px] text-amber-700/70 dark:text-amber-500/50">
-              Last reading {daysSinceLastReading}d old
+            <span className="text-[10px] text-muted-foreground">
+              Last reading {daysSinceLastReading} days ago
             </span>
           </div>
         )}

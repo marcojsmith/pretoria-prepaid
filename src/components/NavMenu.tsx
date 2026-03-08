@@ -19,7 +19,7 @@ const navItems = [
   { title: "Purchase History", path: "/history", icon: History },
   { title: "Smart Calculator", path: "/calculator", icon: Calculator },
   { title: "Rates", path: "/rates", icon: DollarSign },
-  { title: "Export Data", path: "/export", icon: Download },
+  { title: "Import and Export Data", path: "/export", icon: Download },
   { title: "Settings", path: "/settings", icon: Settings },
 ];
 

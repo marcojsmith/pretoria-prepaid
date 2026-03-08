@@ -21,17 +21,15 @@ export function PurchaseFrequencyChart({ stats }: PurchaseFrequencyChartProps) {
   const maxPurchases = Math.max(...displayData.map((s) => s.purchases), 1);
 
   return (
-    <Card className="border-primary/20 bg-primary/5">
-      <CardHeader className="p-3 pb-0">
+    <Card>
+      <CardHeader>
         <div className="flex items-center gap-2">
           <BarChart2 className="h-4 w-4 text-primary" />
-          <CardTitle className="text-xs font-bold uppercase tracking-wider">
-            Refill Frequency
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Refill Frequency</CardTitle>
         </div>
         <CardDescription className="text-[10px]">Number of purchases per month</CardDescription>
       </CardHeader>
-      <CardContent className="p-3 pt-4">
+      <CardContent>
         <div className="flex h-24 items-end justify-between gap-1">
           {displayData.map((stat, idx) => {
             const height = (stat.purchases / maxPurchases) * 100;

@@ -46,7 +46,7 @@ export function ReadingHistory({ readings, onDelete, isFiltered }: ReadingHistor
   if (readings.length === 0) {
     return (
       <Card>
-        <CardContent className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+        <CardContent className="flex flex-col items-center justify-center text-center text-muted-foreground">
           <Activity className="mb-2 h-8 w-8 opacity-20" />
           <p className="text-xs">
             {isFiltered ? "No readings match your filters." : "No readings logged yet."}
@@ -70,7 +70,7 @@ export function ReadingHistory({ readings, onDelete, isFiltered }: ReadingHistor
 
   return (
     <div className="space-y-3">
-      <h3 className="px-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+      <h3 className="px-1 text-sm font-semibold text-muted-foreground">
         Reading History
         {isFiltered && <span className="ml-2 font-normal lowercase"> (filtered)</span>}
         <span className="ml-1 text-xs font-normal">({readings.length} total)</span>
@@ -79,7 +79,7 @@ export function ReadingHistory({ readings, onDelete, isFiltered }: ReadingHistor
       <div className="space-y-2">
         {visibleReadings.map((reading) => (
           <Card key={reading._id} className="overflow-hidden">
-            <CardContent className="flex items-center justify-between p-3">
+            <CardContent className="flex items-center justify-between pt-4">
               <div className="space-y-0.5">
                 <p className="text-sm font-bold">{roundUnits(reading.reading)} kWh</p>
                 <p className="text-[10px] text-muted-foreground">

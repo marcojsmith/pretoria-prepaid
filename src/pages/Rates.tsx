@@ -84,7 +84,7 @@ export default function Rates() {
       <main className="container mx-auto px-4 py-6">
         <div className="mx-auto max-w-[600px]">
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader>
               <CardTitle className="text-base">Current Electricity Rates</CardTitle>
               <p className="text-xs text-muted-foreground">
                 South African prepaid electricity pricing tiers (VAT inclusive)
@@ -95,7 +95,7 @@ export default function Rates() {
                 {rates.map((rate) => (
                   <div
                     key={rate._id}
-                    className="flex items-center justify-between rounded-md border border-muted bg-secondary-foreground p-3"
+                    className="flex items-center justify-between rounded-md border border-muted bg-card p-3"
                   >
                     <div className="flex-1">
                       <p className="text-sm font-medium">{rate.tier_label}</p>

@@ -17,17 +17,15 @@ export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps) {
   const maxDays = Math.max(...displayData.map((i) => i.daysSinceLastRefill || 0), 1);
 
   return (
-    <Card className="border-primary/20 bg-primary/5">
-      <CardHeader className="p-3 pb-0">
+    <Card>
+      <CardHeader>
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-primary" />
-          <CardTitle className="text-xs font-bold uppercase tracking-wider">
-            Refill Frequency
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Refill Frequency</CardTitle>
         </div>
         <CardDescription className="text-[10px]">Days between recent purchases</CardDescription>
       </CardHeader>
-      <CardContent className="p-3 pt-4">
+      <CardContent>
         <div className="flex h-20 items-end justify-between gap-1">
           {displayData.map((interval, idx) => {
             // Ensure at least 10% height for visibility if days is > 0

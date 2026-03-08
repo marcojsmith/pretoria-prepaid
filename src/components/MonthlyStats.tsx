@@ -34,7 +34,7 @@ export function MonthlyStats({ stats, averageUsage }: MonthlyStatsProps) {
   if (stats.length === 0) {
     return (
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
             <BarChart3 className="h-3 w-3 text-primary" />
             Monthly Usage
@@ -54,7 +54,7 @@ export function MonthlyStats({ stats, averageUsage }: MonthlyStatsProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           <BarChart3 className="h-3 w-3 text-primary" />
           Monthly Usage
