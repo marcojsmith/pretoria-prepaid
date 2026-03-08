@@ -62,6 +62,7 @@ describe("PurchaseHistory", () => {
         cost: 342,
         amountPaid: 342,
         tierBreakdown: [
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           { tier: 99 as any, label: "Unknown Tier", units: 100, rate: 3.42, cost: 342 },
         ],
       },
@@ -71,5 +72,36 @@ describe("PurchaseHistory", () => {
     // Since we can't easily query the exact generic div for its class name, just ensuring it doesn't crash
     // and correctly renders the label is enough to cover the fallback branch
     expect(screen.getByText(/Unknown Tier/i)).toBeInTheDocument();
+  });
+
+  it("renders show more when purchases exceed visible count", () => {
+    const purchases: Purchase[] = Array.from({ length: 15 }, (_, i) => ({
+      _id: String(i + 1),
+      date: `2024-01-${String(i + 1).padStart(2, "0")}`,
+      units: 100,
+      cost: 342,
+      amountPaid: 342,
+      tierBreakdown: [{ tier: 1, label: "Tier 1", units: 100, rate: 3.42, cost: 342 }],
+    }));
+    render(<PurchaseHistory purchases={purchases} onDelete={mockOnDelete} />);
+
+    expect(screen.getByText(/total/i)).toBeInTheDocument();
+    expect(screen.getByText(/remaining/i)).toBeInTheDocument();
+  });
+
+  it("handles purchases without tier breakdown", () => {
+    const purchases: Purchase[] = [
+      {
+        _id: "3",
+        date: "2024-01-03",
+        units: 50,
+        cost: 171,
+        amountPaid: 171,
+        tierBreakdown: [],
+      },
+    ];
+    render(<PurchaseHistory purchases={purchases} onDelete={mockOnDelete} />);
+
+    expect(screen.getByText(/50/i)).toBeInTheDocument();
   });
 });

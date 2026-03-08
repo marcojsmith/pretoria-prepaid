@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useNavigate } from "react-router-dom";
 import HistoryPage from "./HistoryPage";
 import { usePurchases } from "../hooks/usePurchase";
 import { useConsumption } from "../hooks/useConsumption";
@@ -32,6 +32,15 @@ vi.mock("sonner", () => ({
     error: vi.fn(),
   },
 }));
+
+// Mock react-router-dom
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: vi.fn(() => vi.fn()),
+  };
+});
 
 // Mock DropdownMenu to render children directly for easier testing
 vi.mock("@/components/ui/dropdown-menu", () => ({
@@ -71,6 +80,7 @@ describe("HistoryPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useNavigate).mockReturnValue(vi.fn() as unknown as ReturnType<typeof useNavigate>);
     vi.mocked(useAuth).mockReturnValue({
       user: {
         id: "1",

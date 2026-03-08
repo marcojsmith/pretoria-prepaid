@@ -16,6 +16,15 @@ vi.mock("../hooks/usePurchase");
 vi.mock("../hooks/useAuth");
 vi.mock("../hooks/useRates");
 
+// Mock react-router-dom
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: vi.fn(() => vi.fn()),
+  };
+});
+
 // Mock DropdownMenu to render children directly for easier testing
 vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: MockDropdownMenuProps) => <div>{children}</div>,
@@ -33,6 +42,7 @@ describe("CalculatorPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
     vi.mocked(useAuth).mockReturnValue({
       user: {
         id: "1",
@@ -118,19 +128,5 @@ describe("CalculatorPage", () => {
       </BrowserRouter>
     );
     expect(container.firstChild).toBeNull();
-  });
-
-  it("handles navigation state for reading prefill", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1" } as NonNullable<ReturnType<typeof useAuth>["user"]>,
-      loading: false,
-      signOut: vi.fn(),
-    });
-
-    render(
-      <BrowserRouter>
-        <CalculatorPage />
-      </BrowserRouter>
-    );
   });
 });

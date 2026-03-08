@@ -46,4 +46,15 @@ describe("RefillAnalysisChart", () => {
     const bars = container.querySelectorAll(".flex-1.flex.flex-col.items-center");
     expect(bars.length).toBe(7);
   });
+
+  it("handles same day refills with 0 days", () => {
+    const intervals: RefillInterval[] = [
+      { date: "2024-03-01", daysSinceLastRefill: null, units: 100 },
+      { date: "2024-03-01", daysSinceLastRefill: 0, units: 50 },
+    ];
+
+    render(<RefillAnalysisChart intervals={intervals} />);
+    expect(screen.getByText(/Refill Frequency/i)).toBeInTheDocument();
+    expect(screen.getByText(/Average: 0 days/i)).toBeInTheDocument();
+  });
 });

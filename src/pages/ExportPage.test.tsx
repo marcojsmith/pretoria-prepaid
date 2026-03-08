@@ -254,4 +254,42 @@ describe("ExportPage", () => {
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Success" }));
     });
   });
+
+  it("handles empty CSV file import", async () => {
+    render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+
+    const fileInput = screen.getByLabelText(/Select CSV File/i);
+    const file = new File([""], "empty.csv", { type: "text/csv" });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    expect(screen.queryByText(/Preview/)).not.toBeInTheDocument();
+  });
+
+  it("shows error toast for invalid CSV data", async () => {
+    render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+
+    const fileInput = screen.getByLabelText(/Select CSV File/i);
+    const csvContent = `InvalidColumn
+invalid data`;
+    const file = new File([csvContent], "import.csv", { type: "text/csv" });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalled();
+    });
+  });
 });
