@@ -1,5 +1,7 @@
 import { Doc } from "./_generated/dataModel";
 
+export const DEFAULT_BURN_RATE = 10;
+
 export interface TierBreakdown {
   tier: number;
   label: string;
@@ -125,8 +127,8 @@ export function calculateConsumptionStats(
     );
   }
 
-  // Default burn rate if we don't have enough data (e.g. 10 kWh/day)
-  const effectiveBurnRate = dailyBurnRate > 0 ? dailyBurnRate : 10;
+  // Default burn rate if we don't have enough data
+  const effectiveBurnRate = dailyBurnRate > 0 ? dailyBurnRate : DEFAULT_BURN_RATE;
   const estimatedUsageSinceLast = daysSinceLastReading * effectiveBurnRate;
 
   // Balance = (Last Reading + New Purchases) - Usage Since Last Reading

@@ -10,7 +10,7 @@ export const getReadings = query({
 
     return await ctx.db
       .query("meter_readings")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
       .order("desc")
       .collect();
   },
@@ -64,13 +64,13 @@ export const getConsumptionStats = query({
 
     const readings = await ctx.db
       .query("meter_readings")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
       .order("desc")
       .take(2);
 
     const purchases = await ctx.db
       .query("purchases")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
       .collect();
 
     return calculateConsumptionStats(readings, purchases, lowBalanceThreshold);

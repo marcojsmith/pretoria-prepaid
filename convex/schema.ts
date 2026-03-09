@@ -43,12 +43,16 @@ export default defineSchema({
         cost: v.number(),
       })
     ),
-  }).index("by_userId", ["userId"]),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_date", ["userId", "date"]),
   meter_readings: defineTable({
     userId: v.string(),
     date: v.string(),
     reading: v.number(), // Units remaining on meter
-  }).index("by_userId", ["userId"]),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_date", ["userId", "date"]),
   user_roles: defineTable({
     userId: v.string(),
     role: v.union(v.literal("admin"), v.string()), // Convex literal or fallback

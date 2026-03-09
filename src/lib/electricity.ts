@@ -178,9 +178,12 @@ export interface RefillInterval {
 export function calculateRefillIntervals(purchases: Purchase[]): RefillInterval[] {
   if (purchases.length === 0) return [];
 
-  const sortedPurchases = [...purchases].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  const sortedPurchases = [...purchases].sort((a, b) => {
+    const dateComp = new Date(a.date).getTime() - new Date(b.date).getTime();
+    if (dateComp !== 0) return dateComp;
+    // Stable sort using ID if dates are identical
+    return a._id.localeCompare(b._id);
+  });
 
   return sortedPurchases.map((purchase, index) => {
     if (index === 0) {

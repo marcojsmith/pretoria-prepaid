@@ -1,4 +1,4 @@
-import { query, mutation, internalMutation, MutationCtx } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { calculateTierBreakdown } from "./electricity_logic";
@@ -18,16 +18,24 @@ export const recalculateMonthlyPurchases = internalMutation({
     const rates = await ctx.db.query("electricity_rates").collect();
     if (rates.length === 0) return;
 
-    // 2. Fetch all purchases for this user, then filter by month in JS
-    const allUserPurchases = await ctx.db
+    // 2. Fetch all purchases for this user for the specific month using composite index
+    const monthPurchases = await ctx.db
       .query("purchases")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId_date", (q) =>
+        q
+          .eq("userId", args.userId)
+          .gte("date", args.monthKey)
+          .lt("date", args.monthKey + "-\uffff")
+      )
       .collect();
 
-    const monthPurchases = allUserPurchases.filter((p) => p.date.startsWith(args.monthKey));
-
-    // Sort by date (ascending) to maintain correct tier sequence
-    const sortedPurchases = monthPurchases.sort((a, b) => a.date.localeCompare(b.date));
+    // Sort by date (ascending) to maintain correct tier sequence.
+    // Use _creationTime as secondary sort for stable order if dates are identical.
+    const sortedPurchases = monthPurchases.sort((a, b) => {
+      const dateComp = a.date.localeCompare(b.date);
+      if (dateComp !== 0) return dateComp;
+      return a._creationTime - b._creationTime;
+    });
 
     let unitsAlreadyBought = 0;
 
@@ -56,7 +64,7 @@ export const getPurchases = query({
 
     return await ctx.db
       .query("purchases")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
       .order("desc")
       .collect();
   },
@@ -84,17 +92,18 @@ export const addPurchase = mutation({
     const monthKey = args.date.substring(0, 7);
     const rates = await ctx.db.query("electricity_rates").collect();
 
-    // Get units already bought this month before this date
-    const allUserPurchases = await ctx.db
+    // Get units already bought this month before this point using composite index.
+    // We include same-day purchases to handle multiple entries on the same day.
+    const monthPurchases = await ctx.db
       .query("purchases")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId_date", (q) =>
+        q.eq("userId", identity.subject).gte("date", monthKey).lte("date", args.date)
+      )
       .collect();
 
-    const existingPurchases = allUserPurchases.filter(
-      (p) => p.date.startsWith(monthKey) && p.date < args.date
-    );
-
-    const unitsBefore = existingPurchases.reduce((sum, p) => sum + p.units, 0);
+    // Since this is a new purchase, we don't have its _creationTime yet.
+    // However, all existing records in 'monthPurchases' were created BEFORE this one.
+    const unitsBefore = monthPurchases.reduce((sum, p) => sum + p.units, 0);
     const { breakdown, total } = calculateTierBreakdown(args.units, unitsBefore, rates);
 
     const purchaseId = await ctx.db.insert("purchases", {
@@ -145,84 +154,5 @@ export const deletePurchase = mutation({
       userId: identity.subject,
       monthKey,
     });
-  },
-});
-
-/**
- * Helper function to perform the actual system-wide recalculation.
- * Extracted to avoid TypeScript circularity issues when calling mutations in the same file.
- */
-async function performSystemWideRecalculation(ctx: MutationCtx) {
-  const allPurchases = await ctx.db.query("purchases").collect();
-  const userMonths = new Map<string, Set<string>>();
-
-  allPurchases.forEach((p) => {
-    const monthKey = p.date.substring(0, 7);
-    if (!userMonths.has(p.userId)) {
-      userMonths.set(p.userId, new Set());
-    }
-    userMonths.get(p.userId)!.add(monthKey);
-  });
-
-  for (const [userId, months] of userMonths.entries()) {
-    for (const monthKey of months) {
-      await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {
-        userId,
-        monthKey,
-      });
-    }
-  }
-
-  return { usersProcessed: userMonths.size };
-}
-
-/**
- * Internal logic for system-wide recalculation.
- */
-export const recalculateSystemWideInternal = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    return await performSystemWideRecalculation(ctx);
-  },
-});
-
-/**
- * CLI-accessible trigger for system-wide recalculation.
- * Run via: `npx convex run purchases:runSystemWideMigration`
- * This is public but intended for administrative CLI use.
- */
-export const runSystemWideMigration = mutation({
-  args: {},
-  handler: async (ctx) => {
-    return await performSystemWideRecalculation(ctx);
-  },
-});
-
-/**
- * Triggers recalculation for all users in the system.
- * High-impact administrative operation.
- * If running from dashboard, ensure you are 'Run as' an admin user.
- */
-export const recalculateSystemWide = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error(
-        "Not authenticated. To run system-wide recalculation from the dashboard, " +
-          "you must use the 'Run as user' feature with an admin userId."
-      );
-    }
-
-    const userRole = await ctx.db
-      .query("user_roles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
-      .unique();
-
-    if (userRole?.role !== "admin") {
-      throw new Error("Not authorized: Admin only");
-    }
-
-    return await performSystemWideRecalculation(ctx);
   },
 });
