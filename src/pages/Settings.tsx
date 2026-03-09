@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { SEO } from "@/components/SEO";
 import {
   subscribeUserToPush,
   unsubscribeUserFromPush,
@@ -119,6 +120,11 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Settings"
+        description="Manage your profile, meter details, and electricity notification preferences."
+        noindex
+      />
       <Header />
 
       <main className="container mx-auto max-w-2xl space-y-4 px-4 py-6">

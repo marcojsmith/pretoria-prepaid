@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Menu,
   LayoutDashboard,
@@ -8,6 +9,7 @@ import {
   DollarSign,
   Download,
   Settings,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -31,11 +33,17 @@ export function NavMenu({ offlineCount }: NavMenuProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useUserRole();
 
   const handleNavigate = (path: string) => {
     navigate(path);
     setOpen(false);
   };
+
+  const menuItems = [...navItems];
+  if (isAdmin) {
+    menuItems.push({ title: "Admin Dashboard", path: "/admin", icon: ShieldAlert });
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -50,7 +58,7 @@ export function NavMenu({ offlineCount }: NavMenuProps) {
             <SheetTitle className="text-left">Menu</SheetTitle>
           </SheetHeader>
           <nav className="mt-6 space-y-1">
-            {navItems.map((item) => (
+            {menuItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => handleNavigate(item.path)}

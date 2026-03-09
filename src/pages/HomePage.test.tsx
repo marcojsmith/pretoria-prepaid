@@ -83,7 +83,6 @@ describe("HomePage", () => {
     const mockNavigate = vi.fn();
     vi.mocked(useNavigate).mockReturnValue(mockNavigate);
     vi.mocked(useAuth).mockReturnValue({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       user: { id: "1" } as any,
       loading: false,
       signOut: vi.fn(),

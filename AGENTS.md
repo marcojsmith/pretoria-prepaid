@@ -1,5 +1,9 @@
 # Quick Reference
 
+| DO NOT RUN     | DO RUN               |
+| -------------- | -------------------- |
+| `bun run test` | `bun run test --run` |
+
 | Command                                            | Description                                             |
 | -------------------------------------------------- | ------------------------------------------------------- |
 | `bun run dev`                                      | Start development server                                |

@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SEO } from "@/components/SEO";
 
 interface ImportItem {
   date: string;
@@ -233,6 +234,11 @@ export default function ExportPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Import & Export"
+        description="Download your electricity usage data as CSV, print reports, or import past transactions."
+        noindex
+      />
       <Header offlineCount={offlineCount} />
 
       <main className="container mx-auto space-y-6 px-4 py-6">

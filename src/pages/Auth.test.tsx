@@ -16,7 +16,7 @@ describe("Auth Page", () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText(/PowerTracker/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Pretoria Prepaid/i).length).toBeGreaterThan(0);
     expect(screen.getByTestId("sign-in")).toBeInTheDocument();
   });
 });

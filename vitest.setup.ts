@@ -33,6 +33,12 @@ Object.defineProperty(window, "IntersectionObserver", {
   value: MockIntersectionObserver,
 });
 
+// Mock react-helmet-async
+vi.mock("react-helmet-async", () => ({
+  Helmet: ({ children }: { children: React.ReactNode }) => children,
+  HelmetProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Mock convex/react globally to prevent 'Could not find Convex client' errors
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => [

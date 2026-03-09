@@ -5,6 +5,7 @@ import { usePurchases } from "@/hooks/usePurchase";
 import { getDaysLeftInMonth } from "@/lib/electricity";
 import { PurchaseCalculator } from "@/components/PurchaseCalculator";
 import { Header } from "@/components/Header";
+import { SEO } from "@/components/SEO";
 
 export default function CalculatorPage() {
   const navigate = useNavigate();
@@ -56,8 +57,12 @@ export default function CalculatorPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Calculator"
+        description="Calculate how many electricity units you'll receive for your Rand amount based on current Pretoria prepaid tiers."
+        noindex
+      />
       <Header offlineCount={offlineCount} />
-
       <main className="container mx-auto px-4 py-4">
         <div className="mx-auto max-w-[600px]">
           <PurchaseCalculator

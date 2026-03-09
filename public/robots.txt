@@ -1,3 +1,11 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /rates
+Disallow: /history
+Disallow: /calculator
+Disallow: /export
+Disallow: /settings
+
+Sitemap: https://pretoria-prepaid.vercel.app/sitemap.xml

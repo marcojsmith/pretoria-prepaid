@@ -63,11 +63,11 @@ describe("CSV utilities", () => {
       click: vi.fn(),
       style: {},
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     vi.spyOn(document, "createElement").mockReturnValue(mockElement as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     vi.spyOn(document.body, "appendChild").mockImplementation(() => mockElement as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     vi.spyOn(document.body, "removeChild").mockImplementation(() => mockElement as any);
 
     // Mock URL methods

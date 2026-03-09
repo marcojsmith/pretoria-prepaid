@@ -6,6 +6,7 @@ import { formatCurrency } from "@/lib/electricity";
 import { useAuth } from "@/hooks/useAuth";
 import { useRates } from "@/hooks/useRates";
 import { useEffect } from "react";
+import { SEO } from "@/components/SEO";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -41,6 +42,31 @@ export default function HomePage() {
   ];
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Home"
+        description="Calculate and track your prepaid electricity costs in Pretoria. Understand South Africa's tiered electricity pricing and track usage."
+      />
+      {/* Structured Data for SEO */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "Pretoria Prepaid",
+          operatingSystem: "Web",
+          applicationCategory: "UtilityApplication",
+          description:
+            "Track and calculate prepaid electricity usage and costs in Pretoria, South Africa.",
+          offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "ZAR",
+          },
+          areaServed: {
+            "@type": "City",
+            name: "Pretoria",
+          },
+        })}
+      </script>
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">

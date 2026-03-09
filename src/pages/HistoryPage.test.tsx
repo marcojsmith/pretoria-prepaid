@@ -232,7 +232,6 @@ describe("HistoryPage", () => {
 
   it("filters purchases and readings by date", async () => {
     const marchPurchase = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       _id: "p1" as any,
       date: "2024-03-15",
       units: 100,
@@ -241,7 +240,6 @@ describe("HistoryPage", () => {
       tierBreakdown: [],
     };
     const februaryPurchase = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       _id: "p2" as any,
       date: "2024-02-15",
       units: 50,
@@ -298,7 +296,6 @@ describe("HistoryPage", () => {
 
   it("calculates availableYears from both purchases and readings", () => {
     const marchPurchase = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       _id: "p1" as any,
       date: "2024-03-15",
       units: 100,
@@ -307,7 +304,6 @@ describe("HistoryPage", () => {
       tierBreakdown: [],
     };
     const oldReading = {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       _id: "r1" as any,
       date: "2023-12-15",
       reading: 100,

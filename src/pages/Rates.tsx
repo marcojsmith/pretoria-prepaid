@@ -11,6 +11,7 @@ import { Header } from "@/components/Header";
 import { Pencil, Check, X, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/electricity";
 import { useToast } from "@/hooks/use-toast";
+import { SEO } from "@/components/SEO";
 
 export default function Rates() {
   const navigate = useNavigate();
@@ -79,8 +80,12 @@ export default function Rates() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Electricity Rates"
+        description="View current prepaid electricity rates and pricing tiers for Pretoria and South Africa (VAT inclusive)."
+        noindex
+      />
       <Header offlineCount={offlineCount} />
-
       <main className="container mx-auto px-4 py-6">
         <div className="mx-auto max-w-[600px]">
           <Card>

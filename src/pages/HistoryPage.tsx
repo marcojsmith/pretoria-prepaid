@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MonthYearFilter } from "@/components/MonthYearFilter";
 import { Receipt, Activity, Filter, X, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { SEO } from "@/components/SEO";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
@@ -123,6 +124,11 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="History"
+        description="Track your past electricity purchases and meter readings to monitor consumption over time."
+        noindex
+      />
       <Header offlineCount={offlineCount} />
 
       <main className="container mx-auto space-y-4 px-4 py-4">

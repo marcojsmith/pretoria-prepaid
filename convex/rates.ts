@@ -34,23 +34,28 @@ export const getRates = query({
 export const updateRate = mutation({
   args: {
     id: v.id("electricity_rates"),
-    rate: v.number(),
+    tier_label: v.optional(v.string()),
+    min_units: v.optional(v.number()),
+    max_units: v.optional(v.union(v.number(), v.null())),
+    rate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { identity } = await checkAdmin(ctx);
 
     const oldRate = await ctx.db.get(args.id);
-
     if (oldRate === null) {
       throw new Error(`Rate not found: ${args.id}`);
     }
 
-    await ctx.db.patch(args.id, { rate: args.rate });
+    const { id, ...updates } = args;
+    if (Object.keys(updates).length === 0) return;
+
+    await ctx.db.patch(id, updates);
 
     // Audit logging
     console.log(
       `[AUDIT] Rate updated by ${identity.email || identity.subject}. ` +
-        `Rate ID: ${args.id}, Old: ${oldRate.rate}, New: ${args.rate}`
+        `Rate ID: ${id}, Old: ${JSON.stringify(oldRate)}, Updates: ${JSON.stringify(updates)}`
     );
   },
 });

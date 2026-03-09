@@ -76,7 +76,7 @@ describe("ExportPage", () => {
   const mockSignOut = vi.fn();
   const mockToast = vi.fn();
 
-  const mockPurchases = [
+  const universalData = [
     {
       _id: "p1",
       date: "2026-03-01",
@@ -84,9 +84,11 @@ describe("ExportPage", () => {
       units: 30,
       cost: 90,
       tierBreakdown: [{ label: "T1", units: 30 }],
+      reading: 500,
     },
   ];
-  const mockReadings = [{ _id: "r1", date: "2026-03-01", reading: 500 }];
+  (universalData as any).preferredName = "Test User";
+  (universalData as any).email = "test@example.com";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -109,15 +111,7 @@ describe("ExportPage", () => {
       dismiss: vi.fn(),
     } as unknown as ReturnType<typeof useToast>);
 
-    let queryCallCount = 0;
-    vi.mocked(useQuery).mockImplementation(() => {
-      const index = queryCallCount % 3;
-      queryCallCount++;
-      if (index === 0) return { preferredName: "Test User" };
-      if (index === 1) return mockPurchases;
-      if (index === 2) return mockReadings;
-      return undefined;
-    });
+    vi.mocked(useQuery).mockImplementation(() => universalData as any);
 
     Object.assign(navigator, {
       clipboard: {

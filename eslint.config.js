@@ -33,5 +33,11 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },
+  {
+    files: ["**/*.test.{ts,tsx}", "vitest.setup.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
   eslintConfigPrettier
 );

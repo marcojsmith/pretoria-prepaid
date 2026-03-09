@@ -5,6 +5,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { usePurchases } from "@/hooks/usePurchase";
 import { useRates } from "@/hooks/useRates";
 import { useConsumption } from "@/hooks/useConsumption";
+import { useUserRole } from "@/hooks/useUserRole";
 import { formatCurrency } from "@/lib/electricity";
 import { DashboardStats } from "@/components/DashboardStats";
 import { TierProgress } from "@/components/TierProgress";
@@ -17,11 +18,13 @@ import { ConsumptionStatsCard } from "@/components/ConsumptionStatsCard";
 import { Header } from "@/components/Header";
 import { QuickActions } from "@/components/QuickActions";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { isAdmin } = useUserRole();
   const { loading: profileLoading } = useProfile();
   const { rates, loading: ratesLoading } = useRates();
   const { stats: consumptionStats, loading: consumptionLoading } = useConsumption();
@@ -73,6 +76,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background pb-6">
+      <SEO
+        title="Dashboard"
+        description="View your personal prepaid electricity usage, costs, and consumption trends at a glance."
+        noindex
+      />
       <Header offlineCount={offlineCount} />
       <PatreonBanner />
 
@@ -81,7 +89,20 @@ export default function Dashboard() {
           {/* KPI Section */}
           <section className="space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <h1 className="text-xl font-bold tracking-tight">Overview</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-bold tracking-tight text-foreground">Overview</h1>
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 border-primary/20 bg-primary/5 px-2 text-[10px] font-medium text-primary transition-none hover:bg-primary/10"
+                    onClick={() => navigate("/admin")}
+                  >
+                    <ShieldAlert className="h-3 w-3" />
+                    Admin
+                  </Button>
+                )}
+              </div>
               <QuickActions />
             </div>
 
