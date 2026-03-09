@@ -11,11 +11,21 @@
   - `YearlyConsumptionChart` provides monthly aggregation using Tailwind-based bars and Framer Motion.
   - Custom Select triggers for year switching.
 
-## Testing Patterns
+## PWA & Service Worker
 
-- **IntersectionObserver Mocking**: Global mock in `vitest.setup.ts` to support infinite scroll testing.
-- **Radix UI Mocking**: Mocking `Tabs` components in tests (e.g., `ExportPage.test.tsx`) avoids JSDOM rendering issues with Radix's lazy loading and presence logic.
-- **CSV Mocking**: Mocking `URL.createObjectURL` and `Blob` for utility tests.
+- **App Badge API**: Used to display the estimated electricity balance directly on the app icon when supported.
+- **Custom InstallPrompt**: `InstallPrompt.tsx` handles the `beforeinstallprompt` event to provide a stylized, non-intrusive install experience.
+- **Background Sync**: Service worker (`sw.ts`) handles background synchronization for failed purchase/reading logs.
+- **InjectManifest Mode**: Custom service worker logic allows for fine-grained control over push notifications and precaching.
+
+## Testing Standards
+
+- **Target Coverage**: **97%** or higher for all new features.
+- **Tools**: Vitest for unit/integration, Chrome DevTools MCP for E2E verification.
+- **Mocking Strategy**:
+  - `IntersectionObserver` mocked for infinite scroll tests.
+  - `navigator.serviceWorker` and `navigator.setAppBadge` mocked for PWA feature tests.
+  - `Clerk` and `Convex` hooks mocked for authentication and data fetching.
 
 ## Data Schema
 

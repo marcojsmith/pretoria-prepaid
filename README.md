@@ -5,12 +5,16 @@ A production-grade Progressive Web App (PWA) designed to help residents of Preto
 ## Key Features
 
 - **Proactive Tier Guidance:** Get warned before you accidentally buy units at a higher price tier. The app calculates how many kWh remain in your current cheaper tier and exactly how much to spend to stay within it.
-- **Smart Consumption Estimation:** Real-time balance estimation based on your personalized burn rate.
-- **Data Staleness Indicator:** Visual nudges to provide new meter readings if your data is more than 7 days old, ensuring high estimation accuracy.
-- **Refill Frequency Analysis:** Visualize the time elapsed between recent purchases to identify patterns and optimize refill strategies.
-- **Web Push Notifications:** Receive low-balance alerts directly on your device when your estimated units fall below your custom threshold.
-- **Offline Excellence:** Full PWA support with background synchronization for logging purchases and readings without an internet connection.
-- **Privacy First:** Secure authentication via Clerk and real-time backend powered by Convex.
+- **Smart Consumption Estimation:** Real-time balance estimation based on your personalized burn rate and manual meter readings.
+- **Data Portability:** Export your entire purchase and reading history to CSV or print-to-PDF for your records.
+- **Visual Analytics:** Interactive charts for yearly consumption, daily usage trends, and purchase frequency.
+- **Advanced PWA Excellence:**
+  - **App Badge Support:** See your estimated balance directly on the app icon.
+  - **InstallPrompt:** Custom in-app installation experience.
+  - **Offline-First:** Full background sync for logging data without an active connection.
+  - **Push Notifications:** Low-balance alerts (Web Push API).
+- **97%+ Test Coverage:** Robustly tested using Vitest and React Testing Library, including E2E UI verification.
+- **Security & Speed:** Real-time synchronization via Convex, secure auth via Clerk, and a lightning-fast UI built with Tailwind CSS.
 
 ## Tech Stack
 

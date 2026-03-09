@@ -11,23 +11,24 @@ Pretoria Prepaid is a digital platform for managing prepaid electricity tokens. 
 
 The platform provides a convenient way for residents in Pretoria to:
 
-- Purchase prepaid electricity tokens
-- View their account balance and transaction history
-- Monitor electricity rates and pricing
-- Manage their prepaid electricity accounts
+- **Log prepaid electricity purchases:** Keep a structured record of spending and units acquired.
+- **Optimize spending:** Get proactive tier guidance to avoid buying units at higher prices.
+- **Track usage:** Monitor daily burn rates and view balance estimations.
+- **Data Portability:** Export data for external analysis or personal archives.
 
 ## Target Audience
 
-- Residents in Pretoria area with prepaid electricity meters
-- Users who prefer digital payment methods over physical token purchases
+- Residents in Pretoria area using prepaid electricity meters.
+- Users looking to understand their consumption patterns and save money by staying within lower price tiers.
 
 ## Key Features
 
-- User authentication and account management
-- Recording of prepaid token purchases
-- Transaction history and receipt viewing
-- Real-time electricity rate information
-- Responsive web interface for mobile and desktop
+- Proactive Tier Guidance & Calculator
+- Real-time balance estimation & Meter reading logging
+- Transaction history with CSV/PDF export
+- PWA with offline support and push notifications
+- Advanced consumption analytics
+- Secure user authentication and multi-meter support
 
 ## Technology Stack
 
