@@ -27,10 +27,13 @@ export default defineConfig({
       includeAssets: ["favicon.ico", "robots.txt", "icons/*.png"],
       manifest: {
         name: "Pretoria Prepaid",
-        short_name: "PretoriaPrepaid",
+        short_name: "Prepaid",
         description: "Calculate and track your prepaid electricity costs in Pretoria.",
+        id: "/",
+        scope: "/",
         theme_color: "#000000",
-        background_color: "#ffffff",
+        background_color: "#000000",
+        start_url: "/dashboard",
         display: "standalone",
         icons: [
           {
@@ -47,7 +50,7 @@ export default defineConfig({
             src: "icons/icon-512x512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "maskable",
           },
         ],
       },

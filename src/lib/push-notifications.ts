@@ -22,12 +22,21 @@ export function isPushSupported() {
   return "serviceWorker" in navigator && "PushManager" in window;
 }
 
+export interface PushSubscriptionJSON {
+  endpoint: string;
+  expirationTime: number | null;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
 /**
  * Requests permission for notifications and subscribes the user to push.
  * @returns The subscription object.
  * @throws Error if failed or denied.
  */
-export async function subscribeUserToPush() {
+export async function subscribeUserToPush(): Promise<PushSubscriptionJSON> {
   if (!isPushSupported()) {
     throw new Error("Push notifications are not supported in this browser.");
   }
@@ -61,7 +70,7 @@ export async function subscribeUserToPush() {
       });
     }
 
-    return JSON.parse(JSON.stringify(subscription));
+    return JSON.parse(JSON.stringify(subscription)) as PushSubscriptionJSON;
   } catch (error) {
     console.error("Error subscribing to push notifications:", error);
     // Rethrow to allow caller to handle/display the error
@@ -88,5 +97,24 @@ export async function unsubscribeUserFromPush() {
   } catch (error) {
     console.error("Error unsubscribing from push notifications:", error);
     return false;
+  }
+}
+
+interface BadgingNavigator extends Navigator {
+  setAppBadge(contents?: number): Promise<void>;
+  clearAppBadge(): Promise<void>;
+}
+
+/**
+ * Clears the application badge on the PWA home screen icon.
+ * This is safely called and will only execute if the Badging API is supported.
+ */
+export async function clearBadge() {
+  if ("clearAppBadge" in navigator) {
+    try {
+      await (navigator as BadgingNavigator).clearAppBadge();
+    } catch (error) {
+      console.error("Failed to clear app badge:", error);
+    }
   }
 }

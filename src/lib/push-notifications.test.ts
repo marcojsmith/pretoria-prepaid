@@ -3,6 +3,7 @@ import {
   isPushSupported,
   subscribeUserToPush,
   unsubscribeUserFromPush,
+  clearBadge,
 } from "./push-notifications";
 
 describe("push-notifications", () => {
@@ -118,5 +119,66 @@ describe("push-notifications", () => {
     await expect(subscribeUserToPush()).rejects.toThrow(
       "Push notifications are not supported in this browser."
     );
+  });
+
+  it("handles non-Error objects in catch block of subscribeUserToPush", async () => {
+    mockNotification.requestPermission.mockRejectedValue("String error, not Error object");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(subscribeUserToPush()).rejects.toThrow(
+      "An unexpected error occurred while subscribing to push notifications."
+    );
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it("handles error in unsubscribeUserFromPush", async () => {
+    const mockSubscription = {
+      unsubscribe: vi.fn().mockRejectedValue(new Error("Unsubscribe error")),
+    };
+    const registration = await mockServiceWorker.ready;
+    vi.mocked(registration.pushManager.getSubscription).mockResolvedValue(
+      mockSubscription as unknown as PushSubscription
+    );
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await unsubscribeUserFromPush();
+
+    expect(result).toBe(false);
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it("returns true in unsubscribeUserFromPush when no subscription exists", async () => {
+    const registration = await mockServiceWorker.ready;
+    vi.mocked(registration.pushManager.getSubscription).mockResolvedValue(null);
+
+    const result = await unsubscribeUserFromPush();
+
+    expect(result).toBe(true);
+  });
+
+  it("clearBadge handles errors and checks support", async () => {
+    const mockClearAppBadge = vi.fn().mockRejectedValue(new Error("Badge error"));
+    vi.stubGlobal("navigator", {
+      serviceWorker: mockServiceWorker,
+      clearAppBadge: mockClearAppBadge,
+    });
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await clearBadge();
+
+    expect(mockClearAppBadge).toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith("Failed to clear app badge:", expect.any(Error));
+    consoleSpy.mockRestore();
+  });
+
+  it("clearBadge does nothing if not supported", async () => {
+    vi.stubGlobal("navigator", {
+      serviceWorker: mockServiceWorker,
+    });
+    // clearAppBadge is NOT in navigator
+    await clearBadge();
+    // Should not throw
   });
 });

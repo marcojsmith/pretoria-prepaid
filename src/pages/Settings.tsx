@@ -13,6 +13,7 @@ import {
   subscribeUserToPush,
   unsubscribeUserFromPush,
   isPushSupported,
+  PushSubscriptionJSON,
 } from "@/lib/push-notifications";
 
 export default function Settings() {
@@ -51,7 +52,8 @@ export default function Settings() {
     setIsSaving(true);
 
     try {
-      let pushSubscription = profile?.pushSubscription;
+      let pushSubscription: PushSubscriptionJSON | undefined =
+        profile?.pushSubscription as unknown as PushSubscriptionJSON | undefined;
 
       if (formData.pushNotificationsEnabled && !profile?.pushNotificationsEnabled) {
         // User is enabling push notifications
@@ -73,25 +75,20 @@ export default function Settings() {
       }
 
       const updates: {
-        preferredName: string;
-        meterNumber: string;
+        preferredName?: string;
+        meterNumber?: string;
+        pushNotificationsEnabled?: boolean;
+        pushSubscription?: PushSubscriptionJSON;
         lowBalanceThreshold?: number;
-        pushNotificationsEnabled: boolean;
-        pushSubscription?: {
-          endpoint: string;
-          expirationTime: number | null;
-          keys: {
-            p256dh: string;
-            auth: string;
-          };
-        };
       } = {
         preferredName: formData.preferredName,
         meterNumber: formData.meterNumber,
         pushNotificationsEnabled: formData.pushNotificationsEnabled,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        pushSubscription: pushSubscription as any, // Cast to any because the browser type and Convex type might slightly differ in strictness
       };
+
+      if (pushSubscription) {
+        updates.pushSubscription = pushSubscription;
+      }
 
       if (formData.lowBalanceThreshold) {
         updates.lowBalanceThreshold = parseFloat(formData.lowBalanceThreshold);

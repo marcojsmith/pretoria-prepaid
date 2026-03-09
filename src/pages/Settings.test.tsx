@@ -164,7 +164,6 @@ describe("Settings Page", () => {
     expect(mockUpdateProfile).toHaveBeenCalledWith(
       expect.objectContaining({
         pushNotificationsEnabled: false,
-        pushSubscription: undefined,
       })
     );
   });
