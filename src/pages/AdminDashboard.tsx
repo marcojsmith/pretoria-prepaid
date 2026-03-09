@@ -1,5 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { useAdmin } from "@/hooks/useAdmin";
 import { Header } from "@/components/Header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -21,11 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Id } from "../../convex/_generated/dataModel";
 
 export default function AdminDashboard() {
-  const globalStats = useQuery(api.admin.getGlobalStats);
-  const usersList = useQuery(api.admin.getUsersList);
-  const recentPurchases = useQuery(api.admin.getRecentPurchases);
-  const rates = useQuery(api.rates.getRates);
-  const updateRate = useMutation(api.rates.updateRate);
+  const { loading, globalStats, usersList, recentPurchases, rates, updateRate } = useAdmin();
   const { toast } = useToast();
 
   const [editingRateId, setEditingRateId] = useState<Id<"electricity_rates"> | null>(null);
@@ -121,13 +116,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const isLoading =
-    globalStats === undefined ||
-    usersList === undefined ||
-    recentPurchases === undefined ||
-    rates === undefined;
-
-  if (isLoading) {
+  if (loading || !globalStats || !usersList || !recentPurchases || !rates) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
