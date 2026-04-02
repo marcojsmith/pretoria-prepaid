@@ -1,3 +1,5 @@
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/marcojsmith/pretoria-prepaid?utm_source=oss&utm_medium=github&utm_campaign=marcojsmith%2Fpretoria-prepaid&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 # Pretoria Prepaid Electricity Tracker
 
 A production-grade Progressive Web App (PWA) designed to help residents of Pretoria, South Africa, calculate, track, and optimize their prepaid electricity costs.
