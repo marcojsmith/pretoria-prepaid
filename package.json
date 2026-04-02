@@ -13,7 +13,7 @@
     "test:coverage": "vitest run --coverage",
     "preview": "bun x vite preview",
     "convex:dev": "bun x convex dev",
-    "prepare": "husky install"
+    "postinstall": "husky"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
