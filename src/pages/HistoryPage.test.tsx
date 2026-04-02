@@ -222,6 +222,9 @@ describe("HistoryPage", () => {
     const unitsInput = screen.getByLabelText(/kWh Received/i);
     fireEvent.change(unitsInput, { target: { value: "30" } });
 
+    const meterReadingInput = screen.getByLabelText(/Current Meter/i);
+    fireEvent.change(meterReadingInput, { target: { value: "1000" } });
+
     const submitButton = screen.getByRole("button", { name: /Add Purchase/i });
     await act(async () => {
       fireEvent.click(submitButton);

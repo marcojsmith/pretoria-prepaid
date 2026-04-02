@@ -54,10 +54,11 @@ describe("AddPurchaseForm", () => {
 
     fireEvent.change(screen.getByLabelText(/Amount Paid/i), { target: { value: "500" } });
     fireEvent.change(screen.getByLabelText(/kWh Received/i), { target: { value: "120" } });
+    fireEvent.change(screen.getByLabelText(/Current Meter/i), { target: { value: "1500" } });
 
     fireEvent.click(screen.getByRole("button", { name: /Add Purchase/i }));
 
-    expect(onAdd).toHaveBeenCalledWith(120, 500, expect.any(String), undefined);
+    expect(onAdd).toHaveBeenCalledWith(120, 500, expect.any(String), 1500);
   });
 
   it("shows error toast when amount is invalid", () => {

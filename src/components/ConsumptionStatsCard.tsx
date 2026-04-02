@@ -50,7 +50,7 @@ export function ConsumptionStatsCard({
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <BarChart3 className="h-3.5 w-3.5 text-primary" />
-              <span>Usage</span>
+              <span>Purchased units</span>
             </div>
             <div className="space-y-0.5">
               <p className="text-lg font-bold tracking-tight text-foreground">

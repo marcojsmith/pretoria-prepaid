@@ -104,7 +104,7 @@ export default function HistoryPage() {
     units: number,
     amountPaid: number,
     date: string,
-    meterReading?: number
+    meterReading: number
   ) => {
     await addPurchase(units, amountPaid, date, meterReading);
     if (prefillData) {

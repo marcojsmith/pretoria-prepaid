@@ -17,12 +17,7 @@ import { toast } from "sonner";
 
 interface AddPurchaseFormProps {
   unitsAlreadyBought: number;
-  onAdd: (
-    units: number,
-    amountPaid: number,
-    date: string,
-    meterReading?: number | undefined
-  ) => void;
+  onAdd: (units: number, amountPaid: number, date: string, meterReading: number) => void;
   prefillAmount?: number | undefined;
   prefillUnits?: number | undefined;
   prefillReading?: number | undefined;
@@ -81,7 +76,11 @@ export function AddPurchaseForm({
       toast.error("Please enter the kWh received");
       return;
     }
-    onAdd(unitsNum, amountNum, date, readingNum > 0 ? readingNum : undefined);
+    if (readingNum <= 0) {
+      toast.error("Please enter the current meter reading");
+      return;
+    }
+    onAdd(unitsNum, amountNum, date, readingNum);
     setAmountPaid("");
     setUnitsReceived("");
     setMeterReading("");
@@ -149,10 +148,10 @@ export function AddPurchaseForm({
               <Input
                 id="meterReading"
                 type="number"
-                placeholder="Optional"
+                placeholder="e.g. 1234.5"
                 value={meterReading}
                 onChange={(e) => setMeterReading(e.target.value)}
-                min="0"
+                min="0.1"
                 step="0.1"
                 className="h-9 text-xs"
               />
@@ -204,7 +203,7 @@ export function AddPurchaseForm({
           <Button
             type="submit"
             className="h-9 w-full text-xs"
-            disabled={amountNum <= 0 || unitsNum <= 0}
+            disabled={amountNum <= 0 || unitsNum <= 0 || readingNum <= 0}
           >
             Add Purchase
           </Button>
