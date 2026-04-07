@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useNavigate } from "react-router-dom";
 import CalculatorPage from "./CalculatorPage";
 import { usePurchases } from "../hooks/usePurchase";
 import { useAuth } from "../hooks/useAuth";
@@ -21,9 +21,24 @@ vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
-    useNavigate: vi.fn(() => vi.fn()),
+    useNavigate: vi.fn(),
+    MemoryRouter: actual.MemoryRouter,
   };
 });
+
+// Mock PurchaseCalculator
+vi.mock("@/components/PurchaseCalculator", () => ({
+  PurchaseCalculator: ({ onSavePurchase, unitsAlreadyBought, averageMonthlyUsage }: any) => (
+    <div>
+      <h2>Smart Calculator</h2>
+      <span data-testid="units-bought">{unitsAlreadyBought}</span>
+      <span data-testid="avg-usage">{averageMonthlyUsage}</span>
+      <button onClick={() => onSavePurchase(100, 350, 1200)} data-testid="mock-save-btn">
+        Save Purchase
+      </button>
+    </div>
+  ),
+}));
 
 // Mock DropdownMenu to render children directly for easier testing
 vi.mock("@/components/ui/dropdown-menu", () => ({
@@ -42,6 +57,7 @@ describe("CalculatorPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useNavigate).mockReturnValue(vi.fn() as unknown as ReturnType<typeof useNavigate>);
 
     vi.mocked(useAuth).mockReturnValue({
       user: {
@@ -128,5 +144,59 @@ describe("CalculatorPage", () => {
       </BrowserRouter>
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  it("calls handleSavePurchase and navigates with correct state", async () => {
+    const mockNav = vi.fn();
+    vi.mocked(useNavigate).mockReturnValue(mockNav as unknown as ReturnType<typeof useNavigate>);
+
+    render(
+      <BrowserRouter>
+        <CalculatorPage />
+      </BrowserRouter>
+    );
+
+    const saveBtn = screen.getByTestId("mock-save-btn");
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    expect(mockNav).toHaveBeenCalledWith("/history", {
+      state: {
+        prefillUnits: 100,
+        prefillAmount: 350,
+        prefillReading: 1200,
+      },
+    });
+  });
+
+  it("passes correct props to PurchaseCalculator", () => {
+    vi.mocked(usePurchases).mockReturnValue({
+      loading: false,
+      purchases: [],
+      addPurchase: vi.fn(),
+      addBatchPurchases: vi.fn(),
+      deletePurchase: vi.fn(),
+      unitsThisMonth: 0,
+      costThisMonth: 0,
+      getMonthlyStats: vi.fn(() => []),
+      getAverageMonthlyUsage: vi.fn(() => 300),
+      getDailyAverageUsage: vi.fn(() => 10),
+      getAverageMonthlyCost: vi.fn(() => 1000),
+      getCurrentMonthPurchases: vi.fn(() => [{ units: 50, amountPaid: 200 } as any]),
+      getRefillAnalysis: vi.fn(() => []),
+      offlineCount: 0,
+    } as ReturnType<typeof usePurchases>);
+
+    vi.mocked(useNavigate).mockReturnValue(vi.fn() as unknown as ReturnType<typeof useNavigate>);
+
+    render(
+      <BrowserRouter>
+        <CalculatorPage />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByTestId("units-bought")).toHaveTextContent("50");
+    expect(screen.getByTestId("avg-usage")).toHaveTextContent("300");
   });
 });

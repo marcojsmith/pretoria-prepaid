@@ -62,7 +62,7 @@ export function AverageDailyUsageChart() {
 
                 {/* Bar Value (above bar) */}
                 {data.avgDaily > 0 && (
-                  <span className="mb-1 text-[9px] font-bold text-orange-500">
+                  <span className="mb-1 text-[11px] font-bold text-orange-500">
                     {data.avgDaily.toFixed(1)}
                   </span>
                 )}

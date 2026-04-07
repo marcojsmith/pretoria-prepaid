@@ -53,18 +53,15 @@ export const checkLowBalances = action({
         continue;
       }
 
-      const { readings, purchases } = await ctx.runQuery(
-        internal.alerts_queries.getUserDataForAlert,
-        {
-          userId: profile.userId,
-        }
-      );
+      const { readings } = await ctx.runQuery(internal.alerts_queries.getUserDataForAlert, {
+        userId: profile.userId,
+      });
 
-      const stats = calculateConsumptionStats(
-        readings,
-        purchases,
-        profile.lowBalanceThreshold ?? 10
+      const filteredReadings = readings.filter(
+        (r): r is typeof r & { source: "purchase" | "onboarding" } =>
+          r.source === "purchase" || r.source === "onboarding"
       );
+      const stats = calculateConsumptionStats(filteredReadings, profile.lowBalanceThreshold ?? 10);
 
       if (!stats) {
         console.log(`Could not calculate stats for profile ${profile.userId}. Missing readings?`);

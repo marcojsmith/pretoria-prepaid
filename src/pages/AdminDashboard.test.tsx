@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AdminDashboard from "./AdminDashboard";
+import { useQuery } from "convex/react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useToast } from "@/hooks/use-toast";
 import { BrowserRouter } from "react-router-dom";
@@ -22,6 +23,11 @@ vi.mock("@/components/SEO", () => ({
   SEO: ({ title }: { title: string }) => <div data-testid="mock-seo">{title}</div>,
 }));
 
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(),
+  useMutation: vi.fn(() => vi.fn()),
+}));
+
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
   Loader2: () => <div data-testid="loader">Loading...</div>,
@@ -32,6 +38,7 @@ vi.mock("lucide-react", () => ({
   Edit2: () => <div data-testid="icon-edit">Edit</div>,
   Check: () => <div data-testid="icon-check">Check</div>,
   X: () => <div data-testid="icon-x">X</div>,
+  ArrowRight: () => <span data-testid="icon-arrow-right">→</span>,
 }));
 
 // Mock Tabs with actual state
@@ -383,5 +390,194 @@ describe("AdminDashboard", () => {
     fireEvent.change(maxInput!, { target: { value: "200" } });
     fireEvent.change(maxInput!, { target: { value: "" } });
     expect((maxInput as HTMLInputElement).value).toBe("");
+  });
+
+  it("renders KPI Breakdown tab and shows user selector", async () => {
+    render(
+      <BrowserRouter>
+        <AdminDashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /kpi/i }));
+    expect(screen.getByText(/Select a user/i)).toBeInTheDocument();
+  });
+
+  it("KPI breakdown shows loading state when kpiData is undefined", async () => {
+    (useQuery as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+    render(
+      <BrowserRouter>
+        <AdminDashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /kpi/i }));
+    const select = screen.getByRole("combobox");
+    fireEvent.change(select, { target: { value: "user_1" } });
+
+    expect(screen.getByTestId("loader")).toBeInTheDocument();
+  });
+
+  it("KPI breakdown renders with full KPI data", async () => {
+    (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
+      stats: {
+        lastReadingDate: "2026-01-01",
+        lastReading: 500,
+        dailyBurnRate: 10,
+        isEstimatedBurnRate: false,
+        estimatedBalance: 200,
+        daysRemaining: 20,
+        daysRemainingUntilLow: 15,
+      },
+      intervals: [],
+      currentMonthPurchases: [],
+      recentPurchases: [],
+      profile: { lowBalanceThreshold: 50 },
+    });
+    render(
+      <BrowserRouter>
+        <AdminDashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /kpi/i }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "user_1" } });
+
+    expect(screen.getByText("Estimated Balance")).toBeInTheDocument();
+    expect(screen.getByText("Days Remaining")).toBeInTheDocument();
+  });
+
+  it("KPI breakdown shows no stats message when stats is null", async () => {
+    (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
+      stats: null,
+      intervals: [],
+      currentMonthPurchases: [],
+      recentPurchases: [],
+      profile: { lowBalanceThreshold: 50 },
+    });
+    render(
+      <BrowserRouter>
+        <AdminDashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /kpi/i }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "user_1" } });
+
+    expect(screen.getByText("No meter readings found for this user yet.")).toBeInTheDocument();
+  });
+
+  it("KPI breakdown renders purchase tables when data present", async () => {
+    (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
+      stats: {
+        lastReadingDate: "2026-01-01",
+        lastReading: 500,
+        dailyBurnRate: 10,
+        isEstimatedBurnRate: false,
+        estimatedBalance: 200,
+        daysRemaining: 20,
+        daysRemainingUntilLow: 15,
+      },
+      intervals: [],
+      currentMonthPurchases: [{ date: "2026-04-01", units: 50, amountPaid: 200 }],
+      recentPurchases: [
+        { date: "2026-03-01", readingPre: 400, readingPost: 450, units: 50, amountPaid: 200 },
+      ],
+      profile: { lowBalanceThreshold: 50 },
+    });
+    render(
+      <BrowserRouter>
+        <AdminDashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /kpi/i }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "user_1" } });
+
+    expect(screen.getByText("This Month's Purchases")).toBeInTheDocument();
+    expect(screen.getByText("Past 12 Purchases")).toBeInTheDocument();
+  });
+
+  it("KPI breakdown shows empty state when no intervals", async () => {
+    (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
+      stats: {
+        lastReadingDate: "2026-01-01",
+        lastReading: 500,
+        dailyBurnRate: 10,
+        isEstimatedBurnRate: false,
+        estimatedBalance: 200,
+        daysRemaining: 20,
+        daysRemainingUntilLow: 15,
+      },
+      intervals: [],
+      currentMonthPurchases: [],
+      recentPurchases: [],
+      profile: { lowBalanceThreshold: 50 },
+    });
+    render(
+      <BrowserRouter>
+        <AdminDashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /kpi/i }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "user_1" } });
+
+    expect(
+      screen.getByText("Need at least 2 purchase readings to compute a burn rate.")
+    ).toBeInTheDocument();
+  });
+
+  it("KPI breakdown shows estimated burn rate note", async () => {
+    (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
+      stats: {
+        lastReadingDate: "2026-01-01",
+        lastReading: 500,
+        dailyBurnRate: 10,
+        isEstimatedBurnRate: true,
+        estimatedBalance: 200,
+        daysRemaining: 20,
+        daysRemainingUntilLow: 15,
+      },
+      intervals: [],
+      currentMonthPurchases: [],
+      recentPurchases: [],
+      profile: { lowBalanceThreshold: 50 },
+    });
+    render(
+      <BrowserRouter>
+        <AdminDashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /kpi/i }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "user_1" } });
+
+    expect(screen.getByText("(estimated default)")).toBeInTheDocument();
+  });
+
+  it("recent purchases tab shows dash when readingPre/readingPost null", async () => {
+    render(
+      <BrowserRouter>
+        <AdminDashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /recent purchases/i }));
+
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("recent purchases tab shows dash when effectiveRate null", async () => {
+    render(
+      <BrowserRouter>
+        <AdminDashboard />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /recent purchases/i }));
+
+    const cells = screen.getAllByText("—");
+    expect(cells.length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 
 /**
  * Hook for fetching administrative data and performing administrative actions.
@@ -14,7 +15,7 @@ export function useAdmin() {
   const loading = !globalStats || !usersList || !recentPurchases || !rates;
 
   const updateRate = async (params: {
-    id: any;
+    id: Id<"electricity_rates">;
     tier_label: string;
     min_units: number;
     max_units: number | null;

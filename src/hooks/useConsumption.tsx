@@ -1,7 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCallback } from "react";
-import { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
 export interface ConsumptionStats {
@@ -18,40 +17,33 @@ export interface ConsumptionStats {
 export function useConsumption() {
   const readings = useQuery(api.readings.getReadings);
   const stats = useQuery(api.readings.getConsumptionStats) as ConsumptionStats | null | undefined;
-  const addReadingMutation = useMutation(api.readings.addReading);
-  const deleteReadingMutation = useMutation(api.readings.deleteReading);
+  const hasAnyReadings = useQuery(api.readings.hasAnyReadings) ?? false;
+  const hasPurchaseReadings = useQuery(api.readings.hasPurchaseReadings) ?? false;
+  const addOnboardingReadingMutation = useMutation(api.readings.addOnboardingReading);
 
-  const addReading = useCallback(
-    async (reading: number, date: string) => {
+  const addOnboardingReading = useCallback(
+    async (reading: number, defaultDailyUsage?: number) => {
       try {
-        await addReadingMutation({ reading, date });
-        toast.success("Reading logged successfully");
+        const args: { reading: number; defaultDailyUsage?: number } = { reading };
+        if (defaultDailyUsage !== undefined) {
+          args.defaultDailyUsage = defaultDailyUsage;
+        }
+        await addOnboardingReadingMutation(args);
+        toast.success("Onboarding reading saved successfully");
       } catch (error) {
-        console.error("Failed to add reading:", error);
-        toast.error("Failed to log reading");
+        console.error("Failed to add onboarding reading:", error);
+        toast.error("Failed to save onboarding reading");
       }
     },
-    [addReadingMutation]
-  );
-
-  const deleteReading = useCallback(
-    async (id: Id<"meter_readings">) => {
-      try {
-        await deleteReadingMutation({ id });
-        toast.success("Reading deleted");
-      } catch (error) {
-        console.error("Failed to delete reading:", error);
-        toast.error("Failed to delete reading");
-      }
-    },
-    [deleteReadingMutation]
+    [addOnboardingReadingMutation]
   );
 
   return {
     readings,
     stats: stats ?? null,
     loading: readings === undefined || stats === undefined,
-    addReading,
-    deleteReading,
+    addOnboardingReading,
+    hasAnyReadings,
+    hasPurchaseReadings,
   };
 }

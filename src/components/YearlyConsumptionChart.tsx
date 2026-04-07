@@ -66,7 +66,7 @@ export function YearlyConsumptionChart() {
                 </div>
                 {/* Bar Value (above bar) */}
                 {data.units > 0 && (
-                  <span className="mb-1 text-[9px] font-bold text-primary" aria-hidden="true">
+                  <span className="mb-1 text-[11px] font-bold text-primary" aria-hidden="true">
                     {Math.round(data.units)}
                   </span>
                 )}

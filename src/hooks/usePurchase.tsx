@@ -13,15 +13,20 @@ import { toast } from "sonner";
 const PURCHASES_CACHE_KEY = "purchases_history";
 const QUEUE_CACHE_KEY = "offline_purchases_queue";
 
-interface QueuedPurchase {
-  id: string;
-  type: "add" | "delete";
-  units?: number;
-  amountPaid?: number;
-  date?: string;
-  purchaseId?: string; // For deletions
-  meterReading?: number | undefined;
-}
+type QueuedPurchase =
+  | {
+      id: string;
+      type: "add";
+      units: number;
+      amountPaid: number;
+      date: string;
+      meterReading: number;
+    }
+  | {
+      id: string;
+      type: "delete";
+      purchaseId: string;
+    };
 
 export function usePurchases() {
   const purchasesData = useQuery(api.purchases.getPurchases);
@@ -74,7 +79,7 @@ export function usePurchases() {
               units: item.units!,
               cost: 0,
               amountPaid: item.amountPaid!,
-              ...(item.meterReading !== undefined ? { meterReading: item.meterReading } : {}),
+              meterReading: item.meterReading!,
             });
           } else if (item.type === "delete") {
             await deletePurchaseMutation({ id: item.purchaseId as Id<"purchases"> });
@@ -142,7 +147,7 @@ export function usePurchases() {
   }, [confirmedPurchases, offlineQueue]);
 
   const addPurchase = useCallback(
-    async (units: number, amountPaid: number, date: string, meterReading?: number) => {
+    async (units: number, amountPaid: number, date: string, meterReading: number) => {
       if (!navigator.onLine) {
         const newOfflineItem: QueuedPurchase = {
           id: `offline-${Date.now()}`,
@@ -168,7 +173,7 @@ export function usePurchases() {
           units,
           cost: 0,
           amountPaid,
-          ...(meterReading !== undefined ? { meterReading } : {}),
+          meterReading,
         });
       } catch (error) {
         console.warn("Mutation failed, queuing instead", error);
@@ -192,7 +197,7 @@ export function usePurchases() {
   );
 
   const addBatchPurchases = useCallback(
-    async (items: { units: number; amountPaid: number; date: string; meterReading?: number }[]) => {
+    async (items: { units: number; amountPaid: number; date: string; meterReading: number }[]) => {
       const offlineItems: QueuedPurchase[] = [];
       let successCount = 0;
 
@@ -225,7 +230,7 @@ export function usePurchases() {
             units: item.units,
             cost: 0,
             amountPaid: item.amountPaid,
-            ...(item.meterReading !== undefined ? { meterReading: item.meterReading } : {}),
+            meterReading: item.meterReading,
           });
           successCount++;
         } catch (error) {

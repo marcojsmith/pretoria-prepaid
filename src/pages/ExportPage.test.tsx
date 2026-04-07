@@ -84,7 +84,9 @@ describe("ExportPage", () => {
       units: 30,
       cost: 90,
       tierBreakdown: [{ label: "T1", units: 30 }],
-      reading: 500,
+      readingPre: 470,
+      readingPost: 500,
+      source: "purchase",
     },
   ];
   (universalData as any).preferredName = "Test User";
@@ -284,6 +286,95 @@ invalid data`;
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalled();
+    });
+  });
+
+  it("shows 'No data' toast when exporting empty purchases", async () => {
+    vi.mocked(useQuery).mockReturnValue([] as any);
+
+    render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+
+    const downloadBtn = screen.getByTestId("download-purchases-csv");
+    fireEvent.click(downloadBtn);
+
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "No data", variant: "destructive" })
+    );
+  });
+
+  it("shows 'No data' toast when exporting empty readings", async () => {
+    vi.mocked(useQuery).mockReturnValue([] as any);
+
+    render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+
+    const downloadBtn = screen.getByTestId("download-readings-csv");
+    fireEvent.click(downloadBtn);
+
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "No data", variant: "destructive" })
+    );
+  });
+
+  it("shows error toast when import batch fails", async () => {
+    vi.mocked(usePurchases).mockReturnValue({
+      loading: false,
+      offlineCount: 0,
+      addBatchPurchases: vi.fn().mockRejectedValue(new Error("Import failed")),
+    } as unknown as ReturnType<typeof usePurchases>);
+
+    render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+
+    const fileInput = screen.getByLabelText(/Select CSV File/i);
+    const csvContent = `Date,Amount,kWh\n2026-03-01,100,30`;
+    const file = new File([csvContent], "import.csv", { type: "text/csv" });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Preview \(1 records?\)/i)).toBeInTheDocument();
+    });
+
+    const importButton = screen.getByRole("button", { name: /Finalize Import/i });
+    await act(async () => {
+      fireEvent.click(importButton);
+    });
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Import Failed" }));
+    });
+  });
+
+  it("parseCsv handles quoted values with commas", async () => {
+    render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+
+    const fileInput = screen.getByLabelText(/Select CSV File/i);
+    const csvContent = `"Date","Amount Paid","kWh"\n"2026-03-01","100.00","30.5"`;
+    const file = new File([csvContent], "import.csv", { type: "text/csv" });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Preview \(1 records?\)/i)).toBeInTheDocument();
     });
   });
 });

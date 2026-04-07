@@ -41,22 +41,27 @@ export function TierProgress({ unitsBought }: TierProgressProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {tierProgress.map(({ tier, progress, unitsInTier, unitsToNextTier }, index) => (
-          <div key={tier.tier_label} className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-medium">{tier.tier_label}</span>
-              <span className="text-muted-foreground">{formatCurrency(tier.rate)}/kWh</span>
+        {tierProgress.map(({ tier, progress, unitsInTier, unitsToNextTier }, index) => {
+          const tierMax = tier.max_units === null ? "∞" : tier.max_units - tier.min_units + 1;
+          return (
+            <div key={tier.tier_label} className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="font-medium">
+                  {tier.tier_label}{" "}
+                  <span className="font-normal text-muted-foreground">
+                    ({roundUnits(unitsInTier)} / {tierMax} kWh
+                    {unitsToNextTier > 0 && progress < 100 && (
+                      <> • {roundUnits(unitsToNextTier)} to next tier</>
+                    )}
+                    )
+                  </span>
+                </span>
+                <span className="text-muted-foreground">{formatCurrency(tier.rate)}/kWh</span>
+              </div>
+              <Progress value={progress} className={cn("h-2", tierProgressClasses[index])} />
             </div>
-            <Progress value={progress} className={cn("h-2", tierProgressClasses[index])} />
-            <p className="text-xs text-muted-foreground">
-              {roundUnits(unitsInTier)} /{" "}
-              {tier.max_units === null ? "∞" : tier.max_units - tier.min_units + 1} kWh
-              {unitsToNextTier > 0 && progress < 100 && (
-                <span className="ml-1">• {roundUnits(unitsToNextTier)} to next tier</span>
-              )}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );

@@ -6,7 +6,6 @@ import { useConsumption } from "@/hooks/useConsumption";
 import { PurchaseHistory } from "@/components/PurchaseHistory";
 import { ReadingHistory } from "@/components/ReadingHistory";
 import { AddPurchaseForm } from "@/components/AddPurchaseForm";
-import { AddReadingForm } from "@/components/AddReadingForm";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,7 +27,7 @@ export default function HistoryPage() {
     offlineCount,
   } = usePurchases();
 
-  const { readings, addReading, deleteReading, loading: consumptionLoading } = useConsumption();
+  const { readings, loading: consumptionLoading } = useConsumption();
 
   const [activeTab, setActiveTab] = useState<"purchases" | "readings">("purchases");
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
@@ -86,11 +85,25 @@ export default function HistoryPage() {
 
   const filteredReadings = useMemo(() => {
     if (!readings) return [];
-    return readings.filter((r) => {
-      const monthMatch = selectedMonth === "All" || r.date.substring(5, 7) === selectedMonth;
-      const yearMatch = selectedYear === "All" || r.date.substring(0, 4) === selectedYear;
-      return monthMatch && yearMatch;
-    });
+    return readings.filter(
+      (
+        r
+      ): r is typeof r & {
+        readingPre: number;
+        readingPost: number;
+        source: "purchase" | "onboarding";
+      } => {
+        const monthMatch = selectedMonth === "All" || r.date.substring(5, 7) === selectedMonth;
+        const yearMatch = selectedYear === "All" || r.date.substring(0, 4) === selectedYear;
+        return (
+          monthMatch &&
+          yearMatch &&
+          r.readingPre !== undefined &&
+          r.readingPost !== undefined &&
+          (r.source === "purchase" || r.source === "onboarding")
+        );
+      }
+    );
   }, [readings, selectedMonth, selectedYear]);
 
   const resetFilters = () => {
@@ -156,7 +169,7 @@ export default function HistoryPage() {
             </div>
           </div>
 
-          {activeTab === "purchases" ? (
+          {activeTab === "purchases" && (
             <AddPurchaseForm
               unitsAlreadyBought={unitsThisMonth}
               onAdd={handleAddPurchase}
@@ -164,8 +177,6 @@ export default function HistoryPage() {
               prefillUnits={prefillData?.prefillUnits}
               prefillReading={prefillData?.prefillReading}
             />
-          ) : (
-            <AddReadingForm onAdd={addReading} />
           )}
 
           <div className="space-y-2">
@@ -236,7 +247,7 @@ export default function HistoryPage() {
           ) : (
             <ReadingHistory
               readings={filteredReadings}
-              onDelete={deleteReading}
+              onDelete={() => {}}
               isFiltered={isFiltered}
             />
           )}

@@ -1,12 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PurchaseCalculator } from "./PurchaseCalculator";
-import * as convexReact from "convex/react";
+import { useRates } from "../hooks/useRates";
 
-vi.mock("convex/react", () => ({
-  useQuery: vi.fn(),
-  useMutation: vi.fn(() => vi.fn()),
-}));
+vi.mock("../hooks/useRates");
 
 const MOCK_RATES = [
   { _id: "1", tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.42585 },
@@ -25,7 +22,12 @@ const MOCK_RATES = [
 describe("PurchaseCalculator", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(convexReact.useQuery).mockReturnValue(MOCK_RATES);
+    vi.mocked(useRates).mockReturnValue({
+      rates: MOCK_RATES,
+      loading: false,
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
+    });
   });
 
   it("renders correctly", () => {
@@ -76,29 +78,16 @@ describe("PurchaseCalculator", () => {
   });
 
   it("updates kWh to buy when current meter reading is entered", () => {
-    // Fix the date to ensure consistent daysInMonth (March = 31 days)
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-03-16T12:00:00Z")); // 15 days left in March (31 - 16 = 15)
+    vi.setSystemTime(new Date("2026-03-16T12:00:00Z"));
 
     render(
-      <PurchaseCalculator
-        unitsAlreadyBought={50}
-        averageMonthlyUsage={300}
-        daysLeftInMonth={15} // 31 days in March, so 16 elapsed
-      />
+      <PurchaseCalculator unitsAlreadyBought={50} averageMonthlyUsage={300} daysLeftInMonth={15} />
     );
 
-    // Initial suggestion based on avg usage: 300 - 50 = 250
     const targetInput = screen.getByLabelText(/kWh to buy/i) as HTMLInputElement;
     expect(targetInput.value).toBe("250");
 
-    // Enter meter reading: 20 kWh
-    // Consumed = 50 - 20 = 30.
-    // Days elapsed = 31 - 15 = 16.
-    // Burn rate = 30 / 16 = 1.875 kWh/day.
-    // Needed remaining = 1.875 * 15 = 28.125 kWh.
-    // Needed to buy = 28.125 - 20 (already have) = 8.125.
-    // Rounded to 1 decimal = 8.1.
     fireEvent.change(screen.getByLabelText(/Current Meter \(kWh\)/i), {
       target: { value: "20" },
     });
@@ -113,13 +102,46 @@ describe("PurchaseCalculator", () => {
       <PurchaseCalculator unitsAlreadyBought={80} averageMonthlyUsage={300} daysLeftInMonth={15} />
     );
 
-    // Tier 1 capacity: 100. unitsAlreadyBought: 80. Remaining: 20.
-    // If we want to buy 50, it exceeds 20.
     fireEvent.change(screen.getByLabelText(/kWh to buy/i), { target: { value: "50" } });
 
     expect(screen.getByText(/Tier Limit Warning/i)).toBeInTheDocument();
     expect(screen.getByText(/Buying more than/i)).toBeInTheDocument();
     expect(screen.getAllByText(/R 68.52/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Tier 1/i).length).toBeGreaterThan(0);
+  });
+
+  it("shows loading state when rates are loading", () => {
+    vi.mocked(useRates).mockReturnValue({
+      rates: [],
+      loading: true,
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    const { container } = render(
+      <PurchaseCalculator unitsAlreadyBought={0} averageMonthlyUsage={300} daysLeftInMonth={15} />
+    );
+
+    const spinner = container.querySelector("svg.animate-spin");
+    expect(spinner).toBeInTheDocument();
+  });
+
+  it("resets to suggested units when balance input is cleared", () => {
+    render(
+      <PurchaseCalculator unitsAlreadyBought={100} averageMonthlyUsage={300} daysLeftInMonth={15} />
+    );
+
+    const targetInput = screen.getByLabelText(/kWh to buy/i) as HTMLInputElement;
+    expect(targetInput.value).toBe("200");
+
+    fireEvent.change(screen.getByLabelText(/Current Meter \(kWh\)/i), {
+      target: { value: "20" },
+    });
+
+    fireEvent.change(screen.getByLabelText(/Current Meter \(kWh\)/i), {
+      target: { value: "" },
+    });
+
+    expect(targetInput.value).toBe("200");
   });
 });

@@ -12,40 +12,97 @@ export const getReadings = query({
       .query("meter_readings")
       .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
       .order("desc")
-      .collect();
+      .take(100);
   },
 });
 
-export const addReading = mutation({
+export const addOnboardingReading = mutation({
   args: {
-    date: v.string(),
     reading: v.number(),
+    defaultDailyUsage: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    return await ctx.db.insert("meter_readings", {
-      userId: identity.subject,
-      date: args.date,
-      reading: args.reading,
-    });
-  },
-});
+    // Check if user already has any readings
+    const existingReadings = await ctx.db
+      .query("meter_readings")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .take(1);
 
-export const deleteReading = mutation({
-  args: { id: v.id("meter_readings") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const todayStr = new Date().toISOString().split("T")[0];
 
-    const reading = await ctx.db.get(args.id);
-    if (!reading) return;
-    if (reading.userId !== identity.subject) {
-      throw new Error("Unauthorized");
+    if (existingReadings.length > 0) {
+      // Check if it's an onboarding reading — overwrite it (idempotent)
+      const existing = existingReadings[0];
+      if (existing.source === "onboarding") {
+        await ctx.db.patch(existing._id, {
+          readingPre: args.reading,
+          readingPost: args.reading,
+          date: todayStr,
+        });
+      } else {
+        throw new Error("User already has purchase readings. Cannot add onboarding reading.");
+      }
+    } else {
+      // No readings exist — create new onboarding reading
+      await ctx.db.insert("meter_readings", {
+        userId: identity.subject,
+        date: todayStr,
+        readingPre: args.reading,
+        readingPost: args.reading,
+        source: "onboarding",
+      });
     }
 
-    await ctx.db.delete(args.id);
+    // Update profile with defaultDailyUsage if provided
+    if (args.defaultDailyUsage !== undefined) {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+        .unique();
+
+      if (profile) {
+        await ctx.db.patch(profile._id, {
+          defaultDailyUsage: args.defaultDailyUsage,
+        });
+      }
+    }
+
+    return null;
+  },
+});
+
+export const hasAnyReadings = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return false;
+
+    const readings = await ctx.db
+      .query("meter_readings")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .take(1);
+
+    return readings.length > 0;
+  },
+});
+
+export const hasPurchaseReadings = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return false;
+
+    const readings = await ctx.db
+      .query("meter_readings")
+      .withIndex("by_userId_source", (q) =>
+        q.eq("userId", identity.subject).eq("source", "purchase")
+      )
+      .take(1);
+
+    return readings.length > 0;
   },
 });
 
@@ -62,17 +119,17 @@ export const getConsumptionStats = query({
 
     const lowBalanceThreshold = profile?.lowBalanceThreshold ?? 10;
 
+    // Fetch all readings, sorted by date desc
     const readings = await ctx.db
       .query("meter_readings")
       .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
       .order("desc")
-      .take(2);
+      .take(100);
 
-    const purchases = await ctx.db
-      .query("purchases")
-      .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
-      .collect();
-
-    return calculateConsumptionStats(readings, purchases, lowBalanceThreshold);
+    const filteredReadings = readings.filter(
+      (r): r is typeof r & { source: "purchase" | "onboarding" } =>
+        r.source === "purchase" || r.source === "onboarding"
+    );
+    return calculateConsumptionStats(filteredReadings, lowBalanceThreshold);
   },
 });

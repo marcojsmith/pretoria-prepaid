@@ -14,6 +14,7 @@ export default defineSchema({
     email: v.union(v.string(), v.null()),
     meterNumber: v.optional(v.string()),
     lowBalanceThreshold: v.optional(v.number()),
+    defaultDailyUsage: v.optional(v.number()),
     preferredName: v.optional(v.string()),
     pushNotificationsEnabled: v.optional(v.boolean()),
     lastAlertSent: v.optional(v.number()), // Timestamp of last alert
@@ -49,10 +50,13 @@ export default defineSchema({
   meter_readings: defineTable({
     userId: v.string(),
     date: v.string(),
-    reading: v.number(), // Units remaining on meter
+    readingPre: v.number(),
+    readingPost: v.number(),
+    source: v.union(v.literal("purchase"), v.literal("onboarding"), v.literal("orphaned")),
   })
     .index("by_userId", ["userId"])
-    .index("by_userId_date", ["userId", "date"]),
+    .index("by_userId_date", ["userId", "date"])
+    .index("by_userId_source", ["userId", "source"]),
   user_roles: defineTable({
     userId: v.string(),
     role: v.union(v.literal("admin"), v.string()), // Convex literal or fallback

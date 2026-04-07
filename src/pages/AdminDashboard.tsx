@@ -13,11 +13,332 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/electricity";
-import { Loader2, Users, Receipt, TrendingUp, ShieldCheck, Edit2, Check, X } from "lucide-react";
+import {
+  Loader2,
+  Users,
+  Receipt,
+  TrendingUp,
+  ShieldCheck,
+  Edit2,
+  Check,
+  X,
+  ArrowRight,
+} from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+
+// ---------------------------------------------------------------------------
+// KPI Breakdown sub-component — loads per-user data and explains each KPI
+// ---------------------------------------------------------------------------
+
+function KPIBreakdown({ userId, userName }: { userId: string; userName: string }) {
+  const kpiData = useQuery(api.admin.getUserKPIData, { userId });
+
+  if (kpiData === undefined) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading…
+      </div>
+    );
+  }
+
+  const { stats, intervals, currentMonthPurchases, recentPurchases, profile } = kpiData;
+
+  if (!stats) {
+    return (
+      <p className="text-sm text-muted-foreground">No meter readings found for this user yet.</p>
+    );
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const lastReadingDate = new Date(stats.lastReadingDate);
+  lastReadingDate.setHours(0, 0, 0, 0);
+  const daysSinceLastReading = Math.max(
+    0,
+    Math.floor((today.getTime() - lastReadingDate.getTime()) / (1000 * 60 * 60 * 24))
+  );
+  const effectiveBurnRate = stats.dailyBurnRate > 0 ? stats.dailyBurnRate : 10;
+  const estimatedUsageSince = daysSinceLastReading * effectiveBurnRate;
+
+  const unitsThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.units, 0);
+  const costThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.amountPaid, 0);
+
+  const rowClass = "transition-none hover:bg-muted/30";
+  const headerClass = "bg-muted/50 transition-none hover:bg-muted/50";
+  const cellXs = "text-xs";
+  const monoXs = "font-mono text-xs";
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm font-semibold text-foreground">{userName}</p>
+
+      {/* ── Row 1: Est Balance + Days Remaining side-by-side ─────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Estimated Balance */}
+        <Card className="rounded-md border-border shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Estimated Balance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5 text-sm">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-muted-foreground">
+                Anchor — last readingPost
+                <span className="block text-[11px]">({stats.lastReadingDate})</span>
+              </span>
+              <span className={`${monoXs} shrink-0`}>{stats.lastReading.toFixed(2)} kWh</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Days since last reading</span>
+              <span className={`${monoXs} shrink-0`}>{daysSinceLastReading} days</span>
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-muted-foreground">
+                Daily burn rate
+                {stats.isEstimatedBurnRate && (
+                  <span className="block text-[11px] italic">(estimated default)</span>
+                )}
+              </span>
+              <span className={`${monoXs} shrink-0`}>{effectiveBurnRate.toFixed(2)} kWh/d</span>
+            </div>
+            <div className="flex items-start justify-between gap-2 text-muted-foreground/70">
+              <span className="text-[11px]">
+                Usage = {daysSinceLastReading} × {effectiveBurnRate.toFixed(2)}
+              </span>
+              <span className="shrink-0 font-mono text-[11px]">
+                −{estimatedUsageSince.toFixed(2)} kWh
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-border pt-1.5 font-semibold">
+              <span>Est. Balance</span>
+              <span className="font-mono text-sm text-primary">
+                {stats.estimatedBalance.toFixed(2)} kWh
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Days Remaining */}
+        <Card className="rounded-md border-border shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Days Remaining</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Est. balance</span>
+              <span className={`${monoXs} shrink-0`}>{stats.estimatedBalance.toFixed(2)} kWh</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Daily burn rate</span>
+              <span className={`${monoXs} shrink-0`}>{effectiveBurnRate.toFixed(2)} kWh/d</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Low threshold</span>
+              <span className={`${monoXs} shrink-0`}>{profile.lowBalanceThreshold} kWh</span>
+            </div>
+            <div className="flex items-start justify-between gap-2 border-t border-border pt-1.5 text-muted-foreground/70">
+              <span className="text-[11px]">
+                Until zero ({stats.estimatedBalance.toFixed(2)} ÷ {effectiveBurnRate.toFixed(2)})
+              </span>
+              <span className="shrink-0 font-mono text-[11px]">
+                {stats.daysRemaining.toFixed(1)} days
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-2 font-semibold">
+              <div>
+                <span>Until threshold</span>
+                <span className="block text-[11px] font-normal text-muted-foreground">
+                  ({stats.estimatedBalance.toFixed(2)} − {profile.lowBalanceThreshold}) ÷{" "}
+                  {effectiveBurnRate.toFixed(2)}
+                </span>
+              </div>
+              <span className="shrink-0 font-mono text-sm text-primary">
+                {stats.daysRemainingUntilLow.toFixed(1)} days
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Row 2: Daily Usage (full width — table needs space) ───────── */}
+      <Card className="rounded-md border-border shadow-none">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">
+            Daily Usage — Exponentially Weighted Average
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {intervals.length === 0 ? (
+            <p className="px-4 pb-4 text-sm text-muted-foreground">
+              Need at least 2 purchase readings to compute a burn rate.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="min-w-[680px]">
+                <TableHeader>
+                  <TableRow className={headerClass}>
+                    <TableHead className={cellXs}>Period</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Days</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>
+                      Meter (older post → newer pre)
+                    </TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Usage (kWh)</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Rate (kWh/d)</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Weight</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Contribution</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {intervals.map((iv, i) => (
+                    <TableRow
+                      key={i}
+                      className={`${rowClass} ${iv.isSkipped ? "line-through opacity-40" : ""}`}
+                    >
+                      <TableCell className={`${cellXs} whitespace-nowrap`}>
+                        {iv.olderDate}
+                        <ArrowRight className="mx-1 inline h-3 w-3 text-muted-foreground" />
+                        {iv.newerDate}
+                      </TableCell>
+                      <TableCell className={`${monoXs} text-right`}>
+                        {iv.daysDiff.toFixed(1)}
+                      </TableCell>
+                      <TableCell className={`${monoXs} text-right`}>
+                        {iv.olderReadingPost.toFixed(1)} → {iv.newerReadingPre.toFixed(1)}
+                      </TableCell>
+                      <TableCell className={`${monoXs} text-right`}>
+                        {iv.usage.toFixed(2)}
+                      </TableCell>
+                      <TableCell className={`${monoXs} text-right`}>
+                        {iv.rate.toFixed(2)}
+                        {iv.isSkipped && (
+                          <span className="not-line-through ml-1 text-[10px] text-destructive">
+                            (skipped)
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className={`${monoXs} text-right`}>
+                        {iv.isSkipped ? "—" : `${(iv.weight * 100).toFixed(1)}%`}
+                      </TableCell>
+                      <TableCell className={`${monoXs} text-right`}>
+                        {iv.isSkipped ? "—" : (iv.rate * iv.weight).toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className={`${headerClass} font-semibold`}>
+                    <TableCell colSpan={5} className={cellXs}>
+                      Weighted Average
+                    </TableCell>
+                    <TableCell className={`${monoXs} text-right`}>100%</TableCell>
+                    <TableCell className={`${monoXs} text-right text-primary`}>
+                      {stats.dailyBurnRate.toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          {stats.isEstimatedBurnRate && (
+            <p className="px-4 pb-3 pt-2 text-[11px] italic text-muted-foreground">
+              Burn rate is estimated — using default value ({effectiveBurnRate} kWh/day).
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Row 3: This Month + Past 12 side-by-side ─────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Card className="rounded-md border-border shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">This Month's Purchases</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {currentMonthPurchases.length === 0 ? (
+              <p className="px-4 pb-4 text-sm text-muted-foreground">No purchases this month.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className={headerClass}>
+                    <TableHead className={cellXs}>Date</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Units (kWh)</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Paid</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentMonthPurchases.map((p, i) => (
+                    <TableRow key={i} className={rowClass}>
+                      <TableCell className={cellXs}>{p.date}</TableCell>
+                      <TableCell className={`${monoXs} text-right`}>{p.units.toFixed(1)}</TableCell>
+                      <TableCell className={`${monoXs} text-right`}>
+                        {formatCurrency(p.amountPaid)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className={`${headerClass} font-semibold`}>
+                    <TableCell className={cellXs}>Total</TableCell>
+                    <TableCell className={`${monoXs} text-right`}>
+                      {unitsThisMonth.toFixed(1)}
+                    </TableCell>
+                    <TableCell className={`${monoXs} text-right`}>
+                      {formatCurrency(costThisMonth)}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Past 12 Purchases ──────────────────────────────────────── */}
+        <Card className="rounded-md border-border shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Past 12 Purchases</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {recentPurchases.length === 0 ? (
+              <p className="px-4 pb-4 text-sm text-muted-foreground">No purchases recorded.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className={headerClass}>
+                    <TableHead className={cellXs}>Date</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Pre → Post</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Units</TableHead>
+                    <TableHead className={`${cellXs} text-right`}>Paid</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentPurchases.map((p, i) => (
+                    <TableRow key={i} className={rowClass}>
+                      <TableCell className={`${cellXs} whitespace-nowrap`}>{p.date}</TableCell>
+                      <TableCell className={`${monoXs} whitespace-nowrap text-right`}>
+                        {p.readingPre != null && p.readingPost != null
+                          ? `${p.readingPre.toFixed(1)} → ${p.readingPost.toFixed(1)}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className={`${monoXs} text-right`}>{p.units.toFixed(1)}</TableCell>
+                      <TableCell className={`${monoXs} text-right`}>
+                        {formatCurrency(p.amountPaid)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Admin Dashboard
+// ---------------------------------------------------------------------------
 
 export default function AdminDashboard() {
   const { loading, globalStats, usersList, recentPurchases, rates, updateRate } = useAdmin();
@@ -30,6 +351,8 @@ export default function AdminDashboard() {
     max_units: number | null;
     rate: number;
   } | null>(null);
+
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
 
   const startEditing = (rate: {
     _id: Id<"electricity_rates">;
@@ -107,7 +430,7 @@ export default function AdminDashboard() {
       });
       setEditingRateId(null);
       setEditRateValues(null);
-    } catch (error) {
+    } catch {
       toast({
         title: "Update Failed",
         description: "There was an error updating the rate tier.",
@@ -124,6 +447,12 @@ export default function AdminDashboard() {
     );
   }
 
+  const selectedUser = usersList.find((u) => u.userId === selectedUserId);
+  const selectedUserName = selectedUser?.preferredName ?? selectedUser?.email ?? selectedUserId;
+
+  const tabTriggerClass =
+    "relative rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
+
   return (
     <div className="min-h-screen bg-background pb-10">
       <SEO title="Admin Dashboard" noindex />
@@ -136,32 +465,24 @@ export default function AdminDashboard() {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="h-auto w-full justify-start gap-4 rounded-none border-b border-border bg-transparent p-0">
-            <TabsTrigger
-              value="overview"
-              className="relative rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="overview" className={tabTriggerClass}>
               Overview
             </TabsTrigger>
-            <TabsTrigger
-              value="users"
-              className="relative rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="users" className={tabTriggerClass}>
               Users
             </TabsTrigger>
-            <TabsTrigger
-              value="purchases"
-              className="relative rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="purchases" className={tabTriggerClass}>
               Recent Purchases
             </TabsTrigger>
-            <TabsTrigger
-              value="rates"
-              className="relative rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-            >
+            <TabsTrigger value="kpi" className={tabTriggerClass}>
+              KPI Breakdown
+            </TabsTrigger>
+            <TabsTrigger value="rates" className={tabTriggerClass}>
               Rates
             </TabsTrigger>
           </TabsList>
 
+          {/* ── Overview ──────────────────────────────────────────────── */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Card className="rounded-md border-border shadow-none">
@@ -233,6 +554,7 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
+          {/* ── Users ─────────────────────────────────────────────────── */}
           <TabsContent value="users">
             <Card className="rounded-md border-border shadow-none">
               <CardHeader>
@@ -279,50 +601,112 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
+          {/* ── Recent Purchases ──────────────────────────────────────── */}
           <TabsContent value="purchases">
             <Card className="rounded-md border-border shadow-none">
               <CardHeader>
                 <CardTitle className="text-lg font-bold">Recent Purchases (Global)</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50 transition-none hover:bg-muted/50">
-                      <TableHead className="font-bold text-foreground">Date</TableHead>
-                      <TableHead className="font-bold text-foreground">User ID</TableHead>
-                      <TableHead className="font-bold text-foreground">Units (kWh)</TableHead>
-                      <TableHead className="font-bold text-foreground">Paid</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentPurchases.map((purchase) => (
-                      <TableRow key={purchase._id} className="transition-none hover:bg-muted/30">
-                        <TableCell className="text-xs">
-                          {new Date(purchase.date).toLocaleDateString("en-ZA", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </TableCell>
-                        <TableCell className="font-mono text-[10px] text-muted-foreground">
-                          {purchase.userId}
-                        </TableCell>
-                        <TableCell className="font-mono font-medium">
-                          {purchase.units.toFixed(1)}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {formatCurrency(purchase.amountPaid)}
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 transition-none hover:bg-muted/50">
+                        <TableHead className="font-bold text-foreground">Date</TableHead>
+                        <TableHead className="font-bold text-foreground">User</TableHead>
+                        <TableHead className="text-right font-bold text-foreground">
+                          Pre → Post (kWh)
+                        </TableHead>
+                        <TableHead className="text-right font-bold text-foreground">
+                          Units
+                        </TableHead>
+                        <TableHead className="text-right font-bold text-foreground">Paid</TableHead>
+                        <TableHead className="text-right font-bold text-foreground">
+                          R/kWh
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {recentPurchases.map((purchase) => (
+                        <TableRow key={purchase._id} className="transition-none hover:bg-muted/30">
+                          <TableCell className="text-xs">
+                            {new Date(purchase.date).toLocaleDateString("en-ZA", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </TableCell>
+                          <TableCell className="max-w-[120px] truncate text-xs">
+                            {purchase.userName ?? (
+                              <span className="font-mono text-[10px] text-muted-foreground">
+                                {purchase.userId.slice(0, 12)}…
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            {purchase.readingPre != null && purchase.readingPost != null ? (
+                              <>
+                                {purchase.readingPre.toFixed(1)}
+                                <ArrowRight className="mx-0.5 inline h-3 w-3 text-muted-foreground" />
+                                {purchase.readingPost.toFixed(1)}
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-medium">
+                            {purchase.units.toFixed(1)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-medium">
+                            {formatCurrency(purchase.amountPaid)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                            {purchase.effectiveRate != null
+                              ? formatCurrency(purchase.effectiveRate)
+                              : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
+          {/* ── KPI Breakdown ─────────────────────────────────────────── */}
+          <TabsContent value="kpi" className="space-y-4">
+            <Card className="rounded-md border-border shadow-none">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-bold">KPI Breakdown by User</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <label
+                  htmlFor="kpi-user-select"
+                  className="mb-1.5 block text-xs font-medium text-muted-foreground"
+                >
+                  Select a user
+                </label>
+                <select
+                  id="kpi-user-select"
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="h-9 w-full max-w-sm rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">— choose a user —</option>
+                  {usersList.map((u) => (
+                    <option key={u.userId} value={u.userId}>
+                      {u.preferredName ?? u.email ?? u.userId}
+                    </option>
+                  ))}
+                </select>
+              </CardContent>
+            </Card>
+
+            {selectedUserId && <KPIBreakdown userId={selectedUserId} userName={selectedUserName} />}
+          </TabsContent>
+
+          {/* ── Rates ─────────────────────────────────────────────────── */}
           <TabsContent value="rates">
             <Card className="rounded-md border-border shadow-none">
               <CardHeader>

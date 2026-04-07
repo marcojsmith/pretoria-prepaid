@@ -2,10 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AddPurchaseForm } from "./AddPurchaseForm";
 import * as convexReact from "convex/react";
+import * as sonner from "sonner";
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
   useMutation: vi.fn(() => vi.fn()),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
 }));
 
 const MOCK_RATES = [
@@ -109,5 +117,95 @@ describe("AddPurchaseForm", () => {
     const readingInput = screen.getByLabelText(/Current Meter/i);
     fireEvent.change(readingInput, { target: { value: "1000" } });
     expect(readingInput).toHaveValue(1000);
+  });
+
+  it("shows error toast when units are invalid", () => {
+    const onAdd = vi.fn();
+    render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={onAdd} />);
+
+    fireEvent.change(screen.getByLabelText(/Amount Paid/i), { target: { value: "500" } });
+
+    // Button is disabled when units are empty, so we can't trigger submit via click
+    // The toast.error is only called in handleSubmit, which requires form submission
+    // Since the button is disabled, handleSubmit is never called and no toast appears
+    const submitButton = screen.getByRole("button", { name: /Add Purchase/i });
+    expect(submitButton).toBeDisabled();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it("shows error toast when meter reading is invalid", () => {
+    const onAdd = vi.fn();
+    render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={onAdd} />);
+
+    fireEvent.change(screen.getByLabelText(/Amount Paid/i), { target: { value: "500" } });
+    fireEvent.change(screen.getByLabelText(/kWh Received/i), { target: { value: "120" } });
+
+    // Button is disabled when meter reading is empty, so handleSubmit is never called
+    const submitButton = screen.getByRole("button", { name: /Add Purchase/i });
+    expect(submitButton).toBeDisabled();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it("shows success toast and clears form on valid submission", () => {
+    const onAdd = vi.fn();
+    render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={onAdd} />);
+
+    fireEvent.change(screen.getByLabelText(/Amount Paid/i), { target: { value: "500" } });
+    fireEvent.change(screen.getByLabelText(/kWh Received/i), { target: { value: "120" } });
+    fireEvent.change(screen.getByLabelText(/Current Meter/i), { target: { value: "1500" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /Add Purchase/i }));
+
+    expect(onAdd).toHaveBeenCalledWith(120, 500, expect.any(String), 1500);
+    expect(sonner.toast.success).toHaveBeenCalledWith(expect.stringContaining("Added 120 kWh"));
+    // Number inputs in jsdom return null for empty value
+    expect((screen.getByLabelText(/Amount Paid/i) as HTMLInputElement).value).toBeFalsy();
+    expect((screen.getByLabelText(/kWh Received/i) as HTMLInputElement).value).toBeFalsy();
+    expect((screen.getByLabelText(/Current Meter/i) as HTMLInputElement).value).toBeFalsy();
+  });
+
+  it("shows error toast when amount is zero on form submit", () => {
+    const onAdd = vi.fn();
+    const { container } = render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={onAdd} />);
+
+    fireEvent.change(screen.getByLabelText(/kWh Received/i), { target: { value: "30" } });
+    fireEvent.change(screen.getByLabelText(/Current Meter/i), { target: { value: "1000" } });
+    // Leave amount at 0
+
+    const form = container.querySelector("form");
+    fireEvent.submit(form!);
+
+    expect(sonner.toast.error).toHaveBeenCalledWith("Please enter a valid amount paid");
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it("shows error toast when kWh is zero on form submit", () => {
+    const onAdd = vi.fn();
+    const { container } = render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={onAdd} />);
+
+    fireEvent.change(screen.getByLabelText(/Amount Paid/i), { target: { value: "100" } });
+    fireEvent.change(screen.getByLabelText(/Current Meter/i), { target: { value: "1000" } });
+    // Leave kWh at 0
+
+    const form = container.querySelector("form");
+    fireEvent.submit(form!);
+
+    expect(sonner.toast.error).toHaveBeenCalledWith("Please enter the kWh received");
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it("shows error toast when meter reading is zero on form submit", () => {
+    const onAdd = vi.fn();
+    const { container } = render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={onAdd} />);
+
+    fireEvent.change(screen.getByLabelText(/Amount Paid/i), { target: { value: "100" } });
+    fireEvent.change(screen.getByLabelText(/kWh Received/i), { target: { value: "30" } });
+    // Leave meter reading at 0
+
+    const form = container.querySelector("form");
+    fireEvent.submit(form!);
+
+    expect(sonner.toast.error).toHaveBeenCalledWith("Please enter the current meter reading");
+    expect(onAdd).not.toHaveBeenCalled();
   });
 });

@@ -3,7 +3,6 @@ import { renderHook, act } from "@testing-library/react";
 import { useConsumption } from "./useConsumption";
 import { useQuery, useMutation } from "convex/react";
 import { toast } from "sonner";
-import { Id } from "../../convex/_generated/dataModel";
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
@@ -18,20 +17,13 @@ vi.mock("sonner", () => ({
 }));
 
 describe("useConsumption hook", () => {
-  const mockAddReading = vi.fn();
-  const mockDeleteReading = vi.fn();
+  const mockAddOnboardingReading = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    let mutationCallCount = 0;
     (useMutation as unknown as { mockImplementation: (cb: () => void) => void }).mockImplementation(
-      () => {
-        mutationCallCount++;
-        if (mutationCallCount === 1) return mockAddReading;
-        if (mutationCallCount === 2) return mockDeleteReading;
-        return vi.fn();
-      }
+      () => mockAddOnboardingReading
     );
   });
 
@@ -42,7 +34,9 @@ describe("useConsumption hook", () => {
   });
 
   it("returns readings and stats when loaded", () => {
-    const mockReadings = [{ _id: "1", reading: 100, date: "2024-03-01" }];
+    const mockReadings = [
+      { _id: "1", readingPre: 100, readingPost: 150, date: "2024-03-01", source: "purchase" },
+    ];
     const mockStats = { dailyAverage: 5 };
 
     let queryCallCount = 0;
@@ -51,6 +45,8 @@ describe("useConsumption hook", () => {
         queryCallCount++;
         if (queryCallCount === 1) return mockReadings;
         if (queryCallCount === 2) return mockStats;
+        if (queryCallCount === 3) return false;
+        if (queryCallCount === 4) return false;
         return undefined;
       }
     );
@@ -61,49 +57,44 @@ describe("useConsumption hook", () => {
     expect(result.current.stats).toEqual(mockStats);
   });
 
-  it("handles addReading successfully", async () => {
-    mockAddReading.mockResolvedValue({});
+  it("handles addOnboardingReading successfully", async () => {
+    mockAddOnboardingReading.mockResolvedValue({});
     const { result } = renderHook(() => useConsumption());
 
     await act(async () => {
-      await result.current.addReading(120, "2024-03-02");
+      await result.current.addOnboardingReading(120, 10);
     });
 
-    expect(mockAddReading).toHaveBeenCalledWith({ reading: 120, date: "2024-03-02" });
+    expect(mockAddOnboardingReading).toHaveBeenCalledWith({ reading: 120, defaultDailyUsage: 10 });
     expect(toast.success).toHaveBeenCalled();
   });
 
-  it("handles addReading failure", async () => {
-    mockAddReading.mockRejectedValue(new Error("Failed"));
+  it("handles addOnboardingReading failure", async () => {
+    mockAddOnboardingReading.mockRejectedValue(new Error("Failed"));
     const { result } = renderHook(() => useConsumption());
 
     await act(async () => {
-      await result.current.addReading(120, "2024-03-02");
+      await result.current.addOnboardingReading(120);
     });
 
     expect(toast.error).toHaveBeenCalled();
   });
 
-  it("handles deleteReading successfully", async () => {
-    mockDeleteReading.mockResolvedValue({});
+  it("returns hasAnyReadings and hasPurchaseReadings", () => {
+    let queryCallCount = 0;
+    (useQuery as unknown as { mockImplementation: (cb: () => void) => void }).mockImplementation(
+      () => {
+        queryCallCount++;
+        if (queryCallCount === 1) return [];
+        if (queryCallCount === 2) return null;
+        if (queryCallCount === 3) return true;
+        if (queryCallCount === 4) return false;
+        return undefined;
+      }
+    );
+
     const { result } = renderHook(() => useConsumption());
-
-    await act(async () => {
-      await result.current.deleteReading("id-1" as Id<"meter_readings">);
-    });
-
-    expect(mockDeleteReading).toHaveBeenCalledWith({ id: "id-1" });
-    expect(toast.success).toHaveBeenCalled();
-  });
-
-  it("handles deleteReading failure", async () => {
-    mockDeleteReading.mockRejectedValue(new Error("Failed"));
-    const { result } = renderHook(() => useConsumption());
-
-    await act(async () => {
-      await result.current.deleteReading("id-1" as Id<"meter_readings">);
-    });
-
-    expect(toast.error).toHaveBeenCalled();
+    expect(result.current.hasAnyReadings).toBe(true);
+    expect(result.current.hasPurchaseReadings).toBe(false);
   });
 });

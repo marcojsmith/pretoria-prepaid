@@ -97,7 +97,7 @@ describe("ConsumptionStatsCard", () => {
 
     const futureStats = {
       lastReading: 100,
-      lastReadingDate: "2026-03-15", // 5 days in the future
+      lastReadingDate: "2026-03-15",
       dailyBurnRate: 10,
       estimatedBalance: 50,
       daysRemaining: 5,
@@ -110,5 +110,43 @@ describe("ConsumptionStatsCard", () => {
     expect(screen.getByText(/Data may be stale/i)).toBeInTheDocument();
 
     vi.useRealTimers();
+  });
+
+  it("shows stale warning when lastReadingDate is null", () => {
+    const statsWithNullDate = {
+      lastReading: 100,
+      lastReadingDate: null as unknown as string,
+      dailyBurnRate: 10,
+      estimatedBalance: 50,
+      daysRemaining: 5,
+      daysRemainingUntilLow: 4,
+      lowBalanceThreshold: 10,
+      isEstimatedBurnRate: false,
+    };
+
+    render(<ConsumptionStatsCard stats={statsWithNullDate} unitsThisMonth={0} costThisMonth={0} />);
+    expect(screen.getByText(/Data may be stale/i)).toBeInTheDocument();
+  });
+
+  it("applies destructive color classes when balance is low", () => {
+    const lowStats = {
+      lastReading: 100,
+      lastReadingDate: "2026-04-01",
+      dailyBurnRate: 5,
+      estimatedBalance: 30,
+      daysRemaining: 6,
+      daysRemainingUntilLow: 0,
+      lowBalanceThreshold: 50,
+      isEstimatedBurnRate: false,
+    };
+
+    render(<ConsumptionStatsCard stats={lowStats} unitsThisMonth={0} costThisMonth={0} />);
+
+    // The balance paragraph shows "30 kWh" and should have text-destructive class
+    const balanceElements = document.querySelectorAll(".text-destructive");
+    expect(balanceElements.length).toBeGreaterThan(0);
+
+    // Also verify the balance value is visible
+    expect(screen.getByText(/30/)).toBeInTheDocument();
   });
 });

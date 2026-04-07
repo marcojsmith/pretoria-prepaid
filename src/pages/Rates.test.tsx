@@ -6,6 +6,7 @@ import { useRates, ElectricityRate } from "../hooks/useRates";
 import { useUserRole } from "../hooks/useUserRole";
 import { useAuth } from "../hooks/useAuth";
 import { usePurchases } from "../hooks/usePurchase";
+import { useToast } from "../hooks/use-toast";
 
 interface MockDropdownMenuProps {
   children?: React.ReactNode;
@@ -17,6 +18,7 @@ vi.mock("../hooks/useRates");
 vi.mock("../hooks/useUserRole");
 vi.mock("../hooks/useAuth");
 vi.mock("../hooks/usePurchase");
+vi.mock("../hooks/use-toast");
 
 // Mock DropdownMenu to render children directly for easier testing
 vi.mock("@/components/ui/dropdown-menu", () => ({
@@ -31,8 +33,34 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
 }));
 
 describe("Rates Page", () => {
+  const mockToast = vi.fn();
+
+  const adminRate: ElectricityRate = {
+    _id: "1",
+    tier_number: 1,
+    tier_label: "Tier 1",
+    min_units: 0,
+    max_units: 100,
+    rate: 3.42,
+  };
+
+  const setupAdminWithRate = (updateRate = vi.fn().mockResolvedValue({ error: null })) => {
+    vi.mocked(useRates).mockReturnValue({
+      loading: false,
+      rates: [adminRate],
+      updateRate,
+      refetch: vi.fn(),
+    });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useToast).mockReturnValue({
+      toast: mockToast,
+      toasts: [],
+      dismiss: vi.fn(),
+    } as unknown as ReturnType<typeof useToast>);
     vi.mocked(useAuth).mockReturnValue({
       user: { id: "1" } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
@@ -272,5 +300,107 @@ describe("Rates Page", () => {
       </BrowserRouter>
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  it("shows error toast when rate value is NaN", async () => {
+    setupAdminWithRate();
+
+    render(
+      <BrowserRouter>
+        <Rates />
+      </BrowserRouter>
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("edit-rate-button"));
+    });
+
+    const input = screen.getByRole("spinbutton");
+    fireEvent.change(input, { target: { value: "abc" } });
+
+    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
+    await act(async () => {
+      fireEvent.click(saveButton!);
+    });
+
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Invalid rate", variant: "destructive" })
+    );
+  });
+
+  it("shows error toast when rate is zero", async () => {
+    setupAdminWithRate();
+
+    render(
+      <BrowserRouter>
+        <Rates />
+      </BrowserRouter>
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("edit-rate-button"));
+    });
+
+    const input = screen.getByRole("spinbutton");
+    fireEvent.change(input, { target: { value: "0" } });
+
+    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
+    await act(async () => {
+      fireEvent.click(saveButton!);
+    });
+
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Invalid rate", variant: "destructive" })
+    );
+  });
+
+  it("shows error toast when updateRate returns error", async () => {
+    setupAdminWithRate(vi.fn().mockResolvedValue({ error: "Permission denied" }));
+
+    render(
+      <BrowserRouter>
+        <Rates />
+      </BrowserRouter>
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("edit-rate-button"));
+    });
+
+    const input = screen.getByRole("spinbutton");
+    fireEvent.change(input, { target: { value: "4.5" } });
+
+    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
+    await act(async () => {
+      fireEvent.click(saveButton!);
+    });
+
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Error", variant: "destructive" })
+    );
+  });
+
+  it("shows success toast when updateRate succeeds", async () => {
+    setupAdminWithRate(vi.fn().mockResolvedValue({ error: null }));
+
+    render(
+      <BrowserRouter>
+        <Rates />
+      </BrowserRouter>
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("edit-rate-button"));
+    });
+
+    const input = screen.getByRole("spinbutton");
+    fireEvent.change(input, { target: { value: "4.5" } });
+
+    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
+    await act(async () => {
+      fireEvent.click(saveButton!);
+    });
+
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Success" }));
   });
 });

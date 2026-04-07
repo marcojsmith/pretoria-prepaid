@@ -197,5 +197,20 @@ describe("electricity calculator utilities", () => {
       expect(result).toHaveLength(2);
       expect(result[1].daysSinceLastRefill).toBe(0);
     });
+
+    it("uses _id as tiebreaker when purchases have identical date strings", () => {
+      const purchases: Purchase[] = [
+        { _id: "zzz", date: "2024-03-01", units: 50, cost: 0, amountPaid: 150, tierBreakdown: [] },
+        { _id: "aaa", date: "2024-03-01", units: 30, cost: 0, amountPaid: 90, tierBreakdown: [] },
+      ];
+
+      const result = calculateRefillIntervals(purchases);
+
+      // Both have the same date so dateComp === 0 → falls through to localeCompare
+      expect(result).toHaveLength(2);
+      // "aaa" < "zzz" so "aaa" comes first after sort
+      expect(result[0].date).toBe("2024-03-01");
+      expect(result[1].date).toBe("2024-03-01");
+    });
   });
 });

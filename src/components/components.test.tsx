@@ -45,16 +45,16 @@ describe("Application Components", () => {
   it("renders DashboardStats correctly", () => {
     const { getAllByText, rerender } = render(
       <BrowserRouter>
-        <DashboardStats averageMonthlyUsage={300} dailyAverage={10} averageMonthlyCost={1000} />
+        <DashboardStats averageMonthlyUsage={300} averageMonthlyCost={1000} />
       </BrowserRouter>
     );
     expect(getAllByText(/300/).length).toBeGreaterThan(0);
-    expect(getAllByText(/kWh\/mo/i).length).toBeGreaterThan(0);
+    expect(getAllByText(/kWh/i).length).toBeGreaterThan(0);
 
     // Test zero usage path
     rerender(
       <BrowserRouter>
-        <DashboardStats averageMonthlyUsage={0} dailyAverage={0} averageMonthlyCost={0} />
+        <DashboardStats averageMonthlyUsage={0} averageMonthlyCost={0} />
       </BrowserRouter>
     );
     expect(screen.getAllByText(/R 0.00/i).length).toBeGreaterThanOrEqual(2);

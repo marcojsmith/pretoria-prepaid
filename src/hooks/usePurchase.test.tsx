@@ -50,7 +50,7 @@ describe("usePurchases Hook - Offline Actions", () => {
     const { result } = renderHook(() => usePurchases());
 
     await act(async () => {
-      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z");
+      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z", 500);
     });
 
     const queue = JSON.parse(localStorage.getItem("offline_purchases_queue") || "[]");
@@ -66,7 +66,7 @@ describe("usePurchases Hook - Offline Actions", () => {
     const { result } = renderHook(() => usePurchases());
 
     await act(async () => {
-      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z");
+      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z", 500);
     });
 
     const queue = JSON.parse(localStorage.getItem("offline_purchases_queue") || "[]");
@@ -133,7 +133,7 @@ describe("usePurchases Hook - Offline Actions", () => {
     const { result } = renderHook(() => usePurchases());
 
     await act(async () => {
-      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z");
+      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z", 500);
     });
 
     const pendingId = result.current.purchases[0]._id;
@@ -154,7 +154,7 @@ describe("usePurchases Hook - Offline Actions", () => {
 
     // Queue an add and a delete
     await act(async () => {
-      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z");
+      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z", 500);
       await result.current.deletePurchase("confirmed-1");
     });
 
@@ -181,7 +181,7 @@ describe("usePurchases Hook - Offline Actions", () => {
     const { result } = renderHook(() => usePurchases());
 
     await act(async () => {
-      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z");
+      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z", 500);
     });
 
     Object.defineProperty(window.navigator, "onLine", { value: true, configurable: true });
@@ -255,6 +255,48 @@ describe("usePurchases Hook - Offline Actions", () => {
     expect(result.current.getAverageMonthlyCost()).toBe(0);
   });
 
+  it("returns loading=true when purchasesData is undefined and no cache", () => {
+    vi.mocked(convexReact.useQuery).mockReturnValue(undefined as any);
+    localStorage.clear(); // ensure no cached data
+
+    const { result } = renderHook(() => usePurchases());
+    expect(result.current.loading).toBe(true);
+  });
+
+  it("stops syncing mid-loop when navigator goes offline between iterations", async () => {
+    Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
+
+    const { result } = renderHook(() => usePurchases());
+
+    // Queue 2 items offline
+    await act(async () => {
+      await result.current.addPurchase(100, 300, "2024-02-25T10:00:00.000Z", 500);
+      await result.current.addPurchase(50, 150, "2024-02-26T10:00:00.000Z", 550);
+    });
+
+    expect(result.current.purchases).toHaveLength(2);
+
+    // Set up: first mutation goes offline after completing
+    mockAddPurchase.mockImplementationOnce(async () => {
+      // Go offline mid-sync so the 2nd iteration check (!navigator.onLine) breaks
+      Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
+      return { success: true };
+    });
+
+    // Come back online to trigger syncQueue
+    Object.defineProperty(window.navigator, "onLine", { value: true, configurable: true });
+
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+
+    // Only 1 mutation was called (2nd was skipped due to offline break)
+    expect(mockAddPurchase).toHaveBeenCalledTimes(1);
+    // Remaining item still in queue
+    const queue = JSON.parse(localStorage.getItem("offline_purchases_queue") || "[]");
+    expect(queue).toHaveLength(1);
+  });
+
   it("provides refill analysis correctly", () => {
     const mockPurchases = [
       { _id: "1", date: "2024-03-01", units: 100, amountPaid: 300, cost: 300, tierBreakdown: [] },
@@ -294,8 +336,8 @@ describe("usePurchases Hook - addBatchPurchases", () => {
     const { result } = renderHook(() => usePurchases());
 
     const batchItems = [
-      { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z" },
-      { units: 50, amountPaid: 150, date: "2024-02-26T10:00:00.000Z" },
+      { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z", meterReading: 500 },
+      { units: 50, amountPaid: 150, date: "2024-02-26T10:00:00.000Z", meterReading: 550 },
     ];
 
     await act(async () => {
@@ -322,9 +364,9 @@ describe("usePurchases Hook - addBatchPurchases", () => {
     const { result } = renderHook(() => usePurchases());
 
     const batchItems = [
-      { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z" },
-      { units: 50, amountPaid: 150, date: "2024-02-26T10:00:00.000Z" },
-      { units: 75, amountPaid: 225, date: "2024-02-27T10:00:00.000Z" },
+      { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z", meterReading: 500 },
+      { units: 50, amountPaid: 150, date: "2024-02-26T10:00:00.000Z", meterReading: 550 },
+      { units: 75, amountPaid: 225, date: "2024-02-27T10:00:00.000Z", meterReading: 600 },
     ];
 
     await act(async () => {
@@ -339,8 +381,8 @@ describe("usePurchases Hook - addBatchPurchases", () => {
     const { result } = renderHook(() => usePurchases());
 
     const batchItems = [
-      { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z" },
-      { units: 50, amountPaid: 150, date: "2024-02-26T10:00:00.000Z" },
+      { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z", meterReading: 500 },
+      { units: 50, amountPaid: 150, date: "2024-02-26T10:00:00.000Z", meterReading: 550 },
     ];
 
     await act(async () => {

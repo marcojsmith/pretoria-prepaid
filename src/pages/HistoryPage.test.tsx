@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { BrowserRouter, useNavigate } from "react-router-dom";
+import { BrowserRouter, useNavigate, MemoryRouter } from "react-router-dom";
 import HistoryPage from "./HistoryPage";
 import { usePurchases } from "../hooks/usePurchase";
 import { useConsumption } from "../hooks/useConsumption";
@@ -75,8 +75,6 @@ describe("HistoryPage", () => {
   const mockSignOut = vi.fn();
   const mockAddPurchase = vi.fn();
   const mockDeletePurchase = vi.fn();
-  const mockAddReading = vi.fn();
-  const mockDeleteReading = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -110,8 +108,9 @@ describe("HistoryPage", () => {
       loading: false,
       readings: [],
       stats: null,
-      addReading: mockAddReading,
-      deleteReading: mockDeleteReading,
+      addOnboardingReading: vi.fn(),
+      hasAnyReadings: false,
+      hasPurchaseReadings: false,
     });
     vi.mocked(useRates).mockReturnValue({
       loading: false,
@@ -163,15 +162,18 @@ describe("HistoryPage", () => {
       readings: [
         {
           _id: "r1" as unknown as Id<"meter_readings">,
-          reading: 120.5,
-          date: "2024-03-05",
           _creationTime: Date.now(),
           userId: "user1",
+          readingPre: 80,
+          readingPost: 120.5,
+          date: "2024-03-05",
+          source: "purchase",
         },
       ],
       stats: null,
-      addReading: mockAddReading,
-      deleteReading: mockDeleteReading,
+      addOnboardingReading: vi.fn(),
+      hasAnyReadings: true,
+      hasPurchaseReadings: true,
     });
 
     render(
@@ -181,15 +183,11 @@ describe("HistoryPage", () => {
     );
 
     fireEvent.click(screen.getByText("Readings"));
-    expect(screen.getByText("120.5 kWh")).toBeInTheDocument();
+    expect(screen.getByText(/80 kWh.*120.5 kWh/)).toBeInTheDocument();
 
+    // Delete button exists but is a no-op (readings are deleted via purchase deletion)
     const deleteBtn = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-trash2"));
-
-    await act(async () => {
-      fireEvent.click(deleteBtn!);
-    });
-
-    expect(mockDeleteReading).toHaveBeenCalledWith("r1");
+    expect(deleteBtn).toBeInTheDocument();
   });
 
   it("handles logout click", async () => {
@@ -309,7 +307,9 @@ describe("HistoryPage", () => {
     const oldReading = {
       _id: "r1" as any,
       date: "2023-12-15",
-      reading: 100,
+      readingPre: 100,
+      readingPost: 100,
+      source: "onboarding" as const,
       userId: "1",
       _creationTime: 123456789,
     };
@@ -334,8 +334,9 @@ describe("HistoryPage", () => {
     vi.mocked(useConsumption).mockReturnValue({
       loading: false,
       readings: [oldReading],
-      addReading: vi.fn(),
-      deleteReading: vi.fn(),
+      addOnboardingReading: vi.fn(),
+      hasAnyReadings: true,
+      hasPurchaseReadings: false,
       stats: null,
     });
 
@@ -351,5 +352,118 @@ describe("HistoryPage", () => {
 
     expect(screen.getByRole("option", { name: "2024" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "2023" })).toBeInTheDocument();
+  });
+
+  it("navigates to /auth when not authenticated", () => {
+    const mockNav = vi.fn();
+    vi.mocked(useNavigate).mockReturnValue(mockNav as unknown as ReturnType<typeof useNavigate>);
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      loading: false,
+      signOut: vi.fn(),
+    });
+
+    render(
+      <BrowserRouter>
+        <HistoryPage />
+      </BrowserRouter>
+    );
+
+    expect(mockNav).toHaveBeenCalledWith("/auth");
+  });
+
+  it("auto-switches to readings tab when location state has showReadings", () => {
+    render(
+      <MemoryRouter initialEntries={[{ pathname: "/history", state: { showReadings: true } }]}>
+        <HistoryPage />
+      </MemoryRouter>
+    );
+
+    // When showReadings is true, activeTab is set to "readings" — the AddPurchaseForm
+    // is NOT rendered (it only renders when activeTab === "purchases")
+    expect(screen.queryByLabelText(/Amount Paid/i)).not.toBeInTheDocument();
+    // The readings tab content is shown instead
+    expect(screen.getByText(/No readings logged yet/i)).toBeInTheDocument();
+  });
+
+  it("resetFilters resets month and year to All", async () => {
+    const marchPurchase = {
+      _id: "p1" as any,
+      date: "2024-03-15",
+      units: 100,
+      cost: 200,
+      amountPaid: 200,
+      tierBreakdown: [],
+    };
+
+    vi.mocked(usePurchases).mockReturnValue({
+      loading: false,
+      purchases: [marchPurchase],
+      addPurchase: mockAddPurchase,
+      addBatchPurchases: vi.fn(),
+      deletePurchase: mockDeletePurchase,
+      unitsThisMonth: 100,
+      costThisMonth: 200,
+      getMonthlyStats: vi.fn(() => []),
+      getAverageMonthlyUsage: vi.fn(() => 0),
+      getDailyAverageUsage: vi.fn(() => 0),
+      getAverageMonthlyCost: vi.fn(() => 0),
+      getCurrentMonthPurchases: vi.fn(() => [marchPurchase]),
+      getRefillAnalysis: vi.fn(() => []),
+      offlineCount: 0,
+    } as unknown as ReturnType<typeof usePurchases>);
+
+    render(
+      <BrowserRouter>
+        <HistoryPage />
+      </BrowserRouter>
+    );
+
+    const filterBtn = screen.getByText(/FILTERS/i);
+    fireEvent.click(filterBtn);
+
+    const selects = screen.getAllByTestId("mock-select");
+    const monthSelect = selects[0];
+    const yearSelect = selects[1];
+
+    fireEvent.change(yearSelect, { target: { value: "2024" } });
+    fireEvent.change(monthSelect, { target: { value: "03" } });
+
+    expect(screen.getByText("Filters Active")).toBeInTheDocument();
+
+    const resetBtn = screen.getByText("Reset");
+    fireEvent.click(resetBtn);
+
+    expect(screen.getByText("Filters")).toBeInTheDocument();
+  });
+
+  it("navigates to clear state after purchase when prefillData exists", async () => {
+    const mockNav = vi.fn();
+    vi.mocked(useNavigate).mockReturnValue(mockNav as unknown as ReturnType<typeof useNavigate>);
+    mockAddPurchase.mockResolvedValue({});
+
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: "/history", state: { prefillUnits: 50, prefillAmount: 200 } }]}
+      >
+        <HistoryPage />
+      </MemoryRouter>
+    );
+
+    const amountInput = screen.getByLabelText(/Amount Paid/i);
+    fireEvent.change(amountInput, { target: { value: "200" } });
+
+    const unitsInput = screen.getByLabelText(/kWh Received/i);
+    fireEvent.change(unitsInput, { target: { value: "50" } });
+
+    const meterReadingInput = screen.getByLabelText(/Current Meter/i);
+    fireEvent.change(meterReadingInput, { target: { value: "1000" } });
+
+    const submitButton = screen.getByRole("button", { name: /Add Purchase/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    expect(mockNav).toHaveBeenCalledWith("/history", { replace: true, state: null });
   });
 });

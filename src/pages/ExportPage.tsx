@@ -28,6 +28,7 @@ interface ImportItem {
   date: string;
   amountPaid: number;
   units: number;
+  meterReading: number;
 }
 
 export default function ExportPage() {
@@ -107,7 +108,7 @@ export default function ExportPage() {
       }
 
       if (date && !isNaN(amount) && !isNaN(units)) {
-        parsed.push({ date, amountPaid: amount, units });
+        parsed.push({ date, amountPaid: amount, units, meterReading: 0 });
       }
     }
     return parsed;
@@ -158,7 +159,8 @@ export default function ExportPage() {
 
     const csvData = readings.map((r) => ({
       Date: r.date,
-      Reading: r.reading,
+      ReadingPre: r.readingPre,
+      ReadingPost: r.readingPost,
     }));
 
     const csv = convertToCSV(csvData);
@@ -462,9 +464,7 @@ export default function ExportPage() {
                           {readings.slice(0, 50).map((r) => (
                             <tr key={r._id} className="border-t">
                               <td className="px-4 py-2">{new Date(r.date).toLocaleDateString()}</td>
-                              <td className="px-4 py-2 text-right">
-                                {r.reading?.toFixed(1) || "0.0"}
-                              </td>
+                              <td className="px-4 py-2 text-right">{r.readingPost.toFixed(1)}</td>
                             </tr>
                           ))}
                         </tbody>

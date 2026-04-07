@@ -72,8 +72,9 @@ describe("Dashboard Page", () => {
       loading: false,
       stats: null,
       readings: [],
-      addReading: vi.fn(),
-      deleteReading: vi.fn(),
+      addOnboardingReading: vi.fn(),
+      hasAnyReadings: true,
+      hasPurchaseReadings: true,
     });
   });
 
@@ -317,5 +318,125 @@ describe("Dashboard Page", () => {
     );
 
     expect(screen.getAllByText(/PowerTracker/i).length).toBeGreaterThan(0);
+  });
+
+  it("navigates to /auth when not authenticated and loading is done", () => {
+    vi.mocked(useAuth).mockReturnValue({ user: null, loading: false, signOut: vi.fn() });
+    mockUsePurchases({ loading: false });
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+    mockUseProfile({ loading: false });
+    vi.mocked(useConsumption).mockReturnValue({
+      loading: false,
+      stats: null,
+      readings: [],
+      addOnboardingReading: vi.fn(),
+      hasAnyReadings: true,
+      hasPurchaseReadings: true,
+    });
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith("/auth");
+  });
+
+  it("renders OnboardingForm when no readings exist", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Marco",
+        primaryEmailAddress: { emailAddress: "marco@example.com" },
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
+      loading: false,
+      signOut: vi.fn(),
+    });
+    mockUsePurchases();
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+    mockUseProfile();
+    vi.mocked(useConsumption).mockReturnValue({
+      loading: false,
+      stats: null,
+      readings: [],
+      addOnboardingReading: vi.fn(),
+      hasAnyReadings: false,
+      hasPurchaseReadings: false,
+    });
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByText("Welcome! Let's get started")).toBeInTheDocument();
+    expect(screen.getByText(/Enter your current meter reading/i)).toBeInTheDocument();
+  });
+
+  it("renders 'log first purchase' prompt when has readings but no purchase readings", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Marco",
+        primaryEmailAddress: { emailAddress: "marco@example.com" },
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
+      loading: false,
+      signOut: vi.fn(),
+    });
+    mockUsePurchases();
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+    mockUseProfile();
+    vi.mocked(useConsumption).mockReturnValue({
+      loading: false,
+      stats: null,
+      readings: [],
+      addOnboardingReading: vi.fn(),
+      hasAnyReadings: true,
+      hasPurchaseReadings: false,
+    });
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByText("Log your first purchase")).toBeInTheDocument();
+  });
+
+  it("renders rates loading spinner in footer", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        firstName: "Marco",
+        primaryEmailAddress: { emailAddress: "marco@example.com" },
+      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
+      loading: false,
+      signOut: vi.fn(),
+    });
+    mockUsePurchases();
+    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
+    mockUseProfile();
+    vi.mocked(useConsumption).mockReturnValue({
+      loading: false,
+      stats: null,
+      readings: [],
+      addOnboardingReading: vi.fn(),
+      hasAnyReadings: true,
+      hasPurchaseReadings: true,
+    });
+    vi.mocked(useRates).mockReturnValue({
+      rates: MOCK_RATES,
+      loading: true,
+      updateRate: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    );
+
+    expect(document.querySelector(".animate-spin")).toBeInTheDocument();
   });
 });

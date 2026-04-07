@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Zap, Calendar, TrendingDown, AlertTriangle, BarChart3 } from "lucide-react";
 import { roundUnits, formatCurrency } from "@/lib/electricity";
 import { ConsumptionStats } from "@/hooks/useConsumption";
+import { InfoTip } from "@/components/InfoTip";
 
 interface ConsumptionStatsCardProps {
   stats: ConsumptionStats | null;
@@ -51,6 +52,7 @@ export function ConsumptionStatsCard({
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <BarChart3 className="h-3.5 w-3.5 text-primary" />
               <span>Purchased units</span>
+              <InfoTip text="Total kWh purchased so far this calendar month, based on your logged purchases." />
             </div>
             <div className="space-y-0.5">
               <p className="text-lg font-bold tracking-tight text-foreground">
@@ -65,6 +67,7 @@ export function ConsumptionStatsCard({
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Zap className={`h-3.5 w-3.5 ${isLow ? "text-destructive" : "text-primary"}`} />
               <span>Est. Balance</span>
+              <InfoTip text="Meter reading after your last purchase, minus estimated consumption since then (daily usage × days elapsed)." />
             </div>
             <div className="space-y-0.5">
               <p
@@ -83,6 +86,7 @@ export function ConsumptionStatsCard({
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <TrendingDown className="h-3.5 w-3.5 text-primary" />
               <span>Daily Usage</span>
+              <InfoTip text="Weighted average of your last 5 purchase intervals. Recent intervals count more than older ones, so a holiday or unusual period won't skew the result." />
             </div>
             <div className="space-y-0.5">
               <p className="text-lg font-bold tracking-tight text-foreground">
@@ -99,6 +103,7 @@ export function ConsumptionStatsCard({
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Calendar className="h-3.5 w-3.5 text-primary" />
               <span>Days Left</span>
+              <InfoTip text="How many days until your balance drops to the low balance threshold, at your current daily usage rate." />
             </div>
             <div className="space-y-0.5">
               <p

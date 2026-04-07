@@ -1,10 +1,33 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { PurchaseHistory } from "./PurchaseHistory";
 import { Purchase } from "@/lib/electricity";
 
+type IntersectionObserverCallback = (entries: IntersectionObserverEntry[]) => void;
+let capturedObserverCallback: IntersectionObserverCallback | null = null;
+const mockObserve = vi.fn();
+const mockUnobserve = vi.fn();
+
+function setupIntersectionObserverMock() {
+  capturedObserverCallback = null;
+  global.IntersectionObserver = vi.fn((callback: IntersectionObserverCallback) => {
+    capturedObserverCallback = callback;
+    return { observe: mockObserve, unobserve: mockUnobserve, disconnect: vi.fn() };
+  }) as unknown as typeof IntersectionObserver;
+}
+
 describe("PurchaseHistory", () => {
   const mockOnDelete = vi.fn();
+
+  beforeEach(() => {
+    mockObserve.mockClear();
+    mockUnobserve.mockClear();
+    setupIntersectionObserverMock();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it("renders empty state correctly", () => {
     render(<PurchaseHistory purchases={[]} onDelete={mockOnDelete} />);
@@ -108,5 +131,104 @@ describe("PurchaseHistory", () => {
     render(<PurchaseHistory purchases={purchases} onDelete={mockOnDelete} />);
 
     expect(screen.getByText(/50/i)).toBeInTheDocument();
+  });
+
+  it("renders tier breakdown when available", () => {
+    const purchases: Purchase[] = [
+      {
+        _id: "4",
+        date: "2024-01-04",
+        units: 100,
+        cost: 342,
+        amountPaid: 342,
+        tierBreakdown: [
+          { tier: 1, label: "Tier 1", units: 50, rate: 3.42, cost: 171 },
+          { tier: 2, label: "Tier 2", units: 50, rate: 4.0, cost: 200 },
+        ],
+      },
+    ];
+    render(<PurchaseHistory purchases={purchases} onDelete={mockOnDelete} />);
+
+    expect(screen.getAllByText(/50/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Tier 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Tier 2/)).toBeInTheDocument();
+  });
+
+  it("handles unknown tier with fallback color", () => {
+    const purchases: Purchase[] = [
+      {
+        _id: "5",
+        date: "2024-01-05",
+        units: 100,
+        cost: 342,
+        amountPaid: 342,
+        tierBreakdown: [
+          { tier: 99 as number, label: "Unknown", units: 100, rate: 3.42, cost: 342 },
+        ],
+      },
+    ];
+    render(<PurchaseHistory purchases={purchases} onDelete={mockOnDelete} />);
+
+    expect(screen.getByText(/Unknown/)).toBeInTheDocument();
+  });
+
+  it("IntersectionObserver callback loads more when target is intersecting", async () => {
+    const purchases: Purchase[] = Array.from({ length: 15 }, (_, i) => ({
+      _id: String(i + 1),
+      date: `2024-01-${String(i + 1).padStart(2, "0")}`,
+      units: 100,
+      cost: 342,
+      amountPaid: 342,
+      tierBreakdown: [{ tier: 1, label: "Tier 1", units: 100, rate: 3.42, cost: 342 }],
+    }));
+
+    render(<PurchaseHistory purchases={purchases} onDelete={mockOnDelete} />);
+
+    // Initially only 10 visible; observer target should be attached
+    expect(mockObserve).toHaveBeenCalled();
+
+    // Trigger the observer callback with isIntersecting = true
+    await act(async () => {
+      capturedObserverCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
+    });
+
+    // All 15 should now be visible (visibleCount went from 10 → 20)
+    expect(screen.queryByText(/remaining/i)).not.toBeInTheDocument();
+  });
+
+  it("IntersectionObserver callback does not load more when not intersecting", async () => {
+    const purchases: Purchase[] = Array.from({ length: 15 }, (_, i) => ({
+      _id: String(i + 1),
+      date: `2024-01-${String(i + 1).padStart(2, "0")}`,
+      units: 100,
+      cost: 342,
+      amountPaid: 342,
+      tierBreakdown: [{ tier: 1, label: "Tier 1", units: 100, rate: 3.42, cost: 342 }],
+    }));
+
+    render(<PurchaseHistory purchases={purchases} onDelete={mockOnDelete} />);
+
+    await act(async () => {
+      capturedObserverCallback!([{ isIntersecting: false } as IntersectionObserverEntry]);
+    });
+
+    // Still 5 remaining (only 10 of 15 visible)
+    expect(screen.getByText(/5 remaining/i)).toBeInTheDocument();
+  });
+
+  it("unobserves target on unmount", () => {
+    const purchases: Purchase[] = Array.from({ length: 15 }, (_, i) => ({
+      _id: String(i + 1),
+      date: `2024-01-${String(i + 1).padStart(2, "0")}`,
+      units: 100,
+      cost: 342,
+      amountPaid: 342,
+      tierBreakdown: [{ tier: 1, label: "Tier 1", units: 100, rate: 3.42, cost: 342 }],
+    }));
+
+    const { unmount } = render(<PurchaseHistory purchases={purchases} onDelete={mockOnDelete} />);
+    unmount();
+
+    expect(mockUnobserve).toHaveBeenCalled();
   });
 });

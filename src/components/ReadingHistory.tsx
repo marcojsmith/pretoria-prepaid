@@ -8,7 +8,9 @@ import { Id } from "../../convex/_generated/dataModel";
 interface Reading {
   _id: Id<"meter_readings">;
   date: string;
-  reading: number;
+  readingPre: number;
+  readingPost: number;
+  source: "purchase" | "onboarding";
 }
 
 interface ReadingHistoryProps {
@@ -54,7 +56,7 @@ export function ReadingHistory({ readings, onDelete, isFiltered }: ReadingHistor
           <p className="text-[10px]">
             {isFiltered
               ? "Try adjusting your filters or reset them."
-              : "Log your first meter reading to start tracking usage."}
+              : "Log your first purchase to start tracking usage."}
           </p>
         </CardContent>
       </Card>
@@ -81,7 +83,21 @@ export function ReadingHistory({ readings, onDelete, isFiltered }: ReadingHistor
           <Card key={reading._id} className="overflow-hidden">
             <CardContent className="flex items-center justify-between pt-4">
               <div className="space-y-0.5">
-                <p className="text-sm font-bold">{roundUnits(reading.reading)} kWh</p>
+                {reading.source === "onboarding" ? (
+                  <>
+                    <p className="text-sm font-bold">{roundUnits(reading.readingPost)} kWh</p>
+                    <p className="text-[10px] text-muted-foreground">Starting point</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-bold">
+                      {roundUnits(reading.readingPre)} kWh → {roundUnits(reading.readingPost)} kWh
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {roundUnits(reading.readingPost - reading.readingPre)} units purchased
+                    </p>
+                  </>
+                )}
                 <p className="text-[10px] text-muted-foreground">
                   {new Date(reading.date).toLocaleDateString("en-ZA", {
                     day: "numeric",

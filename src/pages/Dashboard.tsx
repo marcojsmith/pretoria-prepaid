@@ -18,8 +18,10 @@ import { ConsumptionStatsCard } from "@/components/ConsumptionStatsCard";
 import { Header } from "@/components/Header";
 import { QuickActions } from "@/components/QuickActions";
 import { Button } from "@/components/ui/button";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert, Zap } from "lucide-react";
 import { SEO } from "@/components/SEO";
+import { OnboardingForm } from "@/components/OnboardingForm";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -27,13 +29,18 @@ export default function Dashboard() {
   const { isAdmin } = useUserRole();
   const { loading: profileLoading } = useProfile();
   const { rates, loading: ratesLoading } = useRates();
-  const { stats: consumptionStats, loading: consumptionLoading } = useConsumption();
+  const {
+    stats: consumptionStats,
+    loading: consumptionLoading,
+    addOnboardingReading,
+    hasAnyReadings,
+    hasPurchaseReadings,
+  } = useConsumption();
   const {
     loading: purchasesLoading,
     getCurrentMonthPurchases,
     getMonthlyStats,
     getAverageMonthlyUsage,
-    getDailyAverageUsage,
     getAverageMonthlyCost,
     offlineCount,
   } = usePurchases();
@@ -58,7 +65,6 @@ export default function Dashboard() {
   );
   const monthlyStats = useMemo(() => getMonthlyStats(), [getMonthlyStats]);
   const averageMonthlyUsage = useMemo(() => getAverageMonthlyUsage(), [getAverageMonthlyUsage]);
-  const dailyAverage = useMemo(() => getDailyAverageUsage(), [getDailyAverageUsage]);
   const averageMonthlyCost = useMemo(() => getAverageMonthlyCost(), [getAverageMonthlyCost]);
 
   if (authLoading || purchasesLoading || profileLoading || consumptionLoading) {
@@ -73,6 +79,24 @@ export default function Dashboard() {
   }
 
   if (!user) return null;
+
+  // State 1: No readings at all → show OnboardingForm
+  if (!hasAnyReadings) {
+    return (
+      <div className="min-h-screen bg-background pb-6">
+        <SEO
+          title="Dashboard"
+          description="View your personal prepaid electricity usage, costs, and consumption trends at a glance."
+          noindex
+        />
+        <Header offlineCount={offlineCount} />
+        <PatreonBanner />
+        <main className="container mx-auto space-y-6 px-4 py-6">
+          <OnboardingForm onSubmit={addOnboardingReading} />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-6">
@@ -114,16 +138,43 @@ export default function Dashboard() {
               />
               <DashboardStats
                 averageMonthlyUsage={averageMonthlyUsage}
-                dailyAverage={dailyAverage}
                 averageMonthlyCost={averageMonthlyCost}
               />
             </div>
+
+            {/* State 2: Onboarding only, no purchase readings → prompt user */}
+            {!hasPurchaseReadings && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Zap className="h-4 w-4 text-primary" />
+                    Log your first purchase
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Your estimated balance is based on your onboarding reading. Log your first
+                    electricity purchase to get accurate usage tracking.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => navigate("/history")}
+                  >
+                    Go to History
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </section>
 
-          {/* Tier and Monthly Stats */}
+          {/* Tier Progress + Monthly Usage */}
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <TierProgress unitsBought={unitsThisMonth} />
-            <MonthlyStats stats={monthlyStats} averageUsage={averageMonthlyUsage} />
+            {monthlyStats.length > 0 && (
+              <MonthlyStats stats={monthlyStats} averageUsage={averageMonthlyUsage} />
+            )}
           </section>
 
           {/* Charts Section */}

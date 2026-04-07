@@ -76,7 +76,7 @@ export const addPurchase = mutation({
     units: v.number(),
     cost: v.number(),
     amountPaid: v.number(),
-    meterReading: v.optional(v.number()), // Current reading before purchase
+    meterReading: v.number(), // Current reading before purchase (now required)
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -115,14 +115,14 @@ export const addPurchase = mutation({
       tierBreakdown: breakdown,
     });
 
-    // If a meter reading was provided, log a NEW reading that accounts for the purchase
-    if (args.meterReading !== undefined) {
-      await ctx.db.insert("meter_readings", {
-        userId: identity.subject,
-        date: args.date,
-        reading: args.meterReading + args.units, // Reading AFTER purchase
-      });
-    }
+    // Create ONE reading per purchase with pre/post values
+    await ctx.db.insert("meter_readings", {
+      userId: identity.subject,
+      date: args.date,
+      readingPre: args.meterReading,
+      readingPost: args.meterReading + args.units,
+      source: "purchase",
+    });
 
     // Trigger sequential recalculation for the entire month to be safe
     await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {
@@ -148,6 +148,17 @@ export const deletePurchase = mutation({
 
     const monthKey = purchase.date.substring(0, 7);
     await ctx.db.delete(args.id);
+
+    // Also delete the associated meter reading
+    const reading = await ctx.db
+      .query("meter_readings")
+      .withIndex("by_userId_date", (q) => q.eq("userId", purchase.userId).eq("date", purchase.date))
+      .filter((q) => q.eq(q.field("source"), "purchase"))
+      .take(1);
+
+    if (reading.length > 0) {
+      await ctx.db.delete(reading[0]._id);
+    }
 
     // Trigger recalculation for the month
     await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {

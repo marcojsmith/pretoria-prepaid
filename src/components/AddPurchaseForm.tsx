@@ -192,9 +192,8 @@ export function AddPurchaseForm({
                 <div className="mt-1 flex justify-between border-t border-border/50 pt-1">
                   <span className="flex items-center gap-1 font-medium text-primary">
                     <Zap className="h-3 w-3" />
-                    New Balance
+                    Meter: {roundUnits(readingNum)} → {roundUnits(readingNum + unitsNum)} kWh
                   </span>
-                  <span className="font-bold">{roundUnits(readingNum + unitsNum)} kWh</span>
                 </div>
               )}
             </div>

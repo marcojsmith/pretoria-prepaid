@@ -56,6 +56,26 @@ describe("CSV utilities", () => {
     expect(csv).toBe("name,age,city\nJohn,,");
   });
 
+  it("returns empty string when all items are null", () => {
+    const result = convertToCSV([null as any, null as any]);
+    expect(result).toBe("");
+  });
+
+  it("uses first valid object for headers when array starts with nulls", () => {
+    const data = [null as any, { name: "Alice", age: 30 }];
+    const result = convertToCSV(data);
+    expect(result).toContain("name,age");
+    expect(result).toContain("Alice");
+  });
+
+  it("handles null objects mixed in data rows", () => {
+    const data = [{ name: "Alice" }, null as any, { name: "Bob" }];
+    const result = convertToCSV(data);
+    expect(result).toContain("Alice");
+    const lines = result.split("\n");
+    expect(lines).toHaveLength(4); // header + Alice + empty + Bob
+  });
+
   it("triggers download", () => {
     // Mock DOM elements and methods
     const mockElement = {
