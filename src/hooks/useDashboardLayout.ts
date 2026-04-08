@@ -30,18 +30,24 @@ export const DEFAULT_CARDS: CardConfig[] = [
 
 const VALID_IDS = new Set<string>(DEFAULT_CARDS.map((c) => c.id));
 
-function isValidLayout(cards: { id: string; visible: boolean }[]): cards is CardConfig[] {
-  const savedIds = new Set(cards.map((c) => c.id));
-  const hasAllCards = DEFAULT_CARDS.every((c) => savedIds.has(c.id));
-  const hasNoExtra = cards.every((c) => VALID_IDS.has(c.id));
-  return hasAllCards && hasNoExtra;
+function isValidLayout(cards: unknown): cards is CardConfig[] {
+  if (!Array.isArray(cards)) return false;
+  if (cards.length !== DEFAULT_CARDS.length) return false;
+  const items = cards as Array<Record<string, unknown>>;
+  if (!items.every((c) => typeof c["id"] === "string" && typeof c["visible"] === "boolean"))
+    return false;
+  const typed = items as Array<{ id: string; visible: boolean }>;
+  const savedIds = new Set<string>(typed.map((c) => c.id));
+  if (savedIds.size !== typed.length) return false;
+  if (!DEFAULT_CARDS.every((c) => savedIds.has(c.id))) return false;
+  return typed.every((c) => VALID_IDS.has(c.id));
 }
 
 function loadFromStorage(): CardConfig[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_CARDS;
-    const parsed = JSON.parse(raw) as { id: string; visible: boolean }[];
+    const parsed: unknown = JSON.parse(raw);
     return isValidLayout(parsed) ? parsed : DEFAULT_CARDS;
   } catch {
     return DEFAULT_CARDS;
@@ -65,17 +71,25 @@ export function useDashboardLayout(): UseDashboardLayoutReturn {
   const profile = useQuery(api.users.getProfile);
   const updateLayoutMutation = useMutation(api.users.updateDashboardLayout);
   const serverSyncedRef = useRef(false);
+  const localEditedRef = useRef(false);
 
   useEffect(() => {
-    if (profile === undefined || serverSyncedRef.current) return;
+    if (
+      profile === undefined ||
+      profile === null ||
+      serverSyncedRef.current ||
+      localEditedRef.current
+    )
+      return;
     serverSyncedRef.current = true;
-    const serverLayout = profile?.dashboardLayout;
+    const serverLayout = profile.dashboardLayout;
     if (!serverLayout || !isValidLayout(serverLayout)) return;
     setCardsState(serverLayout);
     saveToStorage(serverLayout);
   }, [profile]);
 
   function setCards(updated: CardConfig[]): void {
+    localEditedRef.current = true;
     setCardsState(updated);
     saveToStorage(updated);
     void updateLayoutMutation({ layout: updated });

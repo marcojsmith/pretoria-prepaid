@@ -160,9 +160,29 @@ export const updateProfile = mutation({
   },
 });
 
+const ALLOWED_CARD_IDS = [
+  "consumption-stats",
+  "dashboard-stats",
+  "tier-progress",
+  "monthly-stats",
+  "yearly-chart",
+  "daily-chart",
+  "frequency-chart",
+] as const;
+
+const cardIdValidator = v.union(
+  v.literal("consumption-stats"),
+  v.literal("dashboard-stats"),
+  v.literal("tier-progress"),
+  v.literal("monthly-stats"),
+  v.literal("yearly-chart"),
+  v.literal("daily-chart"),
+  v.literal("frequency-chart")
+);
+
 export const updateDashboardLayout = mutation({
   args: {
-    layout: v.array(v.object({ id: v.string(), visible: v.boolean() })),
+    layout: v.array(v.object({ id: cardIdValidator, visible: v.boolean() })),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -175,6 +195,16 @@ export const updateDashboardLayout = mutation({
       .unique();
     if (!profile) {
       throw new Error(ERR_PROFILE_NOT_FOUND);
+    }
+    const ids = args.layout.map((c) => c.id);
+    const uniqueIds = new Set(ids);
+    if (uniqueIds.size !== ALLOWED_CARD_IDS.length || ids.length !== ALLOWED_CARD_IDS.length) {
+      throw new Error("Dashboard layout must contain each card exactly once");
+    }
+    for (const required of ALLOWED_CARD_IDS) {
+      if (!uniqueIds.has(required)) {
+        throw new Error(`Dashboard layout is missing required card: ${required}`);
+      }
     }
     await ctx.db.patch(profile._id, { dashboardLayout: args.layout });
   },
