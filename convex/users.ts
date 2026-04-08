@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 const ERR_NOT_AUTHENTICATED = "Not authenticated";
+const ERR_PROFILE_NOT_FOUND = "Profile not found";
 
 export const getProfile = query({
   args: {},
@@ -119,7 +120,7 @@ export const updateProfile = mutation({
       .unique();
 
     if (!profile) {
-      throw new Error("Profile not found");
+      throw new Error(ERR_PROFILE_NOT_FOUND);
     }
 
     const updates: {
@@ -159,6 +160,26 @@ export const updateProfile = mutation({
   },
 });
 
+export const updateDashboardLayout = mutation({
+  args: {
+    layout: v.array(v.object({ id: v.string(), visible: v.boolean() })),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error(ERR_NOT_AUTHENTICATED);
+    }
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!profile) {
+      throw new Error(ERR_PROFILE_NOT_FOUND);
+    }
+    await ctx.db.patch(profile._id, { dashboardLayout: args.layout });
+  },
+});
+
 export const updatePushSubscription = mutation({
   args: {
     pushNotificationsEnabled: v.boolean(),
@@ -182,7 +203,7 @@ export const updatePushSubscription = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .unique();
 
-    if (!profile) throw new Error("Profile not found");
+    if (!profile) throw new Error(ERR_PROFILE_NOT_FOUND);
 
     const patch: {
       pushNotificationsEnabled: boolean;

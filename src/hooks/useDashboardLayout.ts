@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 export type CardId =
   | "consumption-stats"
@@ -16,7 +18,7 @@ export interface CardConfig {
 
 const STORAGE_KEY = "dashboard_layout_v1";
 
-const DEFAULT_CARDS: CardConfig[] = [
+export const DEFAULT_CARDS: CardConfig[] = [
   { id: "consumption-stats", visible: true },
   { id: "dashboard-stats", visible: true },
   { id: "tier-progress", visible: true },
@@ -26,27 +28,27 @@ const DEFAULT_CARDS: CardConfig[] = [
   { id: "frequency-chart", visible: true },
 ];
 
-function loadLayout(): CardConfig[] {
+const VALID_IDS = new Set<string>(DEFAULT_CARDS.map((c) => c.id));
+
+function isValidLayout(cards: { id: string; visible: boolean }[]): cards is CardConfig[] {
+  const savedIds = new Set(cards.map((c) => c.id));
+  const hasAllCards = DEFAULT_CARDS.every((c) => savedIds.has(c.id));
+  const hasNoExtra = cards.every((c) => VALID_IDS.has(c.id));
+  return hasAllCards && hasNoExtra;
+}
+
+function loadFromStorage(): CardConfig[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return DEFAULT_CARDS;
-    }
-    const parsed = JSON.parse(raw) as CardConfig[];
-    const knownIds = new Set(DEFAULT_CARDS.map((c) => c.id));
-    const savedIds = new Set(parsed.map((c) => c.id));
-    const hasAllCards = DEFAULT_CARDS.every((c) => savedIds.has(c.id));
-    const hasNoExtra = parsed.every((c) => knownIds.has(c.id));
-    if (!hasAllCards || !hasNoExtra) {
-      return DEFAULT_CARDS;
-    }
-    return parsed;
+    if (!raw) return DEFAULT_CARDS;
+    const parsed = JSON.parse(raw) as { id: string; visible: boolean }[];
+    return isValidLayout(parsed) ? parsed : DEFAULT_CARDS;
   } catch {
     return DEFAULT_CARDS;
   }
 }
 
-function saveLayout(cards: CardConfig[]): void {
+function saveToStorage(cards: CardConfig[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
 }
 
@@ -55,14 +57,28 @@ interface UseDashboardLayoutReturn {
   setCards: (cards: CardConfig[]) => void;
   toggleVisibility: (id: CardId) => void;
   resetLayout: () => void;
+  syncing: boolean;
 }
 
 export function useDashboardLayout(): UseDashboardLayoutReturn {
-  const [cards, setCardsState] = useState<CardConfig[]>(loadLayout);
+  const [cards, setCardsState] = useState<CardConfig[]>(loadFromStorage);
+  const profile = useQuery(api.users.getProfile);
+  const updateLayoutMutation = useMutation(api.users.updateDashboardLayout);
+  const serverSyncedRef = useRef(false);
+
+  useEffect(() => {
+    if (profile === undefined || serverSyncedRef.current) return;
+    serverSyncedRef.current = true;
+    const serverLayout = profile?.dashboardLayout;
+    if (!serverLayout || !isValidLayout(serverLayout)) return;
+    setCardsState(serverLayout);
+    saveToStorage(serverLayout);
+  }, [profile]);
 
   function setCards(updated: CardConfig[]): void {
     setCardsState(updated);
-    saveLayout(updated);
+    saveToStorage(updated);
+    void updateLayoutMutation({ layout: updated });
   }
 
   function toggleVisibility(id: CardId): void {
@@ -73,7 +89,13 @@ export function useDashboardLayout(): UseDashboardLayoutReturn {
     setCards([...DEFAULT_CARDS]);
   }
 
-  return { cards, setCards, toggleVisibility, resetLayout };
+  return {
+    cards,
+    setCards,
+    toggleVisibility,
+    resetLayout,
+    syncing: profile === undefined,
+  };
 }
 
 export const CARD_LABELS: Record<CardId, { name: string; description: string }> = {
