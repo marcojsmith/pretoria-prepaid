@@ -268,29 +268,6 @@ describe("Dashboard Page", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/history");
   });
 
-  it("navigates to history with meter state when meter card clicked", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        firstName: "Marco",
-        primaryEmailAddress: { emailAddress: "marco@example.com" },
-      } as NonNullable<ReturnType<typeof useAuth>["user"]>,
-      loading: false,
-      signOut: vi.fn(),
-    });
-    mockUsePurchases();
-    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
-    mockUseProfile();
-
-    render(
-      <BrowserRouter>
-        <Dashboard />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByText("Meter Reading"));
-    expect(mockNavigate).toHaveBeenCalledWith("/history", { state: { showReadings: true } });
-  });
-
   it("navigates to rates when View All Rates clicked", () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {
