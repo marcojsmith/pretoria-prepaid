@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 const ERR_NOT_AUTHENTICATED = "Not authenticated";
+const ERR_PROFILE_NOT_FOUND = "Profile not found";
 
 export const getProfile = query({
   args: {},
@@ -119,7 +120,7 @@ export const updateProfile = mutation({
       .unique();
 
     if (!profile) {
-      throw new Error("Profile not found");
+      throw new Error(ERR_PROFILE_NOT_FOUND);
     }
 
     const updates: {
@@ -159,6 +160,56 @@ export const updateProfile = mutation({
   },
 });
 
+const ALLOWED_CARD_IDS = [
+  "consumption-stats",
+  "dashboard-stats",
+  "tier-progress",
+  "monthly-stats",
+  "yearly-chart",
+  "daily-chart",
+  "frequency-chart",
+] as const;
+
+const cardIdValidator = v.union(
+  v.literal("consumption-stats"),
+  v.literal("dashboard-stats"),
+  v.literal("tier-progress"),
+  v.literal("monthly-stats"),
+  v.literal("yearly-chart"),
+  v.literal("daily-chart"),
+  v.literal("frequency-chart")
+);
+
+export const updateDashboardLayout = mutation({
+  args: {
+    layout: v.array(v.object({ id: cardIdValidator, visible: v.boolean() })),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error(ERR_NOT_AUTHENTICATED);
+    }
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!profile) {
+      throw new Error(ERR_PROFILE_NOT_FOUND);
+    }
+    const ids = args.layout.map((c) => c.id);
+    const uniqueIds = new Set(ids);
+    if (uniqueIds.size !== ALLOWED_CARD_IDS.length || ids.length !== ALLOWED_CARD_IDS.length) {
+      throw new Error("Dashboard layout must contain each card exactly once");
+    }
+    for (const required of ALLOWED_CARD_IDS) {
+      if (!uniqueIds.has(required)) {
+        throw new Error(`Dashboard layout is missing required card: ${required}`);
+      }
+    }
+    await ctx.db.patch(profile._id, { dashboardLayout: args.layout });
+  },
+});
+
 export const updatePushSubscription = mutation({
   args: {
     pushNotificationsEnabled: v.boolean(),
@@ -182,7 +233,7 @@ export const updatePushSubscription = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .unique();
 
-    if (!profile) throw new Error("Profile not found");
+    if (!profile) throw new Error(ERR_PROFILE_NOT_FOUND);
 
     const patch: {
       pushNotificationsEnabled: boolean;

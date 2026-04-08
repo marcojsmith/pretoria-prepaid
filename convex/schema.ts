@@ -28,6 +28,7 @@ export default defineSchema({
         }),
       })
     ),
+    dashboardLayout: v.optional(v.array(v.object({ id: v.string(), visible: v.boolean() }))),
   }).index("by_userId", ["userId"]),
   purchases: defineTable({
     userId: v.string(),
