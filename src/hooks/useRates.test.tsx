@@ -2,6 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useRates } from "./useRates";
 import { useQuery, useMutation } from "convex/react";
+import type { ElectricityRate } from "@/lib/electricity";
 
 // Mock convex/react
 vi.mock("convex/react", () => ({
@@ -33,7 +34,7 @@ describe("useRates", () => {
     const { result } = renderHook(() => useRates());
 
     expect(result.current.rates).toHaveLength(1);
-    expect(result.current.rates[0].rate).toBe(3.5);
+    expect((result.current.rates[0] as ElectricityRate).rate).toBe(3.5);
     expect(result.current.loading).toBe(false);
   });
 
@@ -45,9 +46,11 @@ describe("useRates", () => {
 
     renderHook(() => useRates());
 
-    const cached = JSON.parse(localStorage.getItem("electricity_rates") || "[]");
+    const cached = JSON.parse(
+      localStorage.getItem("electricity_rates") ?? "[]"
+    ) as ElectricityRate[];
     expect(cached).toHaveLength(1);
-    expect(cached[0].rate).toBe(3.5);
+    expect((cached[0] as ElectricityRate).rate).toBe(3.5);
   });
 
   it("returns cached rates from localStorage when convex returns undefined (offline/loading)", () => {
@@ -63,7 +66,7 @@ describe("useRates", () => {
     const { result } = renderHook(() => useRates());
 
     expect(result.current.rates).toHaveLength(1);
-    expect(result.current.rates[0].rate).toBe(4.0);
+    expect((result.current.rates[0] as ElectricityRate).rate).toBe(4.0);
   });
 
   it("handles malformed cache data safely", () => {

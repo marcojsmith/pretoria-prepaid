@@ -42,14 +42,35 @@ vi.mock("lucide-react", () => ({
 }));
 
 // Mock Tabs with actual state
+interface TabsProps {
+  children?: React.ReactNode;
+  defaultValue?: string;
+}
+interface TabsListProps {
+  children?: React.ReactNode;
+  activeValue: string;
+  onValueChange: (v: string) => void;
+}
+interface TabsTriggerProps {
+  children?: React.ReactNode;
+  value?: string;
+  activeValue: string;
+  onValueChange?: (v: string) => void;
+}
+interface TabsContentProps {
+  children?: React.ReactNode;
+  value?: string;
+  activeValue?: string;
+}
+
 vi.mock("@/components/ui/tabs", () => {
-  const Tabs = ({ children, defaultValue }: any) => {
-    const [value, setValue] = React.useState(defaultValue);
+  const Tabs = ({ children, defaultValue }: TabsProps) => {
+    const [value, setValue] = React.useState(defaultValue ?? "");
     return (
       <div data-testid="mock-tabs">
         {React.Children.map(children, (child) => {
           if (React.isValidElement(child)) {
-            return React.cloneElement(child as React.ReactElement<any>, {
+            return React.cloneElement(child as React.ReactElement<TabsListProps>, {
               activeValue: value,
               onValueChange: setValue,
             });
@@ -60,13 +81,13 @@ vi.mock("@/components/ui/tabs", () => {
     );
   };
 
-  const TabsList = ({ children, activeValue, onValueChange }: any) => (
+  const TabsList = ({ children, activeValue, onValueChange }: TabsListProps) => (
     <div data-testid="mock-tabs-list">
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as React.ReactElement<any>, {
-            activeValue,
-            onValueChange,
+          return React.cloneElement(child as React.ReactElement<TabsTriggerProps>, {
+            activeValue: activeValue ?? "",
+            onValueChange: onValueChange,
           });
         }
         return child;
@@ -74,13 +95,17 @@ vi.mock("@/components/ui/tabs", () => {
     </div>
   );
 
-  const TabsTrigger = ({ children, value, activeValue, onValueChange }: any) => (
-    <button role="tab" aria-selected={activeValue === value} onClick={() => onValueChange(value)}>
+  const TabsTrigger = ({ children, value, activeValue, onValueChange }: TabsTriggerProps) => (
+    <button
+      role="tab"
+      aria-selected={activeValue === value}
+      onClick={() => onValueChange?.(value ?? "")}
+    >
       {children}
     </button>
   );
 
-  const TabsContent = ({ children, value, activeValue }: any) => {
+  const TabsContent = ({ children, value, activeValue }: TabsContentProps) => {
     if (activeValue !== value) return null;
     return <div data-testid={`content-${value}`}>{children}</div>;
   };
@@ -110,14 +135,23 @@ describe("AdminDashboard", () => {
     {
       _id: "u2",
       preferredName: "",
-      email: null as any, // Trigger N/A branch on line 389
+      email: null as unknown as string, // Trigger N/A branch on line 389
       role: "admin",
       userId: "user_2",
     },
   ];
 
   const mockRecentPurchases = [
-    { _id: "p1", date: Date.now(), userId: "user_1", units: 50.5, amountPaid: 100.25 },
+    {
+      _id: "p1",
+      date: Date.now(),
+      userId: "user_1",
+      units: 50.5,
+      amountPaid: 100.25,
+      readingPre: 100.5,
+      readingPost: 151.0,
+      effectiveRate: 2.0,
+    },
   ];
 
   const mockRates = [
@@ -214,7 +248,7 @@ describe("AdminDashboard", () => {
     expect(screen.getByTestId("loader")).toBeInTheDocument();
   });
 
-  it("renders anonymous users and N/A emails", async () => {
+  it("renders anonymous users and N/A emails", () => {
     render(
       <BrowserRouter>
         <AdminDashboard />
@@ -227,7 +261,7 @@ describe("AdminDashboard", () => {
     expect(screen.getByText("N/A")).toBeInTheDocument();
   });
 
-  it("validates empty label", async () => {
+  it("validates empty label", () => {
     render(
       <BrowserRouter>
         <AdminDashboard />
@@ -235,11 +269,11 @@ describe("AdminDashboard", () => {
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /rates/i }));
-    fireEvent.click(screen.getByTestId("icon-edit").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-edit").parentElement as HTMLElement);
 
     const labelInput = screen.getByDisplayValue("Tier 1 Label");
     fireEvent.change(labelInput, { target: { value: "" } });
-    fireEvent.click(screen.getByTestId("icon-check").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-check").parentElement as HTMLElement);
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Invalid Input",
@@ -247,7 +281,7 @@ describe("AdminDashboard", () => {
     );
   });
 
-  it("validates invalid min units", async () => {
+  it("validates invalid min units", () => {
     render(
       <BrowserRouter>
         <AdminDashboard />
@@ -255,11 +289,11 @@ describe("AdminDashboard", () => {
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /rates/i }));
-    fireEvent.click(screen.getByTestId("icon-edit").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-edit").parentElement as HTMLElement);
 
     const minInput = screen.getByDisplayValue("0");
     fireEvent.change(minInput, { target: { value: "-1" } });
-    fireEvent.click(screen.getByTestId("icon-check").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-check").parentElement as HTMLElement);
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Invalid Input",
@@ -267,7 +301,7 @@ describe("AdminDashboard", () => {
     );
   });
 
-  it("validates invalid max units", async () => {
+  it("validates invalid max units", () => {
     render(
       <BrowserRouter>
         <AdminDashboard />
@@ -275,11 +309,11 @@ describe("AdminDashboard", () => {
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /rates/i }));
-    fireEvent.click(screen.getByTestId("icon-edit").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-edit").parentElement as HTMLElement);
 
     const maxInput = screen.getByDisplayValue("100");
     fireEvent.change(maxInput, { target: { value: "0" } }); // Trigger max_units <= min_units
-    fireEvent.click(screen.getByTestId("icon-check").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-check").parentElement as HTMLElement);
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Invalid Input",
@@ -287,7 +321,7 @@ describe("AdminDashboard", () => {
     );
   });
 
-  it("validates invalid rate", async () => {
+  it("validates invalid rate", () => {
     render(
       <BrowserRouter>
         <AdminDashboard />
@@ -295,11 +329,11 @@ describe("AdminDashboard", () => {
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /rates/i }));
-    fireEvent.click(screen.getByTestId("icon-edit").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-edit").parentElement as HTMLElement);
 
     const rateInput = screen.getByDisplayValue("2.5");
     fireEvent.change(rateInput, { target: { value: "-1" } });
-    fireEvent.click(screen.getByTestId("icon-check").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-check").parentElement as HTMLElement);
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Invalid Input",
@@ -317,12 +351,12 @@ describe("AdminDashboard", () => {
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /rates/i }));
-    fireEvent.click(screen.getByTestId("icon-edit").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-edit").parentElement as HTMLElement);
 
     const rateInput = screen.getByDisplayValue("2.5");
     fireEvent.change(rateInput, { target: { value: "3.5" } });
 
-    fireEvent.click(screen.getByTestId("icon-check").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-check").parentElement as HTMLElement);
 
     await waitFor(() => {
       expect(mockUpdateRate).toHaveBeenCalled();
@@ -330,7 +364,7 @@ describe("AdminDashboard", () => {
     });
   });
 
-  it("handles cancel editing", async () => {
+  it("handles cancel editing", () => {
     render(
       <BrowserRouter>
         <AdminDashboard />
@@ -338,8 +372,8 @@ describe("AdminDashboard", () => {
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /rates/i }));
-    fireEvent.click(screen.getByTestId("icon-edit").parentElement!);
-    fireEvent.click(screen.getByTestId("icon-x").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-edit").parentElement as HTMLElement);
+    fireEvent.click(screen.getByTestId("icon-x").parentElement as HTMLElement);
 
     expect(screen.queryByDisplayValue("Tier 1 Label")).not.toBeInTheDocument();
     expect(screen.getByText("Tier 1 Label")).toBeInTheDocument();
@@ -355,15 +389,15 @@ describe("AdminDashboard", () => {
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /rates/i }));
-    fireEvent.click(screen.getByTestId("icon-edit").parentElement!);
-    fireEvent.click(screen.getByTestId("icon-check").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-edit").parentElement as HTMLElement);
+    fireEvent.click(screen.getByTestId("icon-check").parentElement as HTMLElement);
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Update Failed" }));
     });
   });
 
-  it("handles null max_units in inputs", async () => {
+  it("handles null max_units in inputs", () => {
     const ratesWithNull = [{ ...mockRates[0], max_units: null }];
     (useAdmin as ReturnType<typeof vi.fn>).mockReturnValue({
       loading: false,
@@ -383,16 +417,16 @@ describe("AdminDashboard", () => {
     fireEvent.click(screen.getByRole("tab", { name: /rates/i }));
     expect(screen.getByText("0 - ∞")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId("icon-edit").parentElement!);
+    fireEvent.click(screen.getByTestId("icon-edit").parentElement as HTMLElement);
     const inputs = screen.getAllByRole("spinbutton");
     const maxInput = inputs.find((i) => (i as HTMLInputElement).placeholder === "∞");
 
-    fireEvent.change(maxInput!, { target: { value: "200" } });
-    fireEvent.change(maxInput!, { target: { value: "" } });
+    fireEvent.change(maxInput as HTMLElement, { target: { value: "200" } });
+    fireEvent.change(maxInput as HTMLElement, { target: { value: "" } });
     expect((maxInput as HTMLInputElement).value).toBe("");
   });
 
-  it("renders KPI Breakdown tab and shows user selector", async () => {
+  it("renders KPI Breakdown tab and shows user selector", () => {
     render(
       <BrowserRouter>
         <AdminDashboard />
@@ -403,7 +437,7 @@ describe("AdminDashboard", () => {
     expect(screen.getByText(/Select a user/i)).toBeInTheDocument();
   });
 
-  it("KPI breakdown shows loading state when kpiData is undefined", async () => {
+  it("KPI breakdown shows loading state when kpiData is undefined", () => {
     (useQuery as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
     render(
       <BrowserRouter>
@@ -418,7 +452,7 @@ describe("AdminDashboard", () => {
     expect(screen.getByTestId("loader")).toBeInTheDocument();
   });
 
-  it("KPI breakdown renders with full KPI data", async () => {
+  it("KPI breakdown renders with full KPI data", () => {
     (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
       stats: {
         lastReadingDate: "2026-01-01",
@@ -447,7 +481,7 @@ describe("AdminDashboard", () => {
     expect(screen.getByText("Days Remaining")).toBeInTheDocument();
   });
 
-  it("KPI breakdown shows no stats message when stats is null", async () => {
+  it("KPI breakdown shows no stats message when stats is null", () => {
     (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
       stats: null,
       intervals: [],
@@ -467,7 +501,7 @@ describe("AdminDashboard", () => {
     expect(screen.getByText("No meter readings found for this user yet.")).toBeInTheDocument();
   });
 
-  it("KPI breakdown renders purchase tables when data present", async () => {
+  it("KPI breakdown renders purchase tables when data present", () => {
     (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
       stats: {
         lastReadingDate: "2026-01-01",
@@ -498,7 +532,7 @@ describe("AdminDashboard", () => {
     expect(screen.getByText("Past 12 Purchases")).toBeInTheDocument();
   });
 
-  it("KPI breakdown shows empty state when no intervals", async () => {
+  it("KPI breakdown shows empty state when no intervals", () => {
     (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
       stats: {
         lastReadingDate: "2026-01-01",
@@ -528,7 +562,7 @@ describe("AdminDashboard", () => {
     ).toBeInTheDocument();
   });
 
-  it("KPI breakdown shows estimated burn rate note", async () => {
+  it("KPI breakdown shows estimated burn rate note", () => {
     (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
       stats: {
         lastReadingDate: "2026-01-01",
@@ -556,7 +590,28 @@ describe("AdminDashboard", () => {
     expect(screen.getByText("(estimated default)")).toBeInTheDocument();
   });
 
-  it("recent purchases tab shows dash when readingPre/readingPost null", async () => {
+  it("recent purchases tab shows dash when readingPre/readingPost null", () => {
+    const purchasesWithNullReadings = [
+      {
+        _id: "p1",
+        date: Date.now(),
+        userId: "user_1",
+        units: 50.5,
+        amountPaid: 100.25,
+        readingPre: null,
+        readingPost: null,
+        effectiveRate: 2.0,
+      },
+    ];
+    (useAdmin as ReturnType<typeof vi.fn>).mockReturnValue({
+      loading: false,
+      globalStats: mockGlobalStats,
+      usersList: mockUsersList,
+      recentPurchases: purchasesWithNullReadings,
+      rates: mockRates,
+      updateRate: mockUpdateRate,
+    });
+
     render(
       <BrowserRouter>
         <AdminDashboard />
@@ -568,7 +623,28 @@ describe("AdminDashboard", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("recent purchases tab shows dash when effectiveRate null", async () => {
+  it("recent purchases tab shows dash when effectiveRate null", () => {
+    const purchasesWithNullRate = [
+      {
+        _id: "p1",
+        date: Date.now(),
+        userId: "user_1",
+        units: 50.5,
+        amountPaid: 100.25,
+        readingPre: 100.5,
+        readingPost: 151.0,
+        effectiveRate: null,
+      },
+    ];
+    (useAdmin as ReturnType<typeof vi.fn>).mockReturnValue({
+      loading: false,
+      globalStats: mockGlobalStats,
+      usersList: mockUsersList,
+      recentPurchases: purchasesWithNullRate,
+      rates: mockRates,
+      updateRate: mockUpdateRate,
+    });
+
     render(
       <BrowserRouter>
         <AdminDashboard />

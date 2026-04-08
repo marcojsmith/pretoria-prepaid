@@ -20,7 +20,7 @@ export function SEO({
   ogImage = "https://pretoria-prepaid.vercel.app/icons/icon-512x512.png",
   twitterCard = "summary_large_image",
   noindex = false,
-}: SEOProps) {
+}: SEOProps): JSX.Element {
   const siteTitle = "Pretoria Prepaid";
   const fullTitle = title ? `${title} | ${siteTitle}` : siteTitle;
   const defaultDescription =

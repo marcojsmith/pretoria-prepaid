@@ -29,7 +29,7 @@ interface NavMenuProps {
   offlineCount?: number;
 }
 
-export function NavMenu({ offlineCount }: NavMenuProps) {
+export function NavMenu({ offlineCount }: NavMenuProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { RefillAnalysisChart } from "./RefillAnalysisChart";
-import { RefillInterval } from "@/lib/electricity";
+import type { RefillInterval } from "@/lib/electricity";
 
 describe("RefillAnalysisChart", () => {
   it("returns null when no valid display data exists", () => {

@@ -26,11 +26,12 @@ export interface Purchase {
 }
 
 // Calculate the cost of electricity based on tiered pricing
-export function calculateCost(
-  units: number,
-  unitsAlreadyBought: number = 0,
-  rates: ElectricityRate[]
-): { total: number; breakdown: TierBreakdown[] } {
+export function calculateCost(options: {
+  units: number;
+  unitsAlreadyBought?: number;
+  rates: ElectricityRate[];
+}): { total: number; breakdown: TierBreakdown[] } {
+  const { units, unitsAlreadyBought = 0, rates } = options;
   const breakdown: TierBreakdown[] = [];
   let remainingUnits = units;
   let currentPosition = unitsAlreadyBought;
@@ -75,12 +76,20 @@ export function formatCurrency(amount: number): string {
   return "R " + roundCurrency(amount).toFixed(2);
 }
 
+import {
+  UNITS_PRECISION_FACTOR,
+  CURRENCY_PRECISION_FACTOR,
+  MS_PER_DAY,
+  UNLIMITED_TIER_ASSUMED_SIZE,
+  MAX_TIER_PERCENTAGE,
+} from "./constants";
+
 export function roundUnits(units: number): number {
-  return Math.round(units * 10) / 10;
+  return Math.round(units * UNITS_PRECISION_FACTOR) / UNITS_PRECISION_FACTOR;
 }
 
 export function roundCurrency(amount: number): number {
-  return Math.round(amount * 100) / 100;
+  return Math.round(amount * CURRENCY_PRECISION_FACTOR) / CURRENCY_PRECISION_FACTOR;
 }
 
 export function getCurrentMonth(): string {
@@ -89,7 +98,7 @@ export function getCurrentMonth(): string {
 }
 
 export function getMonthName(monthKey: string): string {
-  const [year, month] = monthKey.split("-");
+  const [year = "0", month = "0"] = monthKey.split("-");
   const date = new Date(parseInt(year), parseInt(month) - 1);
   return date.toLocaleDateString("en-ZA", { month: "long", year: "numeric" });
 }
@@ -98,7 +107,7 @@ export function getDaysLeftInMonth(): number {
   const now = new Date();
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   const diffTime = lastDay.getTime() - now.getTime();
-  return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  return Math.max(0, Math.ceil(diffTime / MS_PER_DAY));
 }
 
 export function getTierProgress(
@@ -113,15 +122,16 @@ export function getTierProgress(
   const sortedRates = [...rates].sort((a, b) => a.tier_number - b.tier_number);
 
   return sortedRates.map((rate) => {
-    const tierSize = rate.max_units === null ? 350 : rate.max_units - rate.min_units + 1;
+    const tierSize =
+      rate.max_units === null ? UNLIMITED_TIER_ASSUMED_SIZE : rate.max_units - rate.min_units + 1;
     const unitsBeforeTier = rate.min_units - 1;
     const unitsInTier = Math.max(0, Math.min(unitsBought - unitsBeforeTier, tierSize));
-    const progress = (unitsInTier / tierSize) * 100;
+    const progress = (unitsInTier / tierSize) * MAX_TIER_PERCENTAGE;
     const unitsToNextTier = rate.max_units === null ? 0 : Math.max(0, rate.max_units - unitsBought);
 
     return {
       tier: rate,
-      progress: Math.min(100, progress),
+      progress: Math.min(MAX_TIER_PERCENTAGE, progress),
       unitsInTier,
       unitsToNextTier,
     };
@@ -159,8 +169,8 @@ export function getRemainingTierCapacity(
   const lastRate = sortedRates[sortedRates.length - 1];
   return {
     units: 0,
-    label: lastRate.tier_label,
-    rate: lastRate.rate,
+    label: lastRate?.tier_label ?? "Unknown",
+    rate: lastRate?.rate ?? 0,
   };
 }
 
@@ -195,14 +205,14 @@ export function calculateRefillIntervals(purchases: Purchase[]): RefillInterval[
     }
 
     const current = new Date(purchase.date);
-    const previous = new Date(sortedPurchases[index - 1].date);
+    const previous = new Date((sortedPurchases[index - 1] ?? purchase).date);
 
     // Set both to midnight for pure day difference
     const d1 = new Date(current.getFullYear(), current.getMonth(), current.getDate());
     const d2 = new Date(previous.getFullYear(), previous.getMonth(), previous.getDate());
 
     const diffTime = d1.getTime() - d2.getTime();
-    const diffDays = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+    const diffDays = Math.max(0, Math.floor(diffTime / MS_PER_DAY));
 
     return {
       date: purchase.date,
@@ -218,11 +228,12 @@ export function getTierLabel(units: number, rates: ElectricityRate[]): string {
   const sortedRates = [...rates].sort((a, b) => a.tier_number - b.tier_number);
 
   for (let i = sortedRates.length - 1; i >= 0; i--) {
-    if (units >= sortedRates[i].min_units) {
-      return sortedRates[i].tier_label;
+    const rate = sortedRates[i];
+    if (rate && units >= rate.min_units) {
+      return rate.tier_label;
     }
   }
-  return sortedRates[0].tier_label;
+  return sortedRates[0]?.tier_label ?? "Unknown";
 }
 
 // Get tier breakdown for a total number of units (from 0)
@@ -230,10 +241,11 @@ export function getTierBreakdownForUnits(
   totalUnits: number,
   rates: ElectricityRate[]
 ): TierBreakdown[] {
-  return calculateCost(totalUnits, 0, rates).breakdown;
+  return calculateCost({ units: totalUnits, unitsAlreadyBought: 0, rates }).breakdown;
 }
 
 // Tier colors for visual display
+/* eslint-disable llm-core/no-magic-numbers */
 export const TIER_BG_CLASSES = {
   1: "bg-primary",
   2: "bg-sky-500",
@@ -247,3 +259,4 @@ export const TIER_TEXT_CLASSES = {
   3: "text-amber-500",
   4: "text-destructive",
 } as const;
+/* eslint-enable llm-core/no-magic-numbers */

@@ -1,7 +1,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
-export function useUserRole() {
+export function useUserRole(): { isAdmin: boolean; loading: boolean } {
   const role = useQuery(api.users.getRole);
 
   return {

@@ -9,9 +9,9 @@ const { mockConvertToCSV, mockDownloadCSV } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/utils", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/utils")>();
+  const actual = await importOriginal();
   return {
-    ...actual,
+    ...(actual as object),
     convertToCSV: mockConvertToCSV,
     downloadCSV: mockDownloadCSV,
   };
@@ -76,7 +76,7 @@ describe("ExportPage", () => {
   const mockSignOut = vi.fn();
   const mockToast = vi.fn();
 
-  const universalData = [
+  const universalDataBase = [
     {
       _id: "p1",
       date: "2026-03-01",
@@ -89,8 +89,11 @@ describe("ExportPage", () => {
       source: "purchase",
     },
   ];
-  (universalData as any).preferredName = "Test User";
-  (universalData as any).email = "test@example.com";
+  const universalData: typeof universalDataBase & { preferredName?: string; email?: string } =
+    Object.assign(universalDataBase, {
+      preferredName: "Test User",
+      email: "test@example.com",
+    });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -113,7 +116,7 @@ describe("ExportPage", () => {
       dismiss: vi.fn(),
     } as unknown as ReturnType<typeof useToast>);
 
-    vi.mocked(useQuery).mockImplementation(() => universalData as any);
+    vi.mocked(useQuery).mockReturnValue(universalData as unknown as ReturnType<typeof useQuery>);
 
     Object.assign(navigator, {
       clipboard: {
@@ -133,7 +136,7 @@ describe("ExportPage", () => {
     expect(screen.getByText(/Import and Export Data/i)).toBeInTheDocument();
   });
 
-  it("handles purchase CSV export", async () => {
+  it("handles purchase CSV export", () => {
     render(
       <BrowserRouter>
         <ExportPage />
@@ -147,7 +150,7 @@ describe("ExportPage", () => {
     expect(mockDownloadCSV).toHaveBeenCalled();
   });
 
-  it("handles reading CSV export", async () => {
+  it("handles reading CSV export", () => {
     render(
       <BrowserRouter>
         <ExportPage />
@@ -175,6 +178,9 @@ describe("ExportPage", () => {
   });
 
   it("handles export and copy to clipboard", async () => {
+    const mockWriteText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText: mockWriteText } });
+
     render(
       <BrowserRouter>
         <ExportPage />
@@ -183,22 +189,22 @@ describe("ExportPage", () => {
 
     const exportButton = screen.getByRole("button", { name: /Generate JSON Export/i });
 
-    await act(async () => {
+    act(() => {
       fireEvent.click(exportButton);
     });
 
     expect(screen.getByText(/exported_at/i)).toBeInTheDocument();
 
     const copyButton = screen.getByRole("button", { name: /Copy to Clipboard/i });
-    await act(async () => {
-      fireEvent.click(copyButton);
-    });
+    fireEvent.click(copyButton);
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Copied" }));
+    await waitFor(() => {
+      expect(mockWriteText).toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Copied" }));
+    });
   });
 
-  it("handles logout", async () => {
+  it("handles logout", () => {
     render(
       <BrowserRouter>
         <ExportPage />
@@ -208,7 +214,7 @@ describe("ExportPage", () => {
     const logoutButton = screen.getByText(/Log out/i);
     expect(logoutButton).toBeInTheDocument();
 
-    await act(async () => {
+    act(() => {
       fireEvent.click(logoutButton);
     });
 
@@ -228,9 +234,7 @@ describe("ExportPage", () => {
 2026-03-02,,50,3.0`;
     const file = new File([csvContent], "import.csv", { type: "text/csv" });
 
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
       expect(screen.getByText(/Preview \(2 records\)/i)).toBeInTheDocument();
@@ -242,16 +246,14 @@ describe("ExportPage", () => {
     expect(screen.getByText(/R 150.00/i)).toBeInTheDocument();
 
     const importButton = screen.getByRole("button", { name: /Finalize Import/i });
-    await act(async () => {
-      fireEvent.click(importButton);
-    });
+    fireEvent.click(importButton);
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Success" }));
     });
   });
 
-  it("handles empty CSV file import", async () => {
+  it("handles empty CSV file import", () => {
     render(
       <BrowserRouter>
         <ExportPage />
@@ -261,7 +263,7 @@ describe("ExportPage", () => {
     const fileInput = screen.getByLabelText(/Select CSV File/i);
     const file = new File([""], "empty.csv", { type: "text/csv" });
 
-    await act(async () => {
+    act(() => {
       fireEvent.change(fileInput, { target: { files: [file] } });
     });
 
@@ -280,17 +282,15 @@ describe("ExportPage", () => {
 invalid data`;
     const file = new File([csvContent], "import.csv", { type: "text/csv" });
 
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalled();
     });
   });
 
-  it("shows 'No data' toast when exporting empty purchases", async () => {
-    vi.mocked(useQuery).mockReturnValue([] as any);
+  it("shows 'No data' toast when exporting empty purchases", () => {
+    vi.mocked(useQuery).mockReturnValue([] as unknown as ReturnType<typeof useQuery>);
 
     render(
       <BrowserRouter>
@@ -306,8 +306,8 @@ invalid data`;
     );
   });
 
-  it("shows 'No data' toast when exporting empty readings", async () => {
-    vi.mocked(useQuery).mockReturnValue([] as any);
+  it("shows 'No data' toast when exporting empty readings", () => {
+    vi.mocked(useQuery).mockReturnValue([] as unknown as ReturnType<typeof useQuery>);
 
     render(
       <BrowserRouter>
@@ -340,18 +340,14 @@ invalid data`;
     const csvContent = `Date,Amount,kWh\n2026-03-01,100,30`;
     const file = new File([csvContent], "import.csv", { type: "text/csv" });
 
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
       expect(screen.getByText(/Preview \(1 records?\)/i)).toBeInTheDocument();
     });
 
     const importButton = screen.getByRole("button", { name: /Finalize Import/i });
-    await act(async () => {
-      fireEvent.click(importButton);
-    });
+    fireEvent.click(importButton);
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Import Failed" }));
@@ -369,9 +365,7 @@ invalid data`;
     const csvContent = `"Date","Amount Paid","kWh"\n"2026-03-01","100.00","30.5"`;
     const file = new File([csvContent], "import.csv", { type: "text/csv" });
 
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
       expect(screen.getByText(/Preview \(1 records?\)/i)).toBeInTheDocument();

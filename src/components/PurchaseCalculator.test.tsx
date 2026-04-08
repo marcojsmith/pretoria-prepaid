@@ -2,15 +2,37 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PurchaseCalculator } from "./PurchaseCalculator";
 import { useRates } from "../hooks/useRates";
+import type { Id } from "../../convex/_generated/dataModel";
 
 vi.mock("../hooks/useRates");
 
 const MOCK_RATES = [
-  { _id: "1", tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.42585 },
-  { _id: "2", tier_number: 2, tier_label: "Tier 2", min_units: 101, max_units: 400, rate: 4.00936 },
-  { _id: "3", tier_number: 3, tier_label: "Tier 3", min_units: 401, max_units: 650, rate: 4.36816 },
   {
-    _id: "4",
+    _id: "1" as Id<"electricity_rates">,
+    tier_number: 1,
+    tier_label: "Tier 1",
+    min_units: 1,
+    max_units: 100,
+    rate: 3.42585,
+  },
+  {
+    _id: "2" as Id<"electricity_rates">,
+    tier_number: 2,
+    tier_label: "Tier 2",
+    min_units: 101,
+    max_units: 400,
+    rate: 4.00936,
+  },
+  {
+    _id: "3" as Id<"electricity_rates">,
+    tier_number: 3,
+    tier_label: "Tier 3",
+    min_units: 401,
+    max_units: 650,
+    rate: 4.36816,
+  },
+  {
+    _id: "4" as Id<"electricity_rates">,
     tier_number: 4,
     tier_label: "Tier 4",
     min_units: 651,
@@ -74,7 +96,11 @@ describe("PurchaseCalculator", () => {
     fireEvent.change(screen.getByLabelText(/kWh to buy/i), { target: { value: "100" } });
     fireEvent.click(screen.getByRole("button", { name: /Save as Purchase/i }));
 
-    expect(onSavePurchase).toHaveBeenCalledWith(100, expect.any(Number), 15.5);
+    expect(onSavePurchase).toHaveBeenCalledWith({
+      units: 100,
+      amount: expect.any(Number),
+      currentBalance: 15.5,
+    });
   });
 
   it("updates kWh to buy when current meter reading is entered", () => {

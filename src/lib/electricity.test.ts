@@ -11,9 +11,8 @@ import {
   getDaysLeftInMonth,
   getTierProgress,
   calculateRefillIntervals,
-  Purchase,
-  ElectricityRate,
 } from "./electricity";
+import type { Purchase, ElectricityRate, TierBreakdown } from "./electricity";
 
 const MOCK_RATES: ElectricityRate[] = [
   { _id: "1", tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.42585 },
@@ -32,33 +31,45 @@ const MOCK_RATES: ElectricityRate[] = [
 describe("electricity calculator utilities", () => {
   describe("calculateCost", () => {
     it("calculates cost for Tier 1 correctly", () => {
-      const { total, breakdown } = calculateCost(10, 0, MOCK_RATES);
+      const { total, breakdown } = calculateCost({
+        units: 10,
+        unitsAlreadyBought: 0,
+        rates: MOCK_RATES,
+      });
       expect(total).toBeCloseTo(34.2585, 4);
-      expect(breakdown[0].units).toBe(10);
-      expect(breakdown[0].tier).toBe(1);
+      expect((breakdown[0] as TierBreakdown).units).toBe(10);
+      expect((breakdown[0] as TierBreakdown).tier).toBe(1);
     });
 
     it("calculates cost across multiple tiers", () => {
-      const { total } = calculateCost(150, 0, MOCK_RATES);
+      const { total } = calculateCost({ units: 150, unitsAlreadyBought: 0, rates: MOCK_RATES });
       const expected = 100 * 3.42585 + 50 * 4.00936;
       expect(total).toBeCloseTo(expected, 4);
     });
 
     it("respects unitsAlreadyBought", () => {
-      const { breakdown } = calculateCost(10, 100, MOCK_RATES);
-      expect(breakdown[0].tier).toBe(2);
-      expect(breakdown[0].rate).toBe(4.00936);
+      const { breakdown } = calculateCost({
+        units: 10,
+        unitsAlreadyBought: 100,
+        rates: MOCK_RATES,
+      });
+      expect((breakdown[0] as TierBreakdown).tier).toBe(2);
+      expect((breakdown[0] as TierBreakdown).rate).toBe(4.00936);
     });
 
     it("handles zero or negative units", () => {
-      expect(calculateCost(0, 0, MOCK_RATES).total).toBe(0);
-      expect(calculateCost(-10, 0, MOCK_RATES).total).toBe(0);
+      expect(calculateCost({ units: 0, unitsAlreadyBought: 0, rates: MOCK_RATES }).total).toBe(0);
+      expect(calculateCost({ units: -10, unitsAlreadyBought: 0, rates: MOCK_RATES }).total).toBe(0);
     });
 
     it("caps units correctly at highest tier", () => {
-      const { breakdown } = calculateCost(1000, 0, MOCK_RATES);
+      const { breakdown } = calculateCost({
+        units: 1000,
+        unitsAlreadyBought: 0,
+        rates: MOCK_RATES,
+      });
       expect(breakdown.length).toBe(4);
-      expect(breakdown[3].label).toBe("Tier 4");
+      expect(breakdown[3]!.label).toBe("Tier 4");
     });
   });
 
@@ -80,8 +91,8 @@ describe("electricity calculator utilities", () => {
     it("returns breakdown starting from zero", () => {
       const breakdown = getTierBreakdownForUnits(150, MOCK_RATES);
       expect(breakdown.length).toBe(2);
-      expect(breakdown[0].tier).toBe(1);
-      expect(breakdown[1].tier).toBe(2);
+      expect(breakdown[0]!.tier).toBe(1);
+      expect(breakdown[1]!.tier).toBe(2);
     });
   });
 
@@ -129,10 +140,10 @@ describe("electricity calculator utilities", () => {
   describe("getTierProgress", () => {
     it("calculates progress for each tier correctly", () => {
       const progress = getTierProgress(150, MOCK_RATES);
-      expect(progress[0].progress).toBe(100); // Tier 1 full
-      expect(progress[1].progress).toBeGreaterThan(0); // Tier 2 started
-      expect(progress[1].progress).toBeLessThan(100);
-      expect(progress[2].progress).toBe(0); // Tier 3 not started
+      expect(progress[0]!.progress).toBe(100); // Tier 1 full
+      expect(progress[1]!.progress).toBeGreaterThan(0); // Tier 2 started
+      expect(progress[1]!.progress).toBeLessThan(100);
+      expect(progress[2]!.progress).toBe(0); // Tier 3 not started
     });
   });
 
@@ -151,9 +162,9 @@ describe("electricity calculator utilities", () => {
       const result = calculateRefillIntervals(purchases);
 
       expect(result).toHaveLength(3);
-      expect(result[0].daysSinceLastRefill).toBeNull();
-      expect(result[1].daysSinceLastRefill).toBe(4);
-      expect(result[2].daysSinceLastRefill).toBe(5);
+      expect(result[0]!.daysSinceLastRefill).toBeNull();
+      expect(result[1]!.daysSinceLastRefill).toBe(4);
+      expect(result[2]!.daysSinceLastRefill).toBe(5);
     });
 
     it("handles unsorted purchases", () => {
@@ -165,11 +176,11 @@ describe("electricity calculator utilities", () => {
 
       const result = calculateRefillIntervals(purchases);
 
-      expect(result[0].date).toBe("2024-03-01");
-      expect(result[1].date).toBe("2024-03-05");
-      expect(result[2].date).toBe("2024-03-10");
-      expect(result[1].daysSinceLastRefill).toBe(4);
-      expect(result[2].daysSinceLastRefill).toBe(5);
+      expect(result[0]!.date).toBe("2024-03-01");
+      expect(result[1]!.date).toBe("2024-03-05");
+      expect(result[2]!.date).toBe("2024-03-10");
+      expect(result[1]!.daysSinceLastRefill).toBe(4);
+      expect(result[2]!.daysSinceLastRefill).toBe(5);
     });
 
     it("handles same day refills", () => {
@@ -195,7 +206,7 @@ describe("electricity calculator utilities", () => {
       const result = calculateRefillIntervals(purchases);
 
       expect(result).toHaveLength(2);
-      expect(result[1].daysSinceLastRefill).toBe(0);
+      expect(result[1]!.daysSinceLastRefill).toBe(0);
     });
 
     it("uses _id as tiebreaker when purchases have identical date strings", () => {
@@ -209,8 +220,8 @@ describe("electricity calculator utilities", () => {
       // Both have the same date so dateComp === 0 → falls through to localeCompare
       expect(result).toHaveLength(2);
       // "aaa" < "zzz" so "aaa" comes first after sort
-      expect(result[0].date).toBe("2024-03-01");
-      expect(result[1].date).toBe("2024-03-01");
+      expect(result[0]!.date).toBe("2024-03-01");
+      expect(result[1]!.date).toBe("2024-03-01");
     });
   });
 });

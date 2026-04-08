@@ -5,10 +5,17 @@ import CalculatorPage from "./CalculatorPage";
 import { usePurchases } from "../hooks/usePurchase";
 import { useAuth } from "../hooks/useAuth";
 import { useRates } from "../hooks/useRates";
+import type { Purchase } from "../lib/electricity";
 
 interface MockDropdownMenuProps {
   children?: React.ReactNode;
   onClick?: () => void;
+}
+
+interface MockPurchaseCalculatorProps {
+  onSavePurchase: (options: { units: number; amount: number; currentBalance?: number }) => void;
+  unitsAlreadyBought?: number;
+  averageMonthlyUsage?: number;
 }
 
 // Mock everything
@@ -20,20 +27,27 @@ vi.mock("../hooks/useRates");
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
-    ...actual,
+    ...(actual as object),
     useNavigate: vi.fn(),
-    MemoryRouter: actual.MemoryRouter,
+    MemoryRouter: (actual as { MemoryRouter: unknown }).MemoryRouter,
   };
 });
 
 // Mock PurchaseCalculator
 vi.mock("@/components/PurchaseCalculator", () => ({
-  PurchaseCalculator: ({ onSavePurchase, unitsAlreadyBought, averageMonthlyUsage }: any) => (
+  PurchaseCalculator: ({
+    onSavePurchase,
+    unitsAlreadyBought,
+    averageMonthlyUsage,
+  }: MockPurchaseCalculatorProps) => (
     <div>
       <h2>Smart Calculator</h2>
       <span data-testid="units-bought">{unitsAlreadyBought}</span>
       <span data-testid="avg-usage">{averageMonthlyUsage}</span>
-      <button onClick={() => onSavePurchase(100, 350, 1200)} data-testid="mock-save-btn">
+      <button
+        onClick={() => onSavePurchase({ units: 100, amount: 350, currentBalance: 1200 })}
+        data-testid="mock-save-btn"
+      >
         Save Purchase
       </button>
     </div>
@@ -115,7 +129,7 @@ describe("CalculatorPage", () => {
     expect(container.querySelector(".animate-spin")).toBeInTheDocument();
   });
 
-  it("handles logout", async () => {
+  it("handles logout", () => {
     render(
       <BrowserRouter>
         <CalculatorPage />
@@ -125,7 +139,7 @@ describe("CalculatorPage", () => {
     const logoutButton = screen.getByText(/Log out/i);
     expect(logoutButton).toBeInTheDocument();
 
-    await act(async () => {
+    act(() => {
       fireEvent.click(logoutButton);
     });
 
@@ -146,7 +160,7 @@ describe("CalculatorPage", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("calls handleSavePurchase and navigates with correct state", async () => {
+  it("calls handleSavePurchase and navigates with correct state", () => {
     const mockNav = vi.fn();
     vi.mocked(useNavigate).mockReturnValue(mockNav as unknown as ReturnType<typeof useNavigate>);
 
@@ -157,7 +171,7 @@ describe("CalculatorPage", () => {
     );
 
     const saveBtn = screen.getByTestId("mock-save-btn");
-    await act(async () => {
+    act(() => {
       fireEvent.click(saveBtn);
     });
 
@@ -183,7 +197,9 @@ describe("CalculatorPage", () => {
       getAverageMonthlyUsage: vi.fn(() => 300),
       getDailyAverageUsage: vi.fn(() => 10),
       getAverageMonthlyCost: vi.fn(() => 1000),
-      getCurrentMonthPurchases: vi.fn(() => [{ units: 50, amountPaid: 200 } as any]),
+      getCurrentMonthPurchases: vi.fn((): Purchase[] => [
+        { _id: "p1", date: "2024-01-01", units: 50, cost: 200, amountPaid: 200, tierBreakdown: [] },
+      ]),
       getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
     } as ReturnType<typeof usePurchases>);

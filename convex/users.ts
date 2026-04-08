@@ -1,6 +1,8 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
+const ERR_NOT_AUTHENTICATED = "Not authenticated";
+
 export const getProfile = query({
   args: {},
   handler: async (ctx) => {
@@ -37,7 +39,7 @@ export const syncUser = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error(ERR_NOT_AUTHENTICATED);
     }
 
     const existingProfile = await ctx.db
@@ -108,7 +110,7 @@ export const updateProfile = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error(ERR_NOT_AUTHENTICATED);
     }
 
     const profile = await ctx.db
@@ -145,7 +147,7 @@ export const updateProfile = mutation({
 
     if (args.pushSubscription !== undefined) {
       updates.pushSubscription = args.pushSubscription;
-    } else if (args.pushNotificationsEnabled === false) {
+    } else if (!args.pushNotificationsEnabled) {
       updates.pushSubscription = undefined;
     }
 
@@ -173,7 +175,7 @@ export const updatePushSubscription = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) throw new Error(ERR_NOT_AUTHENTICATED);
 
     const profile = await ctx.db
       .query("profiles")

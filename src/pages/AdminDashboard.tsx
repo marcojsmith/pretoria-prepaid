@@ -29,12 +29,21 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
+import {
+  MS_PER_DAY,
+  DEFAULT_BURN_RATE,
+  MAX_TIER_PERCENTAGE,
+  USER_ID_PREVIEW_LENGTH,
+} from "@/lib/constants";
+
+const BURN_RATE_TABLE_COLS = 5;
 
 // ---------------------------------------------------------------------------
 // KPI Breakdown sub-component — loads per-user data and explains each KPI
 // ---------------------------------------------------------------------------
 
+// eslint-disable-next-line llm-core/max-function-length
 function KPIBreakdown({ userId, userName }: { userId: string; userName: string }) {
   const kpiData = useQuery(api.admin.getUserKPIData, { userId });
 
@@ -61,9 +70,9 @@ function KPIBreakdown({ userId, userName }: { userId: string; userName: string }
   lastReadingDate.setHours(0, 0, 0, 0);
   const daysSinceLastReading = Math.max(
     0,
-    Math.floor((today.getTime() - lastReadingDate.getTime()) / (1000 * 60 * 60 * 24))
+    Math.floor((today.getTime() - lastReadingDate.getTime()) / MS_PER_DAY)
   );
-  const effectiveBurnRate = stats.dailyBurnRate > 0 ? stats.dailyBurnRate : 10;
+  const effectiveBurnRate = stats.dailyBurnRate > 0 ? stats.dailyBurnRate : DEFAULT_BURN_RATE;
   const estimatedUsageSince = daysSinceLastReading * effectiveBurnRate;
 
   const unitsThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.units, 0);
@@ -222,7 +231,7 @@ function KPIBreakdown({ userId, userName }: { userId: string; userName: string }
                         )}
                       </TableCell>
                       <TableCell className={`${monoXs} text-right`}>
-                        {iv.isSkipped ? "—" : `${(iv.weight * 100).toFixed(1)}%`}
+                        {iv.isSkipped ? "—" : `${(iv.weight * MAX_TIER_PERCENTAGE).toFixed(1)}%`}
                       </TableCell>
                       <TableCell className={`${monoXs} text-right`}>
                         {iv.isSkipped ? "—" : (iv.rate * iv.weight).toFixed(2)}
@@ -230,7 +239,7 @@ function KPIBreakdown({ userId, userName }: { userId: string; userName: string }
                     </TableRow>
                   ))}
                   <TableRow className={`${headerClass} font-semibold`}>
-                    <TableCell colSpan={5} className={cellXs}>
+                    <TableCell colSpan={BURN_RATE_TABLE_COLS} className={cellXs}>
                       Weighted Average
                     </TableCell>
                     <TableCell className={`${monoXs} text-right`}>100%</TableCell>
@@ -316,7 +325,7 @@ function KPIBreakdown({ userId, userName }: { userId: string; userName: string }
                     <TableRow key={i} className={rowClass}>
                       <TableCell className={`${cellXs} whitespace-nowrap`}>{p.date}</TableCell>
                       <TableCell className={`${monoXs} whitespace-nowrap text-right`}>
-                        {p.readingPre != null && p.readingPost != null
+                        {p.readingPre !== null && p.readingPost !== null
                           ? `${p.readingPre.toFixed(1)} → ${p.readingPost.toFixed(1)}`
                           : "—"}
                       </TableCell>
@@ -340,7 +349,10 @@ function KPIBreakdown({ userId, userName }: { userId: string; userName: string }
 // Main Admin Dashboard
 // ---------------------------------------------------------------------------
 
-export default function AdminDashboard() {
+const INVALID_INPUT_TITLE = "Invalid Input";
+
+// eslint-disable-next-line llm-core/max-function-length
+export default function AdminDashboard(): JSX.Element {
   const { loading, globalStats, usersList, recentPurchases, rates, updateRate } = useAdmin();
   const { toast } = useToast();
 
@@ -375,68 +387,70 @@ export default function AdminDashboard() {
     setEditRateValues(null);
   };
 
-  const handleSaveRate = async () => {
-    if (!editingRateId || !editRateValues) return;
+  const handleSaveRate = () => {
+    void (async () => {
+      if (!editingRateId || !editRateValues) return;
 
-    const { tier_label, min_units, max_units, rate } = editRateValues;
+      const { tier_label, min_units, max_units, rate } = editRateValues;
 
-    if (!tier_label.trim()) {
-      toast({
-        title: "Invalid Input",
-        description: "Tier label cannot be empty.",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (!tier_label.trim()) {
+        toast({
+          title: INVALID_INPUT_TITLE,
+          description: "Tier label cannot be empty.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (isNaN(min_units) || min_units < 0) {
-      toast({
-        title: "Invalid Input",
-        description: "Minimum units must be a positive number.",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (isNaN(min_units) || min_units < 0) {
+        toast({
+          title: INVALID_INPUT_TITLE,
+          description: "Minimum units must be a positive number.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (max_units !== null && (isNaN(max_units) || max_units <= min_units)) {
-      toast({
-        title: "Invalid Input",
-        description: "Maximum units must be greater than minimum units or left empty.",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (max_units !== null && (isNaN(max_units) || max_units <= min_units)) {
+        toast({
+          title: INVALID_INPUT_TITLE,
+          description: "Maximum units must be greater than minimum units or left empty.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (isNaN(rate) || rate < 0) {
-      toast({
-        title: "Invalid Input",
-        description: "Rate must be a positive number.",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (isNaN(rate) || rate < 0) {
+        toast({
+          title: INVALID_INPUT_TITLE,
+          description: "Rate must be a positive number.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    try {
-      await updateRate({
-        id: editingRateId,
-        tier_label: tier_label.trim(),
-        min_units,
-        max_units,
-        rate,
-      });
-      toast({
-        title: "Rate Updated",
-        description: "The electricity rate tier has been updated successfully.",
-      });
-      setEditingRateId(null);
-      setEditRateValues(null);
-    } catch {
-      toast({
-        title: "Update Failed",
-        description: "There was an error updating the rate tier.",
-        variant: "destructive",
-      });
-    }
+      try {
+        await updateRate({
+          id: editingRateId,
+          tier_label: tier_label.trim(),
+          min_units,
+          max_units,
+          rate,
+        });
+        toast({
+          title: "Rate Updated",
+          description: "The electricity rate tier has been updated successfully.",
+        });
+        setEditingRateId(null);
+        setEditRateValues(null);
+      } catch {
+        toast({
+          title: "Update Failed",
+          description: "There was an error updating the rate tier.",
+          variant: "destructive",
+        });
+      }
+    })();
   };
 
   if (loading || !globalStats || !usersList || !recentPurchases || !rates) {
@@ -639,12 +653,12 @@ export default function AdminDashboard() {
                           <TableCell className="max-w-[120px] truncate text-xs">
                             {purchase.userName ?? (
                               <span className="font-mono text-[10px] text-muted-foreground">
-                                {purchase.userId.slice(0, 12)}…
+                                {purchase.userId.slice(0, USER_ID_PREVIEW_LENGTH)}…
                               </span>
                             )}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs">
-                            {purchase.readingPre != null && purchase.readingPost != null ? (
+                            {purchase.readingPre !== null && purchase.readingPost !== null ? (
                               <>
                                 {purchase.readingPre.toFixed(1)}
                                 <ArrowRight className="mx-0.5 inline h-3 w-3 text-muted-foreground" />
@@ -661,7 +675,7 @@ export default function AdminDashboard() {
                             {formatCurrency(purchase.amountPaid)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                            {purchase.effectiveRate != null
+                            {purchase.effectiveRate !== null
                               ? formatCurrency(purchase.effectiveRate)
                               : "—"}
                           </TableCell>

@@ -1,5 +1,7 @@
 # Quick Reference
 
+This project runs on Bun. Use `bun run <command>` to run scripts defined in `package.json`, and `bunx <command>` for globally installed CLIs like Vercel and CodeRabbit.
+
 | DO NOT RUN     | DO RUN               |
 | -------------- | -------------------- |
 | `bun run test` | `bun run test --run` |

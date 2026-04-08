@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as alerts from "../alerts.js";
 import type * as alerts_queries from "../alerts_queries.js";
+import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
 import type * as electricity_logic from "../electricity_logic.js";
 import type * as purchases from "../purchases.js";
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   alerts: typeof alerts;
   alerts_queries: typeof alerts_queries;
+  constants: typeof constants;
   crons: typeof crons;
   electricity_logic: typeof electricity_logic;
   purchases: typeof purchases;

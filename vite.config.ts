@@ -1,8 +1,8 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
-import basicSsl from "@vitejs/plugin-basic-ssl";
+import * as basicSslModule from "@vitejs/plugin-basic-ssl";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -14,7 +14,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    basicSsl(),
+    (basicSslModule as unknown as { default: () => Plugin }).default(),
     VitePWA({
       strategies: "injectManifest",
       srcDir: "src",

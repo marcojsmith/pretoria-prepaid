@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Activity, Trash2, Loader2, ChevronDown } from "lucide-react";
 import { roundUnits } from "@/lib/electricity";
-import { Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
+import { MAX_READING_HISTORY_ITEMS } from "@/lib/constants";
 
 interface Reading {
   _id: Id<"meter_readings">;
@@ -19,15 +20,65 @@ interface ReadingHistoryProps {
   isFiltered?: boolean;
 }
 
-export function ReadingHistory({ readings, onDelete, isFiltered }: ReadingHistoryProps) {
-  const [visibleCount, setVisibleCount] = useState(10);
+interface ReadingCardProps {
+  reading: Reading;
+  onDelete: (id: Id<"meter_readings">) => void;
+}
+
+function ReadingCard({ reading, onDelete }: ReadingCardProps) {
+  return (
+    <Card key={reading._id} className="overflow-hidden">
+      <CardContent className="flex items-center justify-between pt-4">
+        <div className="space-y-0.5">
+          {reading.source === "onboarding" ? (
+            <>
+              <p className="text-sm font-bold">{roundUnits(reading.readingPost)} kWh</p>
+              <p className="text-[10px] text-muted-foreground">Starting point</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-bold">
+                {roundUnits(reading.readingPre)} kWh → {roundUnits(reading.readingPost)} kWh
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {roundUnits(reading.readingPost - reading.readingPre)} units purchased
+              </p>
+            </>
+          )}
+          <p className="text-[10px] text-muted-foreground">
+            {new Date(reading.date).toLocaleDateString("en-ZA", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+          onClick={() => onDelete(reading._id)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function ReadingHistory({
+  readings,
+  onDelete,
+  isFiltered,
+}: ReadingHistoryProps): JSX.Element {
+  const [visibleCount, setVisibleCount] = useState(MAX_READING_HISTORY_ITEMS);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && readings.length > visibleCount) {
-          setVisibleCount((prev) => prev + 10);
+        if (entries[0]?.isIntersecting && readings.length > visibleCount) {
+          setVisibleCount((prev) => prev + MAX_READING_HISTORY_ITEMS);
         }
       },
       { threshold: 1.0 }
@@ -67,7 +118,7 @@ export function ReadingHistory({ readings, onDelete, isFiltered }: ReadingHistor
   const hasMore = readings.length > visibleCount;
 
   const handleShowMore = () => {
-    setVisibleCount((prev) => prev + 10);
+    setVisibleCount((prev) => prev + MAX_READING_HISTORY_ITEMS);
   };
 
   return (
@@ -80,42 +131,7 @@ export function ReadingHistory({ readings, onDelete, isFiltered }: ReadingHistor
 
       <div className="space-y-2">
         {visibleReadings.map((reading) => (
-          <Card key={reading._id} className="overflow-hidden">
-            <CardContent className="flex items-center justify-between pt-4">
-              <div className="space-y-0.5">
-                {reading.source === "onboarding" ? (
-                  <>
-                    <p className="text-sm font-bold">{roundUnits(reading.readingPost)} kWh</p>
-                    <p className="text-[10px] text-muted-foreground">Starting point</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-bold">
-                      {roundUnits(reading.readingPre)} kWh → {roundUnits(reading.readingPost)} kWh
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {roundUnits(reading.readingPost - reading.readingPre)} units purchased
-                    </p>
-                  </>
-                )}
-                <p className="text-[10px] text-muted-foreground">
-                  {new Date(reading.date).toLocaleDateString("en-ZA", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                onClick={() => onDelete(reading._id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
+          <ReadingCard key={reading._id} reading={reading} onDelete={onDelete} />
         ))}
       </div>
 

@@ -23,7 +23,8 @@ import { SEO } from "@/components/SEO";
 import { OnboardingForm } from "@/components/OnboardingForm";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-export default function Dashboard() {
+// eslint-disable-next-line llm-core/max-function-length
+export default function Dashboard(): JSX.Element | null {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { isAdmin } = useUserRole();
@@ -92,7 +93,11 @@ export default function Dashboard() {
         <Header offlineCount={offlineCount} />
         <PatreonBanner />
         <main className="container mx-auto space-y-6 px-4 py-6">
-          <OnboardingForm onSubmit={addOnboardingReading} />
+          <OnboardingForm
+            onSubmit={(reading, defaultDailyUsage) => {
+              void addOnboardingReading(reading, defaultDailyUsage);
+            }}
+          />
         </main>
       </div>
     );

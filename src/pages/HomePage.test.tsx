@@ -14,8 +14,6 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-// ... rest of the mocks ...
-
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
   useMutation: vi.fn(() => vi.fn()),
@@ -74,7 +72,7 @@ describe("HomePage", () => {
       </BrowserRouter>
     );
 
-    const loginButton = screen.getAllByText(/Login/i)[0];
+    const loginButton = screen.getAllByText(/Login/i)[0] as HTMLElement;
     loginButton.click();
     expect(mockNavigate).toHaveBeenCalledWith("/auth");
   });
@@ -83,7 +81,7 @@ describe("HomePage", () => {
     const mockNavigate = vi.fn();
     vi.mocked(useNavigate).mockReturnValue(mockNavigate);
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1" } as any,
+      user: { id: "1" } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
       signOut: vi.fn(),
     });

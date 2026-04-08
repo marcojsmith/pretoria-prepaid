@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getRemainingTierCapacity, ElectricityRate } from "./electricity";
+import { getRemainingTierCapacity } from "./electricity";
+import type { ElectricityRate } from "./electricity";
 
 const MOCK_RATES: ElectricityRate[] = [
   { _id: "1", tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.42585 },

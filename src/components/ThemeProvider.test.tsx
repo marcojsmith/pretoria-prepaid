@@ -31,7 +31,11 @@ describe("ThemeProvider", () => {
     );
 
     const mockThemes = screen.getByTestId("mock-themes");
-    const props = JSON.parse(mockThemes.getAttribute("data-props") || "{}");
+    const props = JSON.parse(mockThemes.getAttribute("data-props") ?? "{}") as {
+      attribute: string;
+      defaultTheme: string;
+      enableSystem: boolean;
+    };
 
     expect(props.attribute).toBe("class");
     expect(props.defaultTheme).toBe("dark");

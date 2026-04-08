@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { useRates } from "./useRates";
 import { useUserRole } from "./useUserRole";
 import * as convexReact from "convex/react";
-import { Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
@@ -16,7 +16,7 @@ describe("Data Hooks", () => {
       { _id: "1", tier_number: 1, tier_label: "T1", min_units: 0, max_units: 100, rate: 1.5 },
     ]);
     const { result } = renderHook(() => useRates());
-    expect(result.current.rates[0].tier_label).toBe("T1");
+    expect((result.current.rates[0] as { tier_label: string }).tier_label).toBe("T1");
     expect(result.current.loading).toBe(false);
   });
 

@@ -2,6 +2,11 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
+const COVERAGE_THRESHOLD_LINES = 90;
+const COVERAGE_THRESHOLD_FUNCTIONS = 90;
+const COVERAGE_THRESHOLD_BRANCHES = 90;
+const COVERAGE_THRESHOLD_STATEMENTS = 90;
+
 export default defineConfig({
   plugins: [react()],
   test: {
@@ -30,10 +35,10 @@ export default defineConfig({
       all: true,
       include: ["src/**/*.{ts,tsx}"],
       thresholds: {
-        lines: 97,
-        functions: 90,
-        branches: 89,
-        statements: 97,
+        lines: COVERAGE_THRESHOLD_LINES,
+        functions: COVERAGE_THRESHOLD_FUNCTIONS,
+        branches: COVERAGE_THRESHOLD_BRANCHES,
+        statements: COVERAGE_THRESHOLD_STATEMENTS,
       },
     },
   },

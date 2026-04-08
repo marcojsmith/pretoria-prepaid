@@ -66,11 +66,11 @@ describe("RegisterSW", () => {
     });
 
     render(<RegisterSW />);
-    const consoleSpy = vi.spyOn(console, "log");
+    const consoleSpy = vi.spyOn(console, "warn");
     act(() => {
       registeredCallback?.("test-registration");
     });
-    expect(consoleSpy).toHaveBeenCalledWith("SW Registered: test-registration");
+    expect(consoleSpy).toHaveBeenCalledWith("SW Registered:", "test-registration");
   });
 
   it("calls onRegisterError", () => {

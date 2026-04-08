@@ -13,7 +13,7 @@ import { formatCurrency } from "@/lib/electricity";
 import { useToast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 
-export default function Rates() {
+export default function Rates(): JSX.Element | null {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { rates, loading: ratesLoading, updateRate } = useRates();
@@ -121,7 +121,9 @@ export default function Rates() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleSave(rate._id)}
+                          onClick={() => {
+                            void handleSave(rate._id);
+                          }}
                           disabled={saving}
                         >
                           {saving ? (

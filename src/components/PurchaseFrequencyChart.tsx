@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart2 } from "lucide-react";
+import { MAX_PURCHASE_FREQUENCY_ITEMS, MAX_PURCHASE_FREQUENCY_DISPLAY } from "@/lib/constants";
 
 interface MonthlyStat {
   month: string;
@@ -12,13 +13,54 @@ interface PurchaseFrequencyChartProps {
   stats: MonthlyStat[];
 }
 
-export function PurchaseFrequencyChart({ stats }: PurchaseFrequencyChartProps) {
-  // Take first 6 entries (most recent months) and reverse to chronological order (oldest to newest)
-  const displayData = [...stats].slice(0, 6).reverse();
+function prepareChartData(stats: MonthlyStat[]) {
+  const displayData = [...stats].slice(0, MAX_PURCHASE_FREQUENCY_ITEMS).reverse();
+  const maxPurchases = Math.max(...displayData.map((s) => s.purchases), 1);
+  return { displayData, maxPurchases };
+}
+
+function FrequencyBar({
+  stat,
+  maxPurchases,
+}: {
+  stat: MonthlyStat;
+  maxPurchases: number;
+  idx: number;
+}) {
+  const height = (stat.purchases / maxPurchases) * 100;
+  const date = new Date(stat.month + "-01");
+  const monthLabel = date.toLocaleDateString("en-ZA", { month: "short" });
+  const yearLabel = date.getFullYear().toString().slice(-2);
+
+  return (
+    <div
+      key={stat.month}
+      className="group relative flex h-full flex-1 flex-col items-center justify-end gap-1"
+    >
+      <div
+        className="flex w-full max-w-[24px] cursor-help items-end justify-center rounded-t bg-primary/40 transition-colors group-hover:bg-primary"
+        style={{ height: `${Math.max(height, MAX_PURCHASE_FREQUENCY_DISPLAY)}%` }}
+      >
+        <span className="mb-1 text-[10px] font-bold text-primary">{stat.purchases}</span>
+
+        <div className="absolute -top-10 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded border bg-popover px-1.5 py-0.5 text-center text-[10px] text-popover-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+          {stat.purchases} purchases
+          <br />
+          {Math.round(stat.units)} kWh total
+        </div>
+      </div>
+      <div className="mt-1 flex flex-col items-center">
+        <span className="text-[8px] font-medium text-muted-foreground">{monthLabel}</span>
+        <span className="text-[7px] text-muted-foreground/60">'{yearLabel}</span>
+      </div>
+    </div>
+  );
+}
+
+export function PurchaseFrequencyChart({ stats }: PurchaseFrequencyChartProps): JSX.Element | null {
+  const { displayData, maxPurchases } = prepareChartData(stats);
 
   if (displayData.length === 0) return null;
-
-  const maxPurchases = Math.max(...displayData.map((s) => s.purchases), 1);
 
   return (
     <Card>
@@ -31,38 +73,9 @@ export function PurchaseFrequencyChart({ stats }: PurchaseFrequencyChartProps) {
       </CardHeader>
       <CardContent>
         <div className="flex h-24 items-end justify-between gap-1">
-          {displayData.map((stat, idx) => {
-            const height = (stat.purchases / maxPurchases) * 100;
-            const date = new Date(stat.month + "-01");
-            const monthLabel = date.toLocaleDateString("en-ZA", {
-              month: "short",
-            });
-            const yearLabel = date.getFullYear().toString().slice(-2);
-
-            return (
-              <div
-                key={idx}
-                className="group relative flex h-full flex-1 flex-col items-center justify-end gap-1"
-              >
-                <div
-                  className="flex w-full max-w-[24px] cursor-help items-end justify-center rounded-t bg-primary/40 transition-colors group-hover:bg-primary"
-                  style={{ height: `${Math.max(height, 5)}%` }}
-                >
-                  <span className="mb-1 text-[10px] font-bold text-primary">{stat.purchases}</span>
-
-                  <div className="absolute -top-10 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded border bg-popover px-1.5 py-0.5 text-center text-[10px] text-popover-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                    {stat.purchases} purchases
-                    <br />
-                    {Math.round(stat.units)} kWh total
-                  </div>
-                </div>
-                <div className="mt-1 flex flex-col items-center">
-                  <span className="text-[8px] font-medium text-muted-foreground">{monthLabel}</span>
-                  <span className="text-[7px] text-muted-foreground/60">'{yearLabel}</span>
-                </div>
-              </div>
-            );
-          })}
+          {displayData.map((stat, idx) => (
+            <FrequencyBar key={stat.month} stat={stat} maxPurchases={maxPurchases} idx={idx} />
+          ))}
         </div>
         <div className="mt-4 flex items-center justify-between border-t pt-2 text-[9px] text-muted-foreground">
           <span>Older</span>

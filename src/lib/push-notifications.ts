@@ -1,9 +1,13 @@
+import { BASE64_CHUNK_SIZE } from "./constants";
+
 /**
  * Converts a base64 string to a Uint8Array.
  * Required for the browser's PushManager.subscribe() method.
  */
 function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const padding = "=".repeat(
+    (BASE64_CHUNK_SIZE - (base64String.length % BASE64_CHUNK_SIZE)) % BASE64_CHUNK_SIZE
+  );
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
 
   const rawData = window.atob(base64);
@@ -18,7 +22,7 @@ function urlBase64ToUint8Array(base64String: string) {
 /**
  * Checks if push notifications are supported in the current browser.
  */
-export function isPushSupported() {
+export function isPushSupported(): boolean {
   return "serviceWorker" in navigator && "PushManager" in window;
 }
 
@@ -56,7 +60,7 @@ export async function subscribeUserToPush(): Promise<PushSubscriptionJSON> {
 
     if (!subscription) {
       // 4. Subscribe the user
-      const publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      const publicKey = import.meta.env["VITE_VAPID_PUBLIC_KEY"] as string | undefined;
       if (!publicKey) {
         throw new Error(
           "VITE_VAPID_PUBLIC_KEY is missing in environment variables. Please check your configuration."
@@ -84,7 +88,7 @@ export async function subscribeUserToPush(): Promise<PushSubscriptionJSON> {
 /**
  * Unsubscribes the user from push notifications.
  */
-export async function unsubscribeUserFromPush() {
+export async function unsubscribeUserFromPush(): Promise<boolean> {
   if (!isPushSupported()) return false;
 
   try {
@@ -109,7 +113,7 @@ interface BadgingNavigator extends Navigator {
  * Clears the application badge on the PWA home screen icon.
  * This is safely called and will only execute if the Badging API is supported.
  */
-export async function clearBadge() {
+export async function clearBadge(): Promise<void> {
   if ("clearAppBadge" in navigator) {
     try {
       await (navigator as BadgingNavigator).clearAppBadge();

@@ -1,14 +1,11 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCallback, useEffect, useState, useRef, useMemo } from "react";
-import {
-  Purchase,
-  TierBreakdown,
-  getCurrentMonth,
-  calculateRefillIntervals,
-} from "@/lib/electricity";
-import { Id } from "../../convex/_generated/dataModel";
+import { getCurrentMonth, calculateRefillIntervals, type RefillInterval } from "@/lib/electricity";
+import type { Purchase, TierBreakdown } from "@/lib/electricity";
+import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { DATE_MONTH_LENGTH, AVERAGE_MONTHS_LOOKBACK } from "@/lib/constants";
 
 const PURCHASES_CACHE_KEY = "purchases_history";
 const QUEUE_CACHE_KEY = "offline_purchases_queue";
@@ -28,7 +25,39 @@ type QueuedPurchase =
       purchaseId: string;
     };
 
-export function usePurchases() {
+interface MonthlyStat {
+  month: string;
+  units: number;
+  cost: number;
+  purchases: number;
+}
+
+export interface UsePurchasesReturn {
+  purchases: Purchase[];
+  unitsThisMonth: number;
+  costThisMonth: number;
+  loading: boolean;
+  addPurchase: (options: {
+    units: number;
+    amountPaid: number;
+    date: string;
+    meterReading: number;
+  }) => Promise<void>;
+  addBatchPurchases: (
+    items: { units: number; amountPaid: number; date: string; meterReading: number }[]
+  ) => Promise<void>;
+  deletePurchase: (id: string) => Promise<void>;
+  getCurrentMonthPurchases: () => Purchase[];
+  getMonthlyStats: () => MonthlyStat[];
+  getAverageMonthlyUsage: () => number;
+  getDailyAverageUsage: () => number;
+  getAverageMonthlyCost: () => number;
+  getRefillAnalysis: () => RefillInterval[];
+  offlineCount: number;
+}
+
+// eslint-disable-next-line llm-core/max-function-length
+export function usePurchases(): UsePurchasesReturn {
   const purchasesData = useQuery(api.purchases.getPurchases);
   const addPurchaseMutation = useMutation(api.purchases.addPurchase);
   const deletePurchaseMutation = useMutation(api.purchases.deletePurchase);
@@ -42,18 +71,18 @@ export function usePurchases() {
     const cachedPurchases = localStorage.getItem(PURCHASES_CACHE_KEY);
     if (cachedPurchases) {
       try {
-        setConfirmedPurchases(JSON.parse(cachedPurchases));
-      } catch (e) {
-        console.error("Failed to parse cached purchases", e);
+        setConfirmedPurchases(JSON.parse(cachedPurchases) as Purchase[]);
+      } catch (error) {
+        console.error("Failed to parse cached purchases", error);
       }
     }
 
     const cachedQueue = localStorage.getItem(QUEUE_CACHE_KEY);
     if (cachedQueue) {
       try {
-        setOfflineQueue(JSON.parse(cachedQueue));
-      } catch (e) {
-        console.error("Failed to parse offline queue", e);
+        setOfflineQueue(JSON.parse(cachedQueue) as QueuedPurchase[]);
+      } catch (error) {
+        console.error("Failed to parse offline queue", error);
       }
     }
   }, []);
@@ -66,7 +95,9 @@ export function usePurchases() {
       isSyncing.current = true;
       const currentQueue = [...offlineQueue];
 
-      toast.info(`Syncing ${currentQueue.length} offline actions...`);
+      toast.info("Syncing offline actions...", {
+        description: String(currentQueue.length) + " items",
+      });
 
       const remainingItems = [...currentQueue];
       for (const item of currentQueue) {
@@ -75,11 +106,11 @@ export function usePurchases() {
         try {
           if (item.type === "add") {
             await addPurchaseMutation({
-              date: item.date!,
-              units: item.units!,
+              date: item.date,
+              units: item.units,
               cost: 0,
-              amountPaid: item.amountPaid!,
-              meterReading: item.meterReading!,
+              amountPaid: item.amountPaid,
+              meterReading: item.meterReading,
             });
           } else if (item.type === "delete") {
             await deletePurchaseMutation({ id: item.purchaseId as Id<"purchases"> });
@@ -101,26 +132,28 @@ export function usePurchases() {
       isSyncing.current = false;
     };
 
-    window.addEventListener("online", syncQueue);
-    if (navigator.onLine) syncQueue();
+    window.addEventListener("online", () => void syncQueue());
+    if (navigator.onLine) void syncQueue();
 
-    return () => window.removeEventListener("online", syncQueue);
+    return () => window.removeEventListener("online", () => void syncQueue());
   }, [offlineQueue, addPurchaseMutation, deletePurchaseMutation]);
 
   // Update confirmed purchases when network data arrives
   useEffect(() => {
-    if (purchasesData) {
-      const mappedPurchases: Purchase[] = purchasesData.map((p) => ({
-        _id: p._id,
-        date: p.date,
-        units: p.units,
-        cost: p.cost,
-        amountPaid: p.amountPaid,
-        tierBreakdown: (p.tierBreakdown as unknown as TierBreakdown[]) || [],
-      }));
-      setConfirmedPurchases(mappedPurchases);
-      localStorage.setItem(PURCHASES_CACHE_KEY, JSON.stringify(mappedPurchases));
+    if (!purchasesData) {
+      return;
     }
+
+    const mappedPurchases: Purchase[] = purchasesData.map((p) => ({
+      _id: p._id,
+      date: p.date,
+      units: p.units,
+      cost: p.cost,
+      amountPaid: p.amountPaid,
+      tierBreakdown: (p.tierBreakdown as unknown as TierBreakdown[]) || [],
+    }));
+    setConfirmedPurchases(mappedPurchases);
+    localStorage.setItem(PURCHASES_CACHE_KEY, JSON.stringify(mappedPurchases));
   }, [purchasesData]);
 
   // Combine confirmed and offline purchases for the UI
@@ -133,10 +166,10 @@ export function usePurchases() {
       .filter((item) => item.type === "add")
       .map((item) => ({
         _id: item.id,
-        date: item.date!,
-        units: item.units!,
+        date: item.date,
+        units: item.units,
         cost: 0,
-        amountPaid: item.amountPaid!,
+        amountPaid: item.amountPaid,
         tierBreakdown: [],
         isOffline: true,
       }));
@@ -147,7 +180,9 @@ export function usePurchases() {
   }, [confirmedPurchases, offlineQueue]);
 
   const addPurchase = useCallback(
-    async (units: number, amountPaid: number, date: string, meterReading: number) => {
+    async (options: { units: number; amountPaid: number; date: string; meterReading: number }) => {
+      const { units, amountPaid, date, meterReading } = options;
+
       if (!navigator.onLine) {
         const newOfflineItem: QueuedPurchase = {
           id: `offline-${Date.now()}`,
@@ -218,12 +253,15 @@ export function usePurchases() {
           localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
           return newQueue;
         });
-        toast.info(`${items.length} purchases saved offline.`);
+        toast.info("Purchases saved offline.", {
+          description: String(items.length) + " purchases",
+        });
         return;
       }
 
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
+        if (!item) continue;
         try {
           await addPurchaseMutation({
             date: item.date,
@@ -252,9 +290,10 @@ export function usePurchases() {
           localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
           return newQueue;
         });
-        toast.info(
-          `Imported ${successCount} items. ${offlineItems.length} items queued for retry.`
-        );
+        toast.info("Imported purchases. Some items queued for retry.", {
+          description:
+            "Imported: " + String(successCount) + ", queued: " + String(offlineItems.length),
+        });
       } else {
         toast.success(`Imported all ${successCount} purchases.`);
       }
@@ -318,7 +357,7 @@ export function usePurchases() {
     const monthlyMap = new Map<string, { units: number; cost: number; purchases: number }>();
 
     purchases.forEach((p) => {
-      const monthKey = p.date.substring(0, 7);
+      const monthKey = p.date.substring(0, DATE_MONTH_LENGTH);
       const existing = monthlyMap.get(monthKey) || { units: 0, cost: 0, purchases: 0 };
       monthlyMap.set(monthKey, {
         units: existing.units + p.units,
@@ -335,7 +374,9 @@ export function usePurchases() {
   const getAverageMonthlyUsage = useCallback(() => {
     const monthlyStats = getMonthlyStats();
     const currentMonth = getCurrentMonth();
-    const previousMonths = monthlyStats.filter((s) => s.month !== currentMonth).slice(0, 3);
+    const previousMonths = monthlyStats
+      .filter((s) => s.month !== currentMonth)
+      .slice(0, AVERAGE_MONTHS_LOOKBACK);
     if (previousMonths.length === 0) return 0;
     return Math.round(previousMonths.reduce((sum, s) => sum + s.units, 0) / previousMonths.length);
   }, [getMonthlyStats]);
@@ -343,13 +384,15 @@ export function usePurchases() {
   const getDailyAverageUsage = useCallback(() => {
     const monthlyStats = getMonthlyStats();
     const currentMonth = getCurrentMonth();
-    const previousMonths = monthlyStats.filter((s) => s.month !== currentMonth).slice(0, 3);
+    const previousMonths = monthlyStats
+      .filter((s) => s.month !== currentMonth)
+      .slice(0, AVERAGE_MONTHS_LOOKBACK);
     if (previousMonths.length === 0) return 0;
 
     const totalUnits = previousMonths.reduce((sum, s) => sum + s.units, 0);
 
     const totalDays = previousMonths.reduce((sum, s) => {
-      const [year, month] = s.month.split("-").map(Number);
+      const [year = 0, month = 0] = s.month.split("-").map(Number);
       const daysInMonth = new Date(year, month, 0).getDate();
       return sum + daysInMonth;
     }, 0);
@@ -360,7 +403,9 @@ export function usePurchases() {
   const getAverageMonthlyCost = useCallback(() => {
     const monthlyStats = getMonthlyStats();
     const currentMonth = getCurrentMonth();
-    const previousMonths = monthlyStats.filter((s) => s.month !== currentMonth).slice(0, 3);
+    const previousMonths = monthlyStats
+      .filter((s) => s.month !== currentMonth)
+      .slice(0, AVERAGE_MONTHS_LOOKBACK);
     if (previousMonths.length === 0) return 0;
     return previousMonths.reduce((sum, s) => sum + s.cost, 0) / previousMonths.length;
   }, [getMonthlyStats]);

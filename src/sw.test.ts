@@ -27,9 +27,10 @@ describe("Service Worker", () => {
     },
   };
 
-  let pushListener: (event: any) => void;
-  let clickListener: (event: any) => void;
-  let pscListener: (event: any) => void;
+  type MockEventListener = (event: unknown) => void;
+  let pushListener: MockEventListener;
+  let clickListener: MockEventListener;
+  let pscListener: MockEventListener;
 
   beforeAll(async () => {
     vi.stubGlobal("self", mockSelf);
@@ -38,31 +39,31 @@ describe("Service Worker", () => {
     const addEventListenerMock = vi.mocked(self.addEventListener);
     pushListener = addEventListenerMock.mock.calls.find(
       (c) => (c[0] as string) === "push"
-    )?.[1] as any;
+    )?.[1] as unknown as MockEventListener;
     clickListener = addEventListenerMock.mock.calls.find(
       (c) => (c[0] as string) === "notificationclick"
-    )?.[1] as any;
+    )?.[1] as unknown as MockEventListener;
     pscListener = addEventListenerMock.mock.calls.find(
       (c) => (c[0] as string) === "pushsubscriptionchange"
-    )?.[1] as any;
+    )?.[1] as unknown as MockEventListener;
   });
 
   beforeEach(() => {
-    vi.mocked((self as any).registration.showNotification).mockClear();
-    vi.mocked((self as any).clients.openWindow).mockClear();
-    vi.mocked((self as any).clients.matchAll).mockClear();
+    vi.mocked(mockSelf.registration.showNotification).mockClear();
+    vi.mocked(mockSelf.clients.openWindow).mockClear();
+    vi.mocked(mockSelf.clients.matchAll).mockClear();
 
     vi.stubGlobal("navigator", {});
   });
 
-  it("should initialize correctly and register precache route", async () => {
+  it("should initialize correctly and register precache route", () => {
     expect(precacheAndRoute).toHaveBeenCalledWith(mockManifest);
     expect(pushListener).toBeDefined();
     expect(clickListener).toBeDefined();
     expect(pscListener).toBeDefined();
   });
 
-  it("handles push event correctly", async () => {
+  it("handles push event correctly", () => {
     const mockEvent = {
       data: {
         json: () => ({
@@ -76,13 +77,13 @@ describe("Service Worker", () => {
 
     pushListener(mockEvent);
     expect(mockEvent.waitUntil).toHaveBeenCalled();
-    expect((self as any).registration.showNotification).toHaveBeenCalledWith(
+    expect(mockSelf.registration.showNotification).toHaveBeenCalledWith(
       "Test Title",
       expect.any(Object)
     );
   });
 
-  it("handles push event with unreadCount and App Badge API", async () => {
+  it("handles push event with unreadCount and App Badge API", () => {
     const mockSetAppBadge = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { setAppBadge: mockSetAppBadge });
 
@@ -137,7 +138,7 @@ describe("Service Worker", () => {
     consoleSpy.mockRestore();
   });
 
-  it("handles push event with App Badge API fallback error", async () => {
+  it("handles push event with App Badge API fallback error", () => {
     const mockSetAppBadge = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { setAppBadge: mockSetAppBadge });
 
@@ -163,15 +164,15 @@ describe("Service Worker", () => {
       navigate: vi.fn().mockResolvedValue(undefined),
     };
 
-    (self as any).clients.matchAll = vi.fn().mockResolvedValue([mockClient]);
+    mockSelf.clients.matchAll = vi.fn().mockResolvedValue([mockClient]);
 
     let capturedPromise: Promise<void> | undefined;
     const mockEvent = {
       notification: {
         close: vi.fn(),
-        data: { url: "/test" },
+        data: { data: { url: "/test" } },
       },
-      waitUntil: vi.fn((promise) => {
+      waitUntil: vi.fn((promise: Promise<void>) => {
         capturedPromise = promise;
       }),
     };
@@ -185,16 +186,16 @@ describe("Service Worker", () => {
   });
 
   it("handles notificationclick and opens new window when no client exists", async () => {
-    (self as any).clients.matchAll = vi.fn().mockResolvedValue([]);
-    (self as any).clients.openWindow = vi.fn().mockResolvedValue({ focus: vi.fn() });
+    mockSelf.clients.matchAll = vi.fn().mockResolvedValue([]);
+    mockSelf.clients.openWindow = vi.fn().mockResolvedValue({ focus: vi.fn() });
 
     let capturedPromise: Promise<void> | undefined;
     const mockEvent = {
       notification: {
         close: vi.fn(),
-        data: { url: "/test" },
+        data: { data: { url: "/test" } },
       },
-      waitUntil: vi.fn((promise) => {
+      waitUntil: vi.fn((promise: Promise<void>) => {
         capturedPromise = promise;
       }),
     };
@@ -202,7 +203,7 @@ describe("Service Worker", () => {
     clickListener(mockEvent);
     if (capturedPromise) await capturedPromise;
 
-    expect((self as any).clients.openWindow).toHaveBeenCalledWith("http://localhost/test");
+    expect(mockSelf.clients.openWindow).toHaveBeenCalledWith("http://localhost/test");
   });
 
   it("handles notificationclick and clears app badge with failure", async () => {
@@ -214,9 +215,9 @@ describe("Service Worker", () => {
     const mockEvent = {
       notification: {
         close: vi.fn(),
-        data: { url: "/test" },
+        data: { data: { url: "/test" } },
       },
-      waitUntil: vi.fn((promise) => {
+      waitUntil: vi.fn((promise: Promise<void>) => {
         capturedPromise = promise;
       }),
     };
@@ -229,7 +230,7 @@ describe("Service Worker", () => {
     consoleSpy.mockRestore();
   });
 
-  it("handles push event with invalid JSON data and fallback badge", async () => {
+  it("handles push event with invalid JSON data and fallback badge", () => {
     const mockSetAppBadge = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { setAppBadge: mockSetAppBadge });
 
@@ -245,13 +246,13 @@ describe("Service Worker", () => {
     pushListener(mockEvent);
     expect(mockEvent.waitUntil).toHaveBeenCalled();
     expect(mockSetAppBadge).toHaveBeenCalled();
-    expect((self as any).registration.showNotification).toHaveBeenCalledWith(
+    expect(mockSelf.registration.showNotification).toHaveBeenCalledWith(
       "Pretoria Prepaid",
       expect.any(Object)
     );
   });
 
-  it("handles pushsubscriptionchange event with direct new subscription", async () => {
+  it("handles pushsubscriptionchange event with direct new subscription", () => {
     const mockNewSubscription = { endpoint: "new-endpoint" };
     const mockEvent = {
       newSubscription: mockNewSubscription,
@@ -268,14 +269,12 @@ describe("Service Worker", () => {
     };
     const mockNewSubscription = { endpoint: "re-subscribed-endpoint" };
 
-    (self as any).registration.pushManager.subscribe = vi
-      .fn()
-      .mockResolvedValue(mockNewSubscription);
+    mockSelf.registration.pushManager.subscribe = vi.fn().mockResolvedValue(mockNewSubscription);
 
     let capturedPromise: Promise<void> | undefined;
     const mockEvent = {
       oldSubscription: mockOldSubscription,
-      waitUntil: vi.fn((promise) => {
+      waitUntil: vi.fn((promise: Promise<void>) => {
         capturedPromise = promise;
       }),
     };
@@ -283,7 +282,7 @@ describe("Service Worker", () => {
     pscListener(mockEvent);
     if (capturedPromise) await capturedPromise;
 
-    expect((self as any).registration.pushManager.subscribe).toHaveBeenCalledWith({
+    expect(mockSelf.registration.pushManager.subscribe).toHaveBeenCalledWith({
       userVisibleOnly: true,
       applicationServerKey: "old-key",
     });
@@ -294,7 +293,7 @@ describe("Service Worker", () => {
       options: { applicationServerKey: "old-key" },
     };
 
-    (self as any).registration.pushManager.subscribe = vi
+    mockSelf.registration.pushManager.subscribe = vi
       .fn()
       .mockRejectedValue(new Error("Subscribe failed"));
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -302,7 +301,7 @@ describe("Service Worker", () => {
     let capturedPromise: Promise<void> | undefined;
     const mockEvent = {
       oldSubscription: mockOldSubscription,
-      waitUntil: vi.fn((promise) => {
+      waitUntil: vi.fn((promise: Promise<void>) => {
         capturedPromise = promise;
       }),
     };

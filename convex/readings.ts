@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { calculateConsumptionStats } from "./electricity_logic";
+import { DEFAULT_READINGS_TAKE, DEFAULT_LOW_BALANCE_THRESHOLD } from "./constants";
 
 export const getReadings = query({
   args: {},
@@ -12,7 +13,7 @@ export const getReadings = query({
       .query("meter_readings")
       .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
       .order("desc")
-      .take(100);
+      .take(DEFAULT_READINGS_TAKE);
   },
 });
 
@@ -31,11 +32,11 @@ export const addOnboardingReading = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .take(1);
 
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0] ?? "";
 
-    if (existingReadings.length > 0) {
+    const existing = existingReadings[0];
+    if (existing) {
       // Check if it's an onboarding reading — overwrite it (idempotent)
-      const existing = existingReadings[0];
       if (existing.source === "onboarding") {
         await ctx.db.patch(existing._id, {
           readingPre: args.reading,
@@ -117,14 +118,14 @@ export const getConsumptionStats = query({
       .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .unique();
 
-    const lowBalanceThreshold = profile?.lowBalanceThreshold ?? 10;
+    const lowBalanceThreshold = profile?.lowBalanceThreshold ?? DEFAULT_LOW_BALANCE_THRESHOLD;
 
     // Fetch all readings, sorted by date desc
     const readings = await ctx.db
       .query("meter_readings")
       .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
       .order("desc")
-      .take(100);
+      .take(DEFAULT_READINGS_TAKE);
 
     const filteredReadings = readings.filter(
       (r): r is typeof r & { source: "purchase" | "onboarding" } =>

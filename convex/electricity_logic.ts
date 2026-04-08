@@ -1,3 +1,5 @@
+import { MS_PER_DAY_UNIT, EXPONENTIAL_DECAY_FACTOR } from "./constants";
+
 /**
  * Interface for meter readings with pre/post purchase values.
  */
@@ -39,17 +41,18 @@ export interface ConsumptionStats {
  * @param rates - The electricity rates fetched from the database
  * @returns An object containing the total theoretical cost and the breakdown across tiers
  */
-export function calculateTierBreakdown(
-  units: number,
-  unitsAlreadyBought: number,
+export function calculateTierBreakdown(options: {
+  units: number;
+  unitsAlreadyBought: number;
   rates: {
     tier_number: number;
     tier_label: string;
     min_units: number;
     max_units: number | null;
     rate: number;
-  }[]
-): { total: number; breakdown: TierBreakdown[] } {
+  }[];
+}): { total: number; breakdown: TierBreakdown[] } {
+  const { units, unitsAlreadyBought, rates } = options;
   const breakdown: TierBreakdown[] = [];
   let remainingUnits = units;
   let currentPosition = unitsAlreadyBought;
@@ -92,8 +95,50 @@ export function calculateTierBreakdown(
 
 // How many purchase intervals to include in the weighted average (requires N+1 readings)
 const MAX_INTERVALS = 5;
-// Exponential decay factor: most recent interval gets weight 1, next gets 0.5, then 0.25, etc.
-const WEIGHT_DECAY = 0.5;
+
+/**
+ * Computes the weighted-average daily burn rate from an ordered list of purchase readings.
+ * Returns 0 if there are fewer than 2 readings or no valid intervals.
+ */
+function computeDailyBurnRate(purchaseReadings: MeterReading[]): number {
+  if (purchaseReadings.length < 2) return 0;
+
+  const intervalRates: number[] = [];
+  for (let i = 0; i < purchaseReadings.length - 1; i++) {
+    const newer = purchaseReadings[i];
+    const older = purchaseReadings[i + 1];
+    if (!newer || !older) continue;
+    const daysDiff =
+      (new Date(newer.date).getTime() - new Date(older.date).getTime()) / MS_PER_DAY_UNIT;
+    if (daysDiff > 0) {
+      const rate = (older.readingPost - newer.readingPre) / daysDiff;
+      // Skip negative rates — they indicate a data entry error
+      if (rate >= 0) intervalRates.push(rate);
+    }
+  }
+
+  if (intervalRates.length === 0) return 0;
+
+  // Exponentially decaying weights: index 0 (most recent) = weight 1, index 1 = 0.5, etc.
+  const rawWeights = intervalRates.map((_, i) => Math.pow(EXPONENTIAL_DECAY_FACTOR, i));
+  const totalWeight = rawWeights.reduce((sum, w) => sum + w, 0);
+  /* eslint-disable llm-core/max-params */
+  return intervalRates.reduce(
+    (sum, rate, i) => sum + rate * ((rawWeights[i] ?? 0) / totalWeight),
+    0
+  );
+  /* eslint-enable llm-core/max-params */
+}
+
+/**
+ * Returns the number of days elapsed since `readingDate`, or 0 if it was today.
+ */
+function daysSince(readingDate: string): number {
+  const now = new Date();
+  const todayStr = now.toISOString().split("T")[0];
+  if (readingDate === todayStr) return 0;
+  return Math.max(0, (now.getTime() - new Date(readingDate).getTime()) / MS_PER_DAY_UNIT);
+}
 
 /**
  * Calculates consumption stats based on readings with pre/post values.
@@ -111,67 +156,22 @@ export function calculateConsumptionStats(
   if (readings.length === 0) return null;
 
   const lastReading = readings[0];
-  let dailyBurnRate = 0;
+  if (!lastReading) return null;
 
   // Use up to MAX_INTERVALS+1 purchase readings to compute MAX_INTERVALS interval rates
   const purchaseReadings = readings
     .filter((r) => r.source === "purchase")
     .slice(0, MAX_INTERVALS + 1);
 
-  if (purchaseReadings.length >= 2) {
-    const intervalRates: number[] = [];
-
-    for (let i = 0; i < purchaseReadings.length - 1; i++) {
-      const newer = purchaseReadings[i];
-      const older = purchaseReadings[i + 1];
-      const daysDiff =
-        (new Date(newer.date).getTime() - new Date(older.date).getTime()) / (1000 * 60 * 60 * 24);
-
-      if (daysDiff > 0) {
-        const usage = older.readingPost - newer.readingPre;
-        const rate = usage / daysDiff;
-        // Skip negative rates — they indicate a data entry error
-        if (rate >= 0) {
-          intervalRates.push(rate);
-        }
-      }
-    }
-
-    if (intervalRates.length > 0) {
-      // Exponentially decaying weights: index 0 (most recent) = weight 1, index 1 = 0.5, etc.
-      const rawWeights = intervalRates.map((_, i) => Math.pow(WEIGHT_DECAY, i));
-      const totalWeight = rawWeights.reduce((sum, w) => sum + w, 0);
-      dailyBurnRate = intervalRates.reduce(
-        (sum, rate, i) => sum + rate * (rawWeights[i] / totalWeight),
-        0
-      );
-    }
-  }
-
-  // Estimate current balance based on last reading and time passed
-  const now = new Date();
-  const lastReadingDate = new Date(lastReading.date);
+  const dailyBurnRate = computeDailyBurnRate(purchaseReadings);
 
   // readingPost of the most recent reading is always the anchor
   const anchorBalance = lastReading.readingPost;
-
-  const todayStr = now.toISOString().split("T")[0];
-  let daysSinceLastReading = 0;
-
-  if (lastReading.date !== todayStr) {
-    // Only apply estimated burn rate if the reading wasn't taken today
-    daysSinceLastReading = Math.max(
-      0,
-      (now.getTime() - lastReadingDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-  }
+  const elapsed = daysSince(lastReading.date);
 
   // Default burn rate if we don't have enough data
   const effectiveBurnRate = dailyBurnRate > 0 ? dailyBurnRate : DEFAULT_BURN_RATE;
-  const estimatedUsageSinceLast = daysSinceLastReading * effectiveBurnRate;
-
-  // Balance = anchorBalance - Usage Since Last Reading
-  const estimatedBalance = Math.max(0, anchorBalance - estimatedUsageSinceLast);
+  const estimatedBalance = Math.max(0, anchorBalance - elapsed * effectiveBurnRate);
 
   // Days until we hit ZERO
   const daysRemaining = effectiveBurnRate > 0 ? estimatedBalance / effectiveBurnRate : 0;

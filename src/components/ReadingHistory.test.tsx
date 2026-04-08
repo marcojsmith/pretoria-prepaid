@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { ReadingHistory } from "./ReadingHistory";
-import { Id } from "../../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 
 type IntersectionObserverCallback = (entries: IntersectionObserverEntry[]) => void;
 let capturedObserverCallback: IntersectionObserverCallback | null = null;
@@ -97,7 +97,8 @@ describe("ReadingHistory", () => {
 
     // Find and click the hidden button (since we use sr-only but it's still in DOM)
     const showMoreBtn = screen.getByText(/Show More/).closest("button");
-    fireEvent.click(showMoreBtn!);
+    if (!showMoreBtn) throw new Error("showMoreBtn not found");
+    fireEvent.click(showMoreBtn);
 
     expect(screen.getByText(/110 kWh.*160 kWh/)).toBeInTheDocument();
   });
@@ -126,7 +127,7 @@ describe("ReadingHistory", () => {
     expect(screen.getByText(/No readings logged yet/i)).toBeInTheDocument();
   });
 
-  it("IntersectionObserver callback loads more readings when intersecting", async () => {
+  it("IntersectionObserver callback loads more readings when intersecting", () => {
     const manyReadings = Array.from({ length: 15 }, (_, i) => ({
       _id: `r${i}` as unknown as Id<"meter_readings">,
       readingPre: 100 + i,
@@ -140,8 +141,9 @@ describe("ReadingHistory", () => {
     expect(mockObserve).toHaveBeenCalled();
 
     // Trigger intersection observer callback
-    await act(async () => {
-      capturedObserverCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
+    act(() => {
+      if (!capturedObserverCallback) throw new Error("capturedObserverCallback not set");
+      capturedObserverCallback([{ isIntersecting: true } as IntersectionObserverEntry]);
     });
 
     // All 15 visible now (visibleCount 10 → 20)

@@ -7,7 +7,7 @@ import { PurchaseCalculator } from "@/components/PurchaseCalculator";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 
-export default function CalculatorPage() {
+export default function CalculatorPage(): JSX.Element | null {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const {
@@ -33,7 +33,12 @@ export default function CalculatorPage() {
   );
   const averageMonthlyUsage = useMemo(() => getAverageMonthlyUsage(), [getAverageMonthlyUsage]);
 
-  const handleSavePurchase = (units: number, amount: number, currentBalance?: number) => {
+  const handleSavePurchase = (options: {
+    units: number;
+    amount: number;
+    currentBalance?: number;
+  }) => {
+    const { units, amount, currentBalance } = options;
     navigate("/history", {
       state: {
         prefillUnits: units,

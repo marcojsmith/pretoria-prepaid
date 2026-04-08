@@ -2,6 +2,7 @@ import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { calculateTierBreakdown } from "./electricity_logic";
+import { DATE_MONTH_LENGTH } from "./constants";
 
 /**
  * Recalculates all purchases for a specific user and month.
@@ -40,11 +41,11 @@ export const recalculateMonthlyPurchases = internalMutation({
     let unitsAlreadyBought = 0;
 
     for (const purchase of sortedPurchases) {
-      const { breakdown, total } = calculateTierBreakdown(
-        purchase.units,
+      const { breakdown, total } = calculateTierBreakdown({
+        units: purchase.units,
         unitsAlreadyBought,
-        rates
-      );
+        rates,
+      });
 
       await ctx.db.patch(purchase._id, {
         tierBreakdown: breakdown,
@@ -89,7 +90,7 @@ export const addPurchase = mutation({
     }
 
     // Server-side calculation of initial breakdown
-    const monthKey = args.date.substring(0, 7);
+    const monthKey = args.date.substring(0, DATE_MONTH_LENGTH);
     const rates = await ctx.db.query("electricity_rates").collect();
 
     // Get units already bought this month before this point using composite index.
@@ -104,7 +105,11 @@ export const addPurchase = mutation({
     // Since this is a new purchase, we don't have its _creationTime yet.
     // However, all existing records in 'monthPurchases' were created BEFORE this one.
     const unitsBefore = monthPurchases.reduce((sum, p) => sum + p.units, 0);
-    const { breakdown, total } = calculateTierBreakdown(args.units, unitsBefore, rates);
+    const { breakdown, total } = calculateTierBreakdown({
+      units: args.units,
+      unitsAlreadyBought: unitsBefore,
+      rates,
+    });
 
     const purchaseId = await ctx.db.insert("purchases", {
       userId: identity.subject,
@@ -146,7 +151,7 @@ export const deletePurchase = mutation({
       throw new Error("Unauthorized");
     }
 
-    const monthKey = purchase.date.substring(0, 7);
+    const monthKey = purchase.date.substring(0, DATE_MONTH_LENGTH);
     await ctx.db.delete(args.id);
 
     // Also delete the associated meter reading
@@ -156,8 +161,9 @@ export const deletePurchase = mutation({
       .filter((q) => q.eq(q.field("source"), "purchase"))
       .take(1);
 
-    if (reading.length > 0) {
-      await ctx.db.delete(reading[0]._id);
+    const firstReading = reading[0];
+    if (firstReading) {
+      await ctx.db.delete(firstReading._id);
     }
 
     // Trigger recalculation for the month

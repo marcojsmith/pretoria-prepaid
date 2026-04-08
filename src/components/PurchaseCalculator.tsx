@@ -11,23 +11,188 @@ import {
   TIER_TEXT_CLASSES,
   roundUnits,
   getRemainingTierCapacity,
-  ElectricityRate,
 } from "@/lib/electricity";
+import type { ElectricityRate } from "@/lib/electricity";
 import { Calculator, Lightbulb, Save, Loader2, Zap, AlertTriangle } from "lucide-react";
 
 interface PurchaseCalculatorProps {
   unitsAlreadyBought: number;
   averageMonthlyUsage: number;
   daysLeftInMonth: number;
-  onSavePurchase?: (units: number, amount: number, currentBalance?: number) => void;
+  onSavePurchase?: (options: { units: number; amount: number; currentBalance?: number }) => void;
 }
 
+interface CurrentPositionProps {
+  unitsAlreadyBought: number;
+  averageMonthlyUsage: number;
+  suggestedUnits: number;
+  daysLeftInMonth: number;
+}
+
+function CurrentPosition({
+  unitsAlreadyBought,
+  averageMonthlyUsage,
+  suggestedUnits,
+  daysLeftInMonth,
+}: CurrentPositionProps) {
+  return (
+    <div className="space-y-1 border-l-2 border-primary py-1 pl-3 text-sm">
+      <div className="flex items-center gap-2">
+        <Lightbulb className="h-4 w-4 text-primary" />
+        <span className="font-medium">Current Position</span>
+      </div>
+      <p className="text-muted-foreground">
+        You've bought <strong>{roundUnits(unitsAlreadyBought)} kWh</strong> this month.
+      </p>
+      {suggestedUnits > 0 && (
+        <p className="text-muted-foreground">
+          Based on <strong>{roundUnits(averageMonthlyUsage)} kWh/month</strong> avg, you need{" "}
+          <strong>{roundUnits(suggestedUnits)} more kWh</strong>.
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">{daysLeftInMonth} days left this month</p>
+    </div>
+  );
+}
+
+interface TierWarningProps {
+  exceedsTier: boolean;
+  tierCapacity: { units: number; rate: number; label: string } | null;
+  costToStayInTier: number;
+}
+
+function TierWarning({ exceedsTier, tierCapacity, costToStayInTier }: TierWarningProps) {
+  if (!exceedsTier || !tierCapacity || tierCapacity.units <= 0 || tierCapacity.units === Infinity) {
+    return null;
+  }
+  return (
+    <div className="border-l-2 border-amber-500 py-1 pl-3 text-xs text-amber-700 dark:text-amber-400">
+      <div className="flex items-center gap-2 font-medium">
+        <AlertTriangle className="h-4 w-4" />
+        Tier Limit Warning
+      </div>
+      <p className="mt-1">
+        Buying more than <strong>{roundUnits(tierCapacity.units)} kWh</strong> will push you into
+        the next, more expensive tier.
+      </p>
+      <p className="mt-1">
+        Spend <strong>{formatCurrency(costToStayInTier)}</strong> to stay within{" "}
+        <strong>{tierCapacity.label}</strong>.
+      </p>
+    </div>
+  );
+}
+
+interface PriceBreakdownProps {
+  calculation: {
+    breakdown: { tier: number; units: number; cost: number; rate: number; label: string }[];
+    total: number;
+  } | null;
+  targetNum: number;
+  onSave?: (() => void) | undefined;
+}
+
+function BreakdownBar({
+  calculation,
+  targetNum,
+}: {
+  calculation: { breakdown: { tier: number | string; units: number }[] };
+  targetNum: number;
+}) {
+  return (
+    <div className="flex h-3 overflow-hidden rounded-md bg-muted">
+      {calculation.breakdown.map((item) => {
+        const percentage = (item.units / targetNum) * 100;
+        return (
+          <div
+            key={item.tier}
+            className={`h-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES]}`}
+            style={{ width: `${percentage}%` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function BreakdownRows({
+  calculation,
+}: {
+  calculation: {
+    breakdown: {
+      tier: number | string;
+      units: number;
+      rate: number;
+      cost: number;
+      label: string;
+    }[];
+  };
+}) {
+  return (
+    <div className="space-y-2">
+      {calculation.breakdown.map((item) => (
+        <div key={item.tier} className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <div
+              className={`h-2 w-2 rounded-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES]}`}
+            />
+            <span className={TIER_TEXT_CLASSES[item.tier as keyof typeof TIER_TEXT_CLASSES]}>
+              {item.label}
+            </span>
+            <span className="text-muted-foreground">
+              {roundUnits(item.units)} kWh @ {formatCurrency(item.rate)}/kWh
+            </span>
+          </div>
+          <span className="font-medium">{formatCurrency(item.cost)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PriceBreakdown({ calculation, targetNum, onSave }: PriceBreakdownProps) {
+  if (!calculation || calculation.breakdown.length <= 0) {
+    return (
+      <p className="py-4 text-center text-sm text-muted-foreground">
+        Enter kWh to see the price breakdown.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="text-sm font-medium">Price Breakdown</div>
+
+      <BreakdownBar calculation={calculation} targetNum={targetNum} />
+
+      <BreakdownRows calculation={calculation} />
+
+      <div className="flex items-center justify-between border-t pt-2">
+        <span className="font-semibold">Total Cost</span>
+        <span className="text-lg font-bold text-primary">{formatCurrency(calculation.total)}</span>
+      </div>
+
+      <div className="text-center text-xs text-muted-foreground">
+        Effective rate: {formatCurrency(calculation.total / targetNum)}/kWh
+      </div>
+
+      {onSave && (
+        <Button variant="outline" className="w-full" onClick={onSave}>
+          <Save className="mr-2 h-4 w-4" />
+          Save as Purchase
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// eslint-disable-next-line llm-core/max-function-length
 export function PurchaseCalculator({
   unitsAlreadyBought,
   averageMonthlyUsage,
   daysLeftInMonth,
   onSavePurchase,
-}: PurchaseCalculatorProps) {
+}: PurchaseCalculatorProps): JSX.Element {
   const { rates, loading: ratesLoading } = useRates();
   const suggestedUnits = useMemo(() => {
     if (averageMonthlyUsage === 0) return 0;
@@ -60,13 +225,23 @@ export function PurchaseCalculator({
 
   const calculation = useMemo(() => {
     if (targetNum <= 0 || ratesLoading || rates.length === 0) return null;
-    return calculateCost(targetNum, unitsAlreadyBought, rates as ElectricityRate[]);
+    return calculateCost({
+      units: targetNum,
+      unitsAlreadyBought,
+      rates: rates as ElectricityRate[],
+    });
   }, [targetNum, unitsAlreadyBought, rates, ratesLoading]);
 
   const handleSavePurchase = () => {
-    if (calculation && onSavePurchase) {
-      onSavePurchase(targetNum, calculation.total, balanceNum > 0 ? balanceNum : undefined);
+    if (!calculation || !onSavePurchase) return;
+    const options: { units: number; amount: number; currentBalance?: number } = {
+      units: targetNum,
+      amount: calculation.total,
+    };
+    if (balanceNum > 0) {
+      options.currentBalance = balanceNum;
     }
+    onSavePurchase(options);
   };
 
   if (ratesLoading) {
@@ -91,22 +266,12 @@ export function PurchaseCalculator({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-1 border-l-2 border-primary py-1 pl-3 text-sm">
-          <div className="flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-primary" />
-            <span className="font-medium">Current Position</span>
-          </div>
-          <p className="text-muted-foreground">
-            You've bought <strong>{roundUnits(unitsAlreadyBought)} kWh</strong> this month.
-          </p>
-          {suggestedUnits > 0 && (
-            <p className="text-muted-foreground">
-              Based on <strong>{roundUnits(averageMonthlyUsage)} kWh/month</strong> avg, you need{" "}
-              <strong>{roundUnits(suggestedUnits)} more kWh</strong>.
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground">{daysLeftInMonth} days left this month</p>
-        </div>
+        <CurrentPosition
+          unitsAlreadyBought={unitsAlreadyBought}
+          averageMonthlyUsage={averageMonthlyUsage}
+          suggestedUnits={suggestedUnits}
+          daysLeftInMonth={daysLeftInMonth}
+        />
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
@@ -168,25 +333,11 @@ export function PurchaseCalculator({
           </div>
         </div>
 
-        {exceedsTier &&
-          tierCapacity &&
-          tierCapacity.units > 0 &&
-          tierCapacity.units !== Infinity && (
-            <div className="border-l-2 border-amber-500 py-1 pl-3 text-xs text-amber-700 dark:text-amber-400">
-              <div className="flex items-center gap-2 font-medium">
-                <AlertTriangle className="h-4 w-4" />
-                Tier Limit Warning
-              </div>
-              <p className="mt-1">
-                Buying more than <strong>{roundUnits(tierCapacity.units)} kWh</strong> will push you
-                into the next, more expensive tier.
-              </p>
-              <p className="mt-1">
-                Spend <strong>{formatCurrency(costToStayInTier)}</strong> to stay within{" "}
-                <strong>{tierCapacity.label}</strong>.
-              </p>
-            </div>
-          )}
+        <TierWarning
+          exceedsTier={exceedsTier}
+          tierCapacity={tierCapacity}
+          costToStayInTier={costToStayInTier}
+        />
 
         {targetNum > 0 && balanceNum > 0 && (
           <div className="rounded-md bg-primary/5 p-2 text-center">
@@ -198,70 +349,11 @@ export function PurchaseCalculator({
           </div>
         )}
 
-        {calculation && calculation.breakdown.length > 0 && (
-          <div className="space-y-3">
-            <div className="text-sm font-medium">Price Breakdown</div>
-
-            {/* Visual tier bar */}
-            <div className="flex h-3 overflow-hidden rounded-md bg-muted">
-              {calculation.breakdown.map((item) => {
-                const percentage = (item.units / targetNum) * 100;
-                return (
-                  <div
-                    key={item.tier}
-                    className={`h-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES]}`}
-                    style={{
-                      width: `${percentage}%`,
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Breakdown details */}
-            <div className="space-y-2">
-              {calculation.breakdown.map((item) => (
-                <div key={item.tier} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`h-2 w-2 rounded-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES]}`}
-                    />
-                    <span
-                      className={TIER_TEXT_CLASSES[item.tier as keyof typeof TIER_TEXT_CLASSES]}
-                    >
-                      {item.label}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {roundUnits(item.units)} kWh @ {formatCurrency(item.rate)}/kWh
-                    </span>
-                  </div>
-                  <span className="font-medium">{formatCurrency(item.cost)}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Total */}
-            <div className="flex items-center justify-between border-t pt-2">
-              <span className="font-semibold">Total Cost</span>
-              <span className="text-lg font-bold text-primary">
-                {formatCurrency(calculation.total)}
-              </span>
-            </div>
-
-            {/* Effective rate */}
-            <div className="text-center text-xs text-muted-foreground">
-              Effective rate: {formatCurrency(calculation.total / targetNum)}/kWh
-            </div>
-
-            {/* Save as Purchase button */}
-            {onSavePurchase && (
-              <Button variant="outline" className="w-full" onClick={handleSavePurchase}>
-                <Save className="mr-2 h-4 w-4" />
-                Save as Purchase
-              </Button>
-            )}
-          </div>
-        )}
+        <PriceBreakdown
+          calculation={calculation}
+          targetNum={targetNum}
+          onSave={onSavePurchase ? handleSavePurchase : undefined}
+        />
 
         {targetNum <= 0 && (
           <p className="py-4 text-center text-sm text-muted-foreground">
