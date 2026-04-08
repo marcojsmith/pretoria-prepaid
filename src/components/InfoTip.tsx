@@ -5,7 +5,7 @@ interface InfoTipProps {
   text: string;
 }
 
-export function InfoTip({ text }: InfoTipProps) {
+export function InfoTip({ text }: InfoTipProps): JSX.Element {
   return (
     <Popover>
       <PopoverTrigger asChild>

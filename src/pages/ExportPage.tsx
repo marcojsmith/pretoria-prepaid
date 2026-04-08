@@ -23,6 +23,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SEO } from "@/components/SEO";
+import { MAX_ITEMS_PER_PAGE, MAX_EXPORT_ITEMS } from "@/lib/constants";
+
+const IMPORT_PREVIEW_COLS = 3;
 
 interface ImportItem {
   date: string;
@@ -31,7 +34,45 @@ interface ImportItem {
   meterReading: number;
 }
 
-export default function ExportPage() {
+// Parse a single CSV line, handling quoted fields
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+// Derive missing amount or units from pricePerUnit if available
+function deriveAmountOrUnits(options: { amount: number; units: number; pricePerUnit: number }): {
+  amount: number;
+  units: number;
+} {
+  const { amount, units, pricePerUnit } = options;
+  if (!isNaN(pricePerUnit) && pricePerUnit > 0) {
+    if (isNaN(units) && !isNaN(amount)) {
+      return { amount, units: amount / pricePerUnit };
+    }
+    if (isNaN(amount) && !isNaN(units)) {
+      return { amount: units * pricePerUnit, units };
+    }
+  }
+  return { amount, units };
+}
+
+// eslint-disable-next-line llm-core/max-function-length
+export default function ExportPage(): JSX.Element | null {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { offlineCount, addBatchPurchases } = usePurchases();
@@ -55,66 +96,55 @@ export default function ExportPage() {
     }
   }, [user, authLoading, navigate]);
 
+  const findHeaderIndex = (headers: string[], searchTerms: string[]): number => {
+    return headers.findIndex((h) => searchTerms.some((term) => h.includes(term)));
+  };
+
+  const parseLine = (options: {
+    line: string;
+    dateIdx: number;
+    amountIdx: number;
+    kwhIdx: number;
+    priceIdx: number;
+  }): ImportItem | null => {
+    const { line, dateIdx, amountIdx, kwhIdx, priceIdx } = options;
+    const cols = parseCsvLine(line);
+    const date = cols[dateIdx];
+    if (!date) return null;
+
+    const pricePerUnit = priceIdx !== -1 ? parseFloat(cols[priceIdx] ?? "") : NaN;
+    const derived = deriveAmountOrUnits({
+      amount: parseFloat(cols[amountIdx] ?? ""),
+      units: parseFloat(cols[kwhIdx] ?? ""),
+      pricePerUnit,
+    });
+
+    if (isNaN(derived.amount) || isNaN(derived.units)) return null;
+    return { date, amountPaid: derived.amount, units: derived.units, meterReading: 0 };
+  };
+
   const parseCsv = useCallback((text: string): ImportItem[] => {
     if (!text) return [];
 
     const lines = text.split(/\r?\n/).filter((line) => line.trim());
     if (lines.length < 2) return [];
 
-    // Basic CSV parser that handles quotes
-    const parseLine = (line: string) => {
-      const result = [];
-      let current = "";
-      let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === "," && !inQuotes) {
-          result.push(current.trim());
-          current = "";
-        } else {
-          current += char;
-        }
-      }
-      result.push(current.trim());
-      return result;
-    };
-
-    const headers = parseLine(lines[0].toLowerCase());
-    const dateIdx = headers.findIndex((h) => h.includes("date"));
-    const amountIdx = headers.findIndex((h) => h.includes("amount") || h.includes("paid"));
-    const kwhIdx = headers.findIndex((h) => h.includes("kwh") || h.includes("unit"));
-    const priceIdx = headers.findIndex((h) => h.includes("price") || h.includes("rate"));
+    const headers = parseCsvLine((lines[0] ?? "").toLowerCase());
+    const dateIdx = findHeaderIndex(headers, ["date"]);
+    const amountIdx = findHeaderIndex(headers, ["amount", "paid"]);
+    const kwhIdx = findHeaderIndex(headers, ["kwh", "unit"]);
+    const priceIdx = findHeaderIndex(headers, ["price", "rate"]);
 
     if (dateIdx === -1 || (amountIdx === -1 && kwhIdx === -1)) return [];
 
-    const parsed: ImportItem[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const cols = parseLine(lines[i]);
-      const date = cols[dateIdx];
-      let amount = parseFloat(cols[amountIdx]);
-      let units = parseFloat(cols[kwhIdx]);
-      const pricePerUnit = priceIdx !== -1 ? parseFloat(cols[priceIdx]) : NaN;
-
-      // Handle missing values if pricePerUnit is available
-      if (!isNaN(pricePerUnit) && pricePerUnit > 0) {
-        if (isNaN(units) && !isNaN(amount)) {
-          units = amount / pricePerUnit;
-        } else if (isNaN(amount) && !isNaN(units)) {
-          amount = units * pricePerUnit;
-        }
-      }
-
-      if (date && !isNaN(amount) && !isNaN(units)) {
-        parsed.push({ date, amountPaid: amount, units, meterReading: 0 });
-      }
-    }
-    return parsed;
+    return lines.slice(1).reduce<ImportItem[]>((parsed, line) => {
+      const item = parseLine({ line, dateIdx, amountIdx, kwhIdx, priceIdx });
+      if (item) parsed.push(item);
+      return parsed;
+    }, []);
   }, []);
 
-  const exportUserData = async () => {
+  const exportUserData = () => {
     setLoadingUser(true);
     try {
       const data = {
@@ -350,7 +380,9 @@ export default function ExportPage() {
                         </h4>
                         <Button
                           size="sm"
-                          onClick={finalizeImport}
+                          onClick={() => {
+                            void finalizeImport();
+                          }}
                           disabled={isImporting}
                           className="gap-2"
                         >
@@ -372,17 +404,20 @@ export default function ExportPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {importData.slice(0, 10).map((item, i) => (
+                            {importData.slice(0, MAX_ITEMS_PER_PAGE).map((item, i) => (
                               <tr key={i} className="border-b last:border-0">
                                 <td className="py-2">{item.date}</td>
                                 <td className="py-2">R {item.amountPaid.toFixed(2)}</td>
                                 <td className="py-2">{item.units.toFixed(1)} kWh</td>
                               </tr>
                             ))}
-                            {importData.length > 10 && (
+                            {importData.length > MAX_ITEMS_PER_PAGE && (
                               <tr>
-                                <td colSpan={3} className="pt-2 text-center text-muted-foreground">
-                                  + {importData.length - 10} more rows
+                                <td
+                                  colSpan={IMPORT_PREVIEW_COLS}
+                                  className="pt-2 text-center text-muted-foreground"
+                                >
+                                  + {importData.length - MAX_ITEMS_PER_PAGE} more rows
                                 </td>
                               </tr>
                             )}
@@ -435,7 +470,7 @@ export default function ExportPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {purchases?.slice(0, 50).map((p) => (
+                        {purchases?.slice(0, MAX_EXPORT_ITEMS).map((p) => (
                           <tr key={p._id} className="border-t">
                             <td className="px-4 py-2">{new Date(p.date).toLocaleDateString()}</td>
                             <td className="px-4 py-2 text-right">
@@ -461,7 +496,7 @@ export default function ExportPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {readings.slice(0, 50).map((r) => (
+                          {readings.slice(0, MAX_EXPORT_ITEMS).map((r) => (
                             <tr key={r._id} className="border-t">
                               <td className="px-4 py-2">{new Date(r.date).toLocaleDateString()}</td>
                               <td className="px-4 py-2 text-right">{r.readingPost.toFixed(1)}</td>
@@ -499,7 +534,9 @@ export default function ExportPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => copyToClipboard(userData)}
+                          onClick={() => {
+                            void copyToClipboard(userData);
+                          }}
                         >
                           <Copy className="mr-2 h-3 w-3" />
                           Copy to Clipboard

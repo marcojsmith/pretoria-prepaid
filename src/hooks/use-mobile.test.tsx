@@ -6,7 +6,7 @@ describe("useIsMobile", () => {
   beforeEach(() => {
     vi.stubGlobal(
       "matchMedia",
-      vi.fn().mockImplementation((query) => ({
+      vi.fn().mockImplementation((query: string) => ({
         matches: false,
         media: query,
         onchange: null,
@@ -37,13 +37,13 @@ describe("useIsMobile", () => {
 
     vi.stubGlobal(
       "matchMedia",
-      vi.fn().mockImplementation((query) => ({
+      vi.fn().mockImplementation((query: string) => ({
         matches,
         media: query,
         onchange: null,
         addListener: vi.fn(),
         removeListener: vi.fn(),
-        addEventListener: vi.fn((event, handler) => {
+        addEventListener: vi.fn((event: string, handler: () => void) => {
           if (event === "change") changeHandler = handler;
         }),
         removeEventListener: vi.fn(),

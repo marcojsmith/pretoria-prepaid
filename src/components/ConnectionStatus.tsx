@@ -8,7 +8,10 @@ interface ConnectionStatusProps {
   className?: string;
 }
 
-export function ConnectionStatus({ offlineCount = 0, className }: ConnectionStatusProps) {
+export function ConnectionStatus({
+  offlineCount = 0,
+  className,
+}: ConnectionStatusProps): JSX.Element | null {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {

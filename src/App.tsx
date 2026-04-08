@@ -31,15 +31,111 @@ const LoadingFallback = () => (
   </div>
 );
 
+function renderPublicRoutes() {
+  return (
+    <>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/auth/*" element={<Auth />} />
+      <Route path="*" element={<NotFound />} />
+    </>
+  );
+}
+
+function renderProtectedDashboard() {
+  return (
+    <>
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rates"
+        element={
+          <ProtectedRoute>
+            <Rates />
+          </ProtectedRoute>
+        }
+      />
+    </>
+  );
+}
+
+function renderProtectedData() {
+  return (
+    <>
+      <Route
+        path="/history"
+        element={
+          <ProtectedRoute>
+            <HistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/calculator"
+        element={
+          <ProtectedRoute>
+            <CalculatorPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/export"
+        element={
+          <ProtectedRoute>
+            <ExportPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        }
+      />
+    </>
+  );
+}
+
+function renderProtectedRoutes() {
+  return (
+    <>
+      {renderProtectedDashboard()}
+      {renderProtectedData()}
+    </>
+  );
+}
+
+function renderAppRoutes() {
+  return (
+    <Routes>
+      {renderPublicRoutes()}
+      {renderProtectedRoutes()}
+    </Routes>
+  );
+}
+
 const App = () => {
   useEffect(() => {
-    // Clear the app badge when the application is loaded
-    clearBadge();
+    void clearBadge();
 
-    // Also clear it when the app becomes visible/active again
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        clearBadge();
+        void clearBadge();
       }
     };
 
@@ -58,70 +154,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <AdminDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/auth/*" element={<Auth />} />
-                <Route
-                  path="/rates"
-                  element={
-                    <ProtectedRoute>
-                      <Rates />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/history"
-                  element={
-                    <ProtectedRoute>
-                      <HistoryPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/calculator"
-                  element={
-                    <ProtectedRoute>
-                      <CalculatorPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/export"
-                  element={
-                    <ProtectedRoute>
-                      <ExportPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute>
-                      <Settings />
-                    </ProtectedRoute>
-                  }
-                />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
+            <Suspense fallback={<LoadingFallback />}>{renderAppRoutes()}</Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

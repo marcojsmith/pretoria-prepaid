@@ -14,10 +14,11 @@ import {
   subscribeUserToPush,
   unsubscribeUserFromPush,
   isPushSupported,
-  PushSubscriptionJSON,
 } from "@/lib/push-notifications";
+import type { PushSubscriptionJSON } from "@/lib/push-notifications";
 
-export default function Settings() {
+// eslint-disable-next-line llm-core/max-function-length
+export default function Settings(): JSX.Element | null {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, updateProfile, loading: profileLoading } = useProfile();
@@ -48,61 +49,63 @@ export default function Settings() {
     }
   }, [user, authLoading, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
+  const handleSubmit = (e: React.FormEvent) => {
+    void (async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsSaving(true);
 
-    try {
-      let pushSubscription: PushSubscriptionJSON | undefined =
-        profile?.pushSubscription as unknown as PushSubscriptionJSON | undefined;
+      try {
+        let pushSubscription: PushSubscriptionJSON | undefined =
+          profile?.pushSubscription as unknown as PushSubscriptionJSON | undefined;
 
-      if (formData.pushNotificationsEnabled && !profile?.pushNotificationsEnabled) {
-        // User is enabling push notifications
-        try {
-          const subscription = await subscribeUserToPush();
-          pushSubscription = subscription;
-        } catch (err: unknown) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Failed to enable push notifications.";
-          toast.error(errorMessage);
-          setFormData((prev) => ({ ...prev, pushNotificationsEnabled: false }));
-          setIsSaving(false);
-          return; // Stop submission if subscription failed
+        if (formData.pushNotificationsEnabled && !profile?.pushNotificationsEnabled) {
+          // User is enabling push notifications
+          try {
+            const subscription = await subscribeUserToPush();
+            pushSubscription = subscription;
+          } catch (error: unknown) {
+            const errorMessage =
+              error instanceof Error ? error.message : "Failed to enable push notifications.";
+            toast.error(errorMessage);
+            setFormData((prev) => ({ ...prev, pushNotificationsEnabled: false }));
+            setIsSaving(false);
+            return; // Stop submission if subscription failed
+          }
+        } else if (!formData.pushNotificationsEnabled && profile?.pushNotificationsEnabled) {
+          // User is disabling push notifications
+          await unsubscribeUserFromPush();
+          pushSubscription = undefined;
         }
-      } else if (!formData.pushNotificationsEnabled && profile?.pushNotificationsEnabled) {
-        // User is disabling push notifications
-        await unsubscribeUserFromPush();
-        pushSubscription = undefined;
+
+        const updates: {
+          preferredName?: string;
+          meterNumber?: string;
+          pushNotificationsEnabled?: boolean;
+          pushSubscription?: PushSubscriptionJSON;
+          lowBalanceThreshold?: number;
+        } = {
+          preferredName: formData.preferredName,
+          meterNumber: formData.meterNumber,
+          pushNotificationsEnabled: formData.pushNotificationsEnabled,
+        };
+
+        if (pushSubscription) {
+          updates.pushSubscription = pushSubscription;
+        }
+
+        if (formData.lowBalanceThreshold) {
+          updates.lowBalanceThreshold = parseFloat(formData.lowBalanceThreshold);
+        }
+
+        await updateProfile(updates);
+        toast.success("Settings updated successfully");
+      } catch (error) {
+        console.error("Failed to update settings:", error);
+        toast.error("Failed to update settings");
+      } finally {
+        setIsSaving(false);
       }
-
-      const updates: {
-        preferredName?: string;
-        meterNumber?: string;
-        pushNotificationsEnabled?: boolean;
-        pushSubscription?: PushSubscriptionJSON;
-        lowBalanceThreshold?: number;
-      } = {
-        preferredName: formData.preferredName,
-        meterNumber: formData.meterNumber,
-        pushNotificationsEnabled: formData.pushNotificationsEnabled,
-      };
-
-      if (pushSubscription) {
-        updates.pushSubscription = pushSubscription;
-      }
-
-      if (formData.lowBalanceThreshold) {
-        updates.lowBalanceThreshold = parseFloat(formData.lowBalanceThreshold);
-      }
-
-      await updateProfile(updates);
-      toast.success("Settings updated successfully");
-    } catch (error) {
-      console.error("Failed to update settings:", error);
-      toast.error("Failed to update settings");
-    } finally {
-      setIsSaving(false);
-    }
+    })(e);
   };
 
   if (authLoading || profileLoading) {

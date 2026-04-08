@@ -5,15 +5,37 @@ import { NavLink } from "./NavLink";
 import { DashboardStats } from "./DashboardStats";
 import { TierProgress } from "./TierProgress";
 import { useRates } from "../hooks/useRates";
+import type { Id } from "../../convex/_generated/dataModel";
 
 vi.mock("../hooks/useRates");
 
 const MOCK_RATES = [
-  { _id: "1", tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.42585 },
-  { _id: "2", tier_number: 2, tier_label: "Tier 2", min_units: 101, max_units: 400, rate: 4.00936 },
-  { _id: "3", tier_number: 3, tier_label: "Tier 3", min_units: 401, max_units: 650, rate: 4.36816 },
   {
-    _id: "4",
+    _id: "1" as Id<"electricity_rates">,
+    tier_number: 1,
+    tier_label: "Tier 1",
+    min_units: 1,
+    max_units: 100,
+    rate: 3.42585,
+  },
+  {
+    _id: "2" as Id<"electricity_rates">,
+    tier_number: 2,
+    tier_label: "Tier 2",
+    min_units: 101,
+    max_units: 400,
+    rate: 4.00936,
+  },
+  {
+    _id: "3" as Id<"electricity_rates">,
+    tier_number: 3,
+    tier_label: "Tier 3",
+    min_units: 401,
+    max_units: 650,
+    rate: 4.36816,
+  },
+  {
+    _id: "4" as Id<"electricity_rates">,
     tier_number: 4,
     tier_label: "Tier 4",
     min_units: 651,

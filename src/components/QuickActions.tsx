@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Calculator, Plus, Activity } from "lucide-react";
 
-export function QuickActions() {
+export function QuickActions(): JSX.Element {
   const navigate = useNavigate();
 
   const actions = [

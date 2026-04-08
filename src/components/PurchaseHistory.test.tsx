@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { PurchaseHistory } from "./PurchaseHistory";
-import { Purchase } from "@/lib/electricity";
+import type { Purchase } from "@/lib/electricity";
 
 type IntersectionObserverCallback = (entries: IntersectionObserverEntry[]) => void;
 let capturedObserverCallback: IntersectionObserverCallback | null = null;
@@ -34,7 +34,7 @@ describe("PurchaseHistory", () => {
     expect(screen.getByText(/No purchases recorded yet/i)).toBeInTheDocument();
   });
 
-  it("renders list of purchases correctly and handles deletion", async () => {
+  it("renders list of purchases correctly and handles deletion", () => {
     const purchases: Purchase[] = [
       {
         _id: "1",
@@ -52,7 +52,7 @@ describe("PurchaseHistory", () => {
     expect(screen.getAllByText(/R 342.00/i).length).toBeGreaterThan(0);
 
     const deleteButton = screen.getByRole("button");
-    await act(async () => {
+    act(() => {
       fireEvent.click(deleteButton);
     });
 
@@ -172,7 +172,7 @@ describe("PurchaseHistory", () => {
     expect(screen.getByText(/Unknown/)).toBeInTheDocument();
   });
 
-  it("IntersectionObserver callback loads more when target is intersecting", async () => {
+  it("IntersectionObserver callback loads more when target is intersecting", () => {
     const purchases: Purchase[] = Array.from({ length: 15 }, (_, i) => ({
       _id: String(i + 1),
       date: `2024-01-${String(i + 1).padStart(2, "0")}`,
@@ -188,15 +188,16 @@ describe("PurchaseHistory", () => {
     expect(mockObserve).toHaveBeenCalled();
 
     // Trigger the observer callback with isIntersecting = true
-    await act(async () => {
-      capturedObserverCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
+    act(() => {
+      if (!capturedObserverCallback) throw new Error("capturedObserverCallback not set");
+      capturedObserverCallback([{ isIntersecting: true } as IntersectionObserverEntry]);
     });
 
     // All 15 should now be visible (visibleCount went from 10 → 20)
     expect(screen.queryByText(/remaining/i)).not.toBeInTheDocument();
   });
 
-  it("IntersectionObserver callback does not load more when not intersecting", async () => {
+  it("IntersectionObserver callback does not load more when not intersecting", () => {
     const purchases: Purchase[] = Array.from({ length: 15 }, (_, i) => ({
       _id: String(i + 1),
       date: `2024-01-${String(i + 1).padStart(2, "0")}`,
@@ -208,8 +209,9 @@ describe("PurchaseHistory", () => {
 
     render(<PurchaseHistory purchases={purchases} onDelete={mockOnDelete} />);
 
-    await act(async () => {
-      capturedObserverCallback!([{ isIntersecting: false } as IntersectionObserverEntry]);
+    act(() => {
+      if (!capturedObserverCallback) throw new Error("capturedObserverCallback not set");
+      capturedObserverCallback([{ isIntersecting: false } as IntersectionObserverEntry]);
     });
 
     // Still 5 remaining (only 10 of 15 visible)

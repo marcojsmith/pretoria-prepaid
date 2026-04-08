@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
@@ -14,7 +14,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    basicSsl(),
+    (basicSsl as () => PluginOption)(),
     VitePWA({
       strategies: "injectManifest",
       srcDir: "src",

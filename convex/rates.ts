@@ -1,5 +1,19 @@
-import { query, mutation, QueryCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
+import {
+  TIER_1_MIN,
+  TIER_1_MAX,
+  TIER_1_RATE,
+  TIER_2_MIN,
+  TIER_2_MAX,
+  TIER_2_RATE,
+  TIER_3_MIN,
+  TIER_3_MAX,
+  TIER_3_RATE,
+  TIER_4_MIN,
+  TIER_4_RATE,
+} from "./constants";
 
 /**
  * Helper to check if the current user is an admin.
@@ -53,10 +67,12 @@ export const updateRate = mutation({
     await ctx.db.patch(id, updates);
 
     // Audit logging
-    console.log(
-      `[AUDIT] Rate updated by ${identity.email || identity.subject}. ` +
-        `Rate ID: ${id}, Old: ${JSON.stringify(oldRate)}, Updates: ${JSON.stringify(updates)}`
-    );
+    console.warn("[AUDIT] Rate updated", {
+      updatedBy: identity.email ?? identity.subject,
+      rateId: id,
+      old: oldRate,
+      updates,
+    });
   },
 });
 
@@ -70,16 +86,42 @@ export const seedRates = mutation({
     if (existing.length > 0) return;
 
     const TIERS = [
-      { tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.42585 },
-      { tier_number: 2, tier_label: "Tier 2", min_units: 101, max_units: 400, rate: 4.00936 },
-      { tier_number: 3, tier_label: "Tier 3", min_units: 401, max_units: 650, rate: 4.36816 },
-      { tier_number: 4, tier_label: "Tier 4", min_units: 651, max_units: null, rate: 4.70902 },
+      {
+        tier_number: 1,
+        tier_label: "Tier 1",
+        min_units: TIER_1_MIN,
+        max_units: TIER_1_MAX,
+        rate: TIER_1_RATE,
+      },
+      {
+        tier_number: 2,
+        tier_label: "Tier 2",
+        min_units: TIER_2_MIN,
+        max_units: TIER_2_MAX,
+        rate: TIER_2_RATE,
+      },
+      {
+        // eslint-disable-next-line llm-core/no-magic-numbers
+        tier_number: 3,
+        tier_label: "Tier 3",
+        min_units: TIER_3_MIN,
+        max_units: TIER_3_MAX,
+        rate: TIER_3_RATE,
+      },
+      {
+        // eslint-disable-next-line llm-core/no-magic-numbers
+        tier_number: 4,
+        tier_label: "Tier 4",
+        min_units: TIER_4_MIN,
+        max_units: null,
+        rate: TIER_4_RATE,
+      },
     ];
 
     for (const tier of TIERS) {
       await ctx.db.insert("electricity_rates", tier);
     }
 
-    console.log(`[AUDIT] Rates seeded by ${identity.email || identity.subject}`);
+    console.warn("[AUDIT] Rates seeded", { seededBy: identity.email ?? identity.subject });
   },
 });

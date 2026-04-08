@@ -8,7 +8,7 @@ import { useRates } from "@/hooks/useRates";
 import { useEffect } from "react";
 import { SEO } from "@/components/SEO";
 
-export default function HomePage() {
+export default function HomePage(): JSX.Element {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { rates, loading: ratesLoading } = useRates();

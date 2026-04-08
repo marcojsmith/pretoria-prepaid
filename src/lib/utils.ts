@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-export function cn(...inputs: ClassValue[]) {
+export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]) {
  * @param data Array of objects to convert
  * @returns CSV string
  */
-export function convertToCSV(data: Record<string, unknown>[]): string {
+export function convertToCSV(data: (Record<string, unknown> | null)[]): string {
   if (!Array.isArray(data) || data.length === 0) return "";
 
   // Find the first non-null/undefined object to get headers
@@ -46,7 +46,7 @@ export function convertToCSV(data: Record<string, unknown>[]): string {
  * @param csv CSV content string
  * @param filename Desired filename
  */
-export function downloadCSV(csv: string, filename: string) {
+export function downloadCSV(csv: string, filename: string): void {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

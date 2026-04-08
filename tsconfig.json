@@ -26,8 +26,11 @@
     "noFallthroughCasesInSwitch": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "verbatimModuleSyntax": true,
     "types": ["@testing-library/jest-dom", "vite-plugin-pwa/client", "vite-plugin-pwa/react"]
   },
-  "include": ["src", "convex"],
+  "include": ["src", "convex", "vitest.setup.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

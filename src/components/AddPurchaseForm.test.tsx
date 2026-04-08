@@ -66,7 +66,12 @@ describe("AddPurchaseForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Add Purchase/i }));
 
-    expect(onAdd).toHaveBeenCalledWith(120, 500, expect.any(String), 1500);
+    expect(onAdd).toHaveBeenCalledWith({
+      units: 120,
+      amountPaid: 500,
+      date: expect.any(String),
+      meterReading: 1500,
+    });
   });
 
   it("shows error toast when amount is invalid", () => {
@@ -156,9 +161,13 @@ describe("AddPurchaseForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Add Purchase/i }));
 
-    expect(onAdd).toHaveBeenCalledWith(120, 500, expect.any(String), 1500);
+    expect(onAdd).toHaveBeenCalledWith({
+      units: 120,
+      amountPaid: 500,
+      date: expect.any(String),
+      meterReading: 1500,
+    });
     expect(sonner.toast.success).toHaveBeenCalledWith(expect.stringContaining("Added 120 kWh"));
-    // Number inputs in jsdom return null for empty value
     expect((screen.getByLabelText(/Amount Paid/i) as HTMLInputElement).value).toBeFalsy();
     expect((screen.getByLabelText(/kWh Received/i) as HTMLInputElement).value).toBeFalsy();
     expect((screen.getByLabelText(/Current Meter/i) as HTMLInputElement).value).toBeFalsy();
@@ -173,7 +182,8 @@ describe("AddPurchaseForm", () => {
     // Leave amount at 0
 
     const form = container.querySelector("form");
-    fireEvent.submit(form!);
+    if (!form) throw new Error("form not found");
+    fireEvent.submit(form);
 
     expect(sonner.toast.error).toHaveBeenCalledWith("Please enter a valid amount paid");
     expect(onAdd).not.toHaveBeenCalled();
@@ -188,7 +198,8 @@ describe("AddPurchaseForm", () => {
     // Leave kWh at 0
 
     const form = container.querySelector("form");
-    fireEvent.submit(form!);
+    if (!form) throw new Error("form not found");
+    fireEvent.submit(form);
 
     expect(sonner.toast.error).toHaveBeenCalledWith("Please enter the kWh received");
     expect(onAdd).not.toHaveBeenCalled();
@@ -203,7 +214,8 @@ describe("AddPurchaseForm", () => {
     // Leave meter reading at 0
 
     const form = container.querySelector("form");
-    fireEvent.submit(form!);
+    if (!form) throw new Error("form not found");
+    fireEvent.submit(form);
 
     expect(sonner.toast.error).toHaveBeenCalledWith("Please enter the current meter reading");
     expect(onAdd).not.toHaveBeenCalled();

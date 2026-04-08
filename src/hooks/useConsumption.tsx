@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import type { Doc } from "../../convex/_generated/dataModel";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
@@ -14,7 +15,18 @@ export interface ConsumptionStats {
   isEstimatedBurnRate: boolean;
 }
 
-export function useConsumption() {
+export interface Reading extends Doc<"meter_readings"> {}
+
+export interface UseConsumptionReturn {
+  readings: Reading[] | undefined;
+  stats: ConsumptionStats | null;
+  loading: boolean;
+  addOnboardingReading: (reading: number, defaultDailyUsage?: number) => Promise<void>;
+  hasAnyReadings: boolean;
+  hasPurchaseReadings: boolean;
+}
+
+export function useConsumption(): UseConsumptionReturn {
   const readings = useQuery(api.readings.getReadings);
   const stats = useQuery(api.readings.getConsumptionStats) as ConsumptionStats | null | undefined;
   const hasAnyReadings = useQuery(api.readings.hasAnyReadings) ?? false;

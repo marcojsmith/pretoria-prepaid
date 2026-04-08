@@ -2,7 +2,7 @@ import { Heart, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export function PatreonBanner() {
+export function PatreonBanner(): JSX.Element | null {
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed) return null;

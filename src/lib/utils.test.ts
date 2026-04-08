@@ -2,7 +2,6 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { cn, convertToCSV, downloadCSV } from "./utils";
 
 describe("cn utility", () => {
-  // ... existing tests ...
   it("handles undefined and null", () => {
     expect(cn("px-2", undefined, null)).toBe("px-2");
   });
@@ -14,13 +13,13 @@ describe("CSV utilities", () => {
     { name: "Jane", age: 25, city: "London" },
   ];
 
-  const origCreateObjectURL = global.URL.createObjectURL;
-  const origRevokeObjectURL = global.URL.revokeObjectURL;
+  const origCreateObjectURL = globalThis.URL?.createObjectURL?.bind(globalThis.URL);
+  const origRevokeObjectURL = globalThis.URL?.revokeObjectURL?.bind(globalThis.URL);
 
   afterEach(() => {
     vi.restoreAllMocks();
-    global.URL.createObjectURL = origCreateObjectURL;
-    global.URL.revokeObjectURL = origRevokeObjectURL;
+    if (origCreateObjectURL) globalThis.URL.createObjectURL = origCreateObjectURL;
+    if (origRevokeObjectURL) globalThis.URL.revokeObjectURL = origRevokeObjectURL;
   });
 
   it("converts array of objects to CSV string", () => {
@@ -57,19 +56,19 @@ describe("CSV utilities", () => {
   });
 
   it("returns empty string when all items are null", () => {
-    const result = convertToCSV([null as any, null as any]);
+    const result = convertToCSV([null, null]);
     expect(result).toBe("");
   });
 
   it("uses first valid object for headers when array starts with nulls", () => {
-    const data = [null as any, { name: "Alice", age: 30 }];
+    const data: (Record<string, unknown> | null)[] = [null, { name: "Alice", age: 30 }];
     const result = convertToCSV(data);
     expect(result).toContain("name,age");
     expect(result).toContain("Alice");
   });
 
   it("handles null objects mixed in data rows", () => {
-    const data = [{ name: "Alice" }, null as any, { name: "Bob" }];
+    const data: (Record<string, unknown> | null)[] = [{ name: "Alice" }, null, { name: "Bob" }];
     const result = convertToCSV(data);
     expect(result).toContain("Alice");
     const lines = result.split("\n");
@@ -77,26 +76,26 @@ describe("CSV utilities", () => {
   });
 
   it("triggers download", () => {
-    // Mock DOM elements and methods
     const mockElement = {
       setAttribute: vi.fn(),
       click: vi.fn(),
       style: {},
     };
 
-    vi.spyOn(document, "createElement").mockReturnValue(mockElement as any);
+    const createElementSpy = vi
+      .spyOn(document, "createElement")
+      .mockReturnValue(mockElement as unknown as HTMLAnchorElement);
 
-    vi.spyOn(document.body, "appendChild").mockImplementation(() => mockElement as any);
+    vi.spyOn(document.body, "appendChild").mockImplementation(() => mockElement as unknown as Node);
 
-    vi.spyOn(document.body, "removeChild").mockImplementation(() => mockElement as any);
+    vi.spyOn(document.body, "removeChild").mockImplementation(() => mockElement as unknown as Node);
 
-    // Mock URL methods
-    global.URL.createObjectURL = vi.fn(() => "blob:url");
-    global.URL.revokeObjectURL = vi.fn();
+    URL.createObjectURL = vi.fn(() => "blob:url");
+    URL.revokeObjectURL = vi.fn();
 
     downloadCSV("col1,col2\nval1,val2", "test.csv");
 
-    expect(document.createElement).toHaveBeenCalledWith("a");
+    expect(createElementSpy).toHaveBeenCalledWith("a");
     expect(mockElement.setAttribute).toHaveBeenCalledWith("href", "blob:url");
     expect(mockElement.setAttribute).toHaveBeenCalledWith("download", "test.csv");
     expect(mockElement.click).toHaveBeenCalled();

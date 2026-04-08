@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useToast, toast, reducer, State, Action, ToasterToast } from "./use-toast";
+import { useToast, toast, reducer } from "./use-toast";
+import type { State, Action, ToasterToast } from "./use-toast";
 
 describe("useToast hook and logic", () => {
   beforeEach(() => {
@@ -15,7 +16,7 @@ describe("useToast hook and logic", () => {
     });
 
     expect(result.current.toasts.length).toBe(1);
-    expect(result.current.toasts[0].title).toBe("Test Toast");
+    expect((result.current.toasts[0] as { title: string }).title).toBe("Test Toast");
   });
 
   it("updates a toast when update() is called", () => {
@@ -30,7 +31,7 @@ describe("useToast hook and logic", () => {
       t.update({ title: "Updated Title", id: t.id });
     });
 
-    expect(result.current.toasts[0].title).toBe("Updated Title");
+    expect((result.current.toasts[0] as { title: string }).title).toBe("Updated Title");
   });
 
   it("dismisses a toast when dismiss() is called", () => {
@@ -46,7 +47,7 @@ describe("useToast hook and logic", () => {
       result.current.dismiss(id);
     });
 
-    expect(result.current.toasts[0].open).toBe(false);
+    expect((result.current.toasts[0] as ToasterToast).open).toBe(false);
   });
 
   it("dismisses all toasts when dismiss() is called without id", () => {
@@ -70,7 +71,7 @@ describe("useToast hook and logic", () => {
       toast({ title: "OnOpenChange Test" });
     });
 
-    const currentToast = result.current.toasts[0];
+    const currentToast = result.current.toasts[0] as ToasterToast;
 
     act(() => {
       if (currentToast.onOpenChange) {
@@ -78,7 +79,7 @@ describe("useToast hook and logic", () => {
       }
     });
 
-    expect(result.current.toasts[0].open).toBe(false);
+    expect((result.current.toasts[0] as ToasterToast).open).toBe(false);
   });
 
   it("reducer handles UPDATE_TOAST", () => {
@@ -88,7 +89,7 @@ describe("useToast hook and logic", () => {
       toast: { id: "1", title: "New" },
     };
     const nextState = reducer(initialState, action);
-    expect(nextState.toasts[0].title).toBe("New");
+    expect((nextState.toasts[0] as ToasterToast).title).toBe("New");
   });
 
   it("reducer handles REMOVE_TOAST without id", () => {
@@ -107,7 +108,7 @@ describe("useToast hook and logic", () => {
     const initialState: State = { toasts: [{ id: "1", title: "T1", open: true }] };
     const action: Action = { type: "DISMISS_TOAST", toastId: "1" };
     const nextState = reducer(initialState, action);
-    expect(nextState.toasts[0].open).toBe(false);
+    expect((nextState.toasts[0] as ToasterToast).open).toBe(false);
   });
 
   it("reducer handles REMOVE_TOAST with specific toastId", () => {
@@ -120,6 +121,6 @@ describe("useToast hook and logic", () => {
     const action: Action = { type: "REMOVE_TOAST", toastId: "1" };
     const nextState = reducer(initialState, action);
     expect(nextState.toasts.length).toBe(1);
-    expect(nextState.toasts[0].id).toBe("2");
+    expect((nextState.toasts[0] as ToasterToast).id).toBe("2");
   });
 });

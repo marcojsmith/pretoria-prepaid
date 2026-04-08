@@ -7,6 +7,17 @@ cleanupOutdatedCaches();
 
 precacheAndRoute(self.__WB_MANIFEST);
 
+const DEFAULT_ICON = "/icons/icon-192x192.png";
+
+interface NotificationData {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  data?: { url?: string };
+  unreadCount?: number;
+}
+
 interface BadgingNavigator extends Navigator {
   setAppBadge(contents?: number): Promise<void>;
   clearAppBadge(): Promise<void>;
@@ -15,19 +26,18 @@ interface BadgingNavigator extends Navigator {
 self.addEventListener("push", (event) => {
   if (event.data) {
     try {
-      const data = event.data.json();
+      const data = event.data.json() as NotificationData;
       const options: NotificationOptions = {
         body: data.body,
-        icon: data.icon || "/icons/icon-192x192.png",
-        badge: data.badge || "/icons/icon-192x192.png",
+        icon: data.icon ?? DEFAULT_ICON,
+        badge: data.badge ?? DEFAULT_ICON,
         data: data.data,
       };
 
       // Handle App Badge API
       if ("setAppBadge" in navigator) {
         // If the push data contains an unreadCount, use it, otherwise show a generic badge
-        const badgeCount =
-          data.unreadCount !== undefined ? (data.unreadCount as number) : undefined;
+        const badgeCount = data.unreadCount !== undefined ? data.unreadCount : undefined;
         (navigator as BadgingNavigator).setAppBadge(badgeCount).catch((err: unknown) => {
           console.error("Failed to set app badge:", err);
         });
@@ -47,7 +57,7 @@ self.addEventListener("push", (event) => {
       event.waitUntil(
         self.registration.showNotification("Pretoria Prepaid", {
           body: "You have a new electricity alert.",
-          icon: "/icons/icon-192x192.png",
+          icon: DEFAULT_ICON,
         })
       );
     }
@@ -64,8 +74,8 @@ self.addEventListener("notificationclick", (event) => {
     });
   }
 
-  const urlToOpen = new URL(event.notification.data?.url || "/dashboard", self.location.origin)
-    .href;
+  const notificationData = event.notification.data as NotificationData | undefined;
+  const urlToOpen = new URL(notificationData?.data?.url ?? "/dashboard", self.location.origin).href;
 
   event.waitUntil(
     (async () => {
@@ -125,7 +135,7 @@ self.addEventListener("pushsubscriptionchange", (event: Event) => {
         // for background sync here, we'll rely on our frontend's useProfile sync
         // when the user next opens the app.
         // We log it here for debugging/visibility in DevTools.
-        console.log("Push subscription rotated successfully:", newSubscription);
+        console.warn("Push subscription rotated successfully:", newSubscription);
       }
     })()
   );

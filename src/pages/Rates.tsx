@@ -13,7 +13,79 @@ import { formatCurrency } from "@/lib/electricity";
 import { useToast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 
-export default function Rates() {
+interface ElectricityRateRow {
+  _id: string;
+  tier_label: string;
+  min_units: number;
+  max_units: number | null;
+  rate: number;
+}
+
+function RateRow({
+  rate,
+  editingId,
+  editValue,
+  saving,
+  isAdmin,
+  onEdit,
+  onSave,
+  onCancel,
+  onEditValueChange,
+}: {
+  rate: ElectricityRateRow;
+  editingId: string | null;
+  editValue: string;
+  saving: boolean;
+  isAdmin: boolean;
+  onEdit: (id: string, currentRate: number) => void;
+  onSave: (id: string) => void;
+  onCancel: () => void;
+  onEditValueChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-md border border-muted bg-card p-3">
+      <div className="flex-1">
+        <p className="text-sm font-medium">{rate.tier_label}</p>
+        <p className="text-xs text-muted-foreground">
+          {rate.min_units}-{rate.max_units ?? "∞"} kWh
+        </p>
+      </div>
+      {editingId === rate._id ? (
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            step="0.00001"
+            value={editValue}
+            onChange={(e) => onEditValueChange(e.target.value)}
+            className="h-8 w-24 text-xs"
+          />
+          <Button size="sm" variant="ghost" onClick={() => onSave(rate._id)} disabled={saving}>
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onCancel}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">{formatCurrency(rate.rate)}/kWh</span>
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onEdit(rate._id, rate.rate)}
+              data-testid="edit-rate-button"
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Rates(): JSX.Element | null {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { rates, loading: ratesLoading, updateRate } = useRates();
@@ -50,7 +122,7 @@ export default function Rates() {
     setEditValue("");
   };
 
-  const handleSave = async (id: string) => {
+  const handleSave = async (id: string): Promise<void> => {
     const newRate = parseFloat(editValue);
     if (isNaN(newRate) || newRate <= 0) {
       toast({
@@ -61,20 +133,29 @@ export default function Rates() {
       return;
     }
     setSaving(true);
-    const { error } = await updateRate(id, newRate);
-    setSaving(false);
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update rate",
-        variant: "destructive",
-      });
-    } else {
+    try {
+      const { error } = await updateRate(id, newRate);
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update rate",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
         title: "Success",
         description: "Rate updated successfully",
       });
       setEditingId(null);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to update rate",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -98,58 +179,20 @@ export default function Rates() {
             <CardContent>
               <div className="space-y-3">
                 {rates.map((rate) => (
-                  <div
+                  <RateRow
                     key={rate._id}
-                    className="flex items-center justify-between rounded-md border border-muted bg-card p-3"
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{rate.tier_label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {rate.min_units}-{rate.max_units ?? "∞"} kWh
-                      </p>
-                    </div>
-
-                    {editingId === rate._id ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          step="0.00001"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="h-8 w-24 text-xs"
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleSave(rate._id)}
-                          disabled={saving}
-                        >
-                          {saving ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Check className="h-3 w-3" />
-                          )}
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={handleCancel}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{formatCurrency(rate.rate)}/kWh</span>
-                        {isAdmin && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEdit(rate._id, rate.rate)}
-                            data-testid="edit-rate-button"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                    rate={rate}
+                    editingId={editingId}
+                    editValue={editValue}
+                    saving={saving}
+                    isAdmin={isAdmin}
+                    onEdit={handleEdit}
+                    onSave={(id) => {
+                      void handleSave(id);
+                    }}
+                    onCancel={handleCancel}
+                    onEditValueChange={setEditValue}
+                  />
                 ))}
               </div>
 

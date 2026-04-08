@@ -37,7 +37,7 @@ export function MonthYearFilter({
   availableYears,
   onMonthChange,
   onYearChange,
-}: MonthYearFilterProps) {
+}: MonthYearFilterProps): JSX.Element {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
       <div className="flex-1 space-y-1.5">

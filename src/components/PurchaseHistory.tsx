@@ -1,29 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Purchase,
-  formatCurrency,
-  TIER_BG_CLASSES,
-  TIER_TEXT_CLASSES,
-  roundUnits,
-} from "@/lib/electricity";
+import { formatCurrency, TIER_BG_CLASSES, TIER_TEXT_CLASSES, roundUnits } from "@/lib/electricity";
+import type { Purchase } from "@/lib/electricity";
 import { History, Trash2, ChevronDown, Clock, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MAX_PURCHASE_HISTORY_ITEMS } from "@/lib/constants";
 
 interface PurchaseHistoryProps {
   purchases: Purchase[];
   onDelete: (id: string) => void;
 }
 
-export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
-  const [visibleCount, setVisibleCount] = useState(10);
+export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps): JSX.Element {
+  const [visibleCount, setVisibleCount] = useState(MAX_PURCHASE_HISTORY_ITEMS);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && purchases.length > visibleCount) {
-          setVisibleCount((prev) => prev + 10);
+        if (entries[0]?.isIntersecting && purchases.length > visibleCount) {
+          setVisibleCount((prev) => prev + MAX_PURCHASE_HISTORY_ITEMS);
         }
       },
       { threshold: 1.0 }
@@ -57,7 +53,7 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
   const hasMore = purchases.length > visibleCount;
 
   const handleShowMore = () => {
-    setVisibleCount((prev) => prev + 10);
+    setVisibleCount((prev) => prev + MAX_PURCHASE_HISTORY_ITEMS);
   };
 
   return (
@@ -76,7 +72,7 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
           const hasValidBreakdown =
             purchase.tierBreakdown &&
             purchase.tierBreakdown.length > 0 &&
-            typeof purchase.tierBreakdown[0].tier === "number";
+            typeof purchase.tierBreakdown[0]?.tier === "number";
 
           return (
             <div
@@ -129,7 +125,7 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
                       return (
                         <div
                           key={item.tier}
-                          className={`h-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES] || "bg-primary"}`}
+                          className={`h-full ${TIER_BG_CLASSES[item.tier] || "bg-primary"}`}
                           style={{ width: `${segmentWidth}%` }}
                         />
                       );
@@ -144,7 +140,7 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps) {
                   purchase.tierBreakdown.map((item, index) => (
                     <span key={item.tier}>
                       <span
-                        className={`font-medium ${TIER_TEXT_CLASSES[item.tier as keyof typeof TIER_TEXT_CLASSES]}`}
+                        className={`font-medium ${TIER_TEXT_CLASSES[item.tier] || "text-primary"}`}
                       >
                         {roundUnits(item.units)}
                       </span>

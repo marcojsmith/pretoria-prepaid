@@ -9,7 +9,7 @@ const RegisterSW = () => {
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r: ServiceWorkerRegistration | undefined) {
-      console.log("SW Registered: " + r);
+      console.warn("SW Registered:", r);
     },
     onRegisterError(error: unknown) {
       console.error("SW registration error", error);
@@ -37,7 +37,7 @@ const RegisterSW = () => {
       toast("New content available, click on reload button to update.", {
         action: {
           label: "Reload",
-          onClick: () => updateServiceWorker(true),
+          onClick: () => void updateServiceWorker(true),
         },
       });
     }

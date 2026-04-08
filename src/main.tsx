@@ -7,16 +7,16 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App";
 import "./index.css";
 
-const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-if (!CONVEX_URL) {
-  throw new Error("Missing VITE_CONVEX_URL environment variable");
+function getRequiredEnvVar(name: "VITE_CONVEX_URL" | "VITE_CLERK_PUBLISHABLE_KEY"): string {
+  const value: unknown = (import.meta.env as Record<string, unknown>)[name];
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`Missing ${name} environment variable`);
+  }
+  return value;
 }
 
-if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY environment variable");
-}
+const CONVEX_URL = getRequiredEnvVar("VITE_CONVEX_URL");
+const PUBLISHABLE_KEY = getRequiredEnvVar("VITE_CLERK_PUBLISHABLE_KEY");
 
 const convex = new ConvexReactClient(CONVEX_URL);
 

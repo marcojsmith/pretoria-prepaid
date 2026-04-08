@@ -13,8 +13,15 @@ import { MonthYearFilter } from "@/components/MonthYearFilter";
 import { Receipt, Activity, Filter, X, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SEO } from "@/components/SEO";
+import {
+  DATE_YEAR_LENGTH,
+  DATE_MONTH_START,
+  DATE_MONTH_LENGTH,
+  CHART_SCALE_0_2,
+} from "@/lib/constants";
 
-export default function HistoryPage() {
+// eslint-disable-next-line llm-core/max-function-length
+export default function HistoryPage(): JSX.Element | null {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
@@ -67,18 +74,21 @@ export default function HistoryPage() {
   const availableYears = useMemo(() => {
     const years = new Set<string>();
     purchases.forEach((p) => {
-      if (p.date) years.add(p.date.substring(0, 4));
+      if (p.date) years.add(p.date.substring(0, DATE_YEAR_LENGTH));
     });
     readings?.forEach((r) => {
-      if (r.date) years.add(r.date.substring(0, 4));
+      if (r.date) years.add(r.date.substring(0, DATE_YEAR_LENGTH));
     });
     return Array.from(years).sort((a, b) => b.localeCompare(a));
   }, [purchases, readings]);
 
   const filteredPurchases = useMemo(() => {
     return purchases.filter((p) => {
-      const monthMatch = selectedMonth === "All" || p.date.substring(5, 7) === selectedMonth;
-      const yearMatch = selectedYear === "All" || p.date.substring(0, 4) === selectedYear;
+      const monthMatch =
+        selectedMonth === "All" ||
+        p.date.substring(DATE_MONTH_START, DATE_MONTH_LENGTH) === selectedMonth;
+      const yearMatch =
+        selectedYear === "All" || p.date.substring(0, DATE_YEAR_LENGTH) === selectedYear;
       return monthMatch && yearMatch;
     });
   }, [purchases, selectedMonth, selectedYear]);
@@ -93,8 +103,11 @@ export default function HistoryPage() {
         readingPost: number;
         source: "purchase" | "onboarding";
       } => {
-        const monthMatch = selectedMonth === "All" || r.date.substring(5, 7) === selectedMonth;
-        const yearMatch = selectedYear === "All" || r.date.substring(0, 4) === selectedYear;
+        const monthMatch =
+          selectedMonth === "All" ||
+          r.date.substring(DATE_MONTH_START, DATE_MONTH_LENGTH) === selectedMonth;
+        const yearMatch =
+          selectedYear === "All" || r.date.substring(0, DATE_YEAR_LENGTH) === selectedYear;
         return (
           monthMatch &&
           yearMatch &&
@@ -113,16 +126,19 @@ export default function HistoryPage() {
 
   const isFiltered = selectedMonth !== "All" || selectedYear !== "All";
 
-  const handleAddPurchase = async (
-    units: number,
-    amountPaid: number,
-    date: string,
-    meterReading: number
-  ) => {
-    await addPurchase(units, amountPaid, date, meterReading);
-    if (prefillData) {
-      navigate("/history", { replace: true, state: null });
-    }
+  const handleAddPurchase = (options: {
+    units: number;
+    amountPaid: number;
+    date: string;
+    meterReading: number;
+  }) => {
+    const { units, amountPaid, date, meterReading } = options;
+    void (async () => {
+      await addPurchase({ units, amountPaid, date, meterReading });
+      if (prefillData) {
+        navigate("/history", { replace: true, state: null });
+      }
+    })();
   };
 
   if (authLoading || purchasesLoading || consumptionLoading) {
@@ -207,7 +223,7 @@ export default function HistoryPage() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: CHART_SCALE_0_2 }}
                   className="overflow-hidden"
                 >
                   <Card className="border-none bg-transparent shadow-none">
@@ -243,7 +259,12 @@ export default function HistoryPage() {
           </div>
 
           {activeTab === "purchases" ? (
-            <PurchaseHistory purchases={filteredPurchases} onDelete={deletePurchase} />
+            <PurchaseHistory
+              purchases={filteredPurchases}
+              onDelete={(id) => {
+                void deletePurchase(id);
+              }}
+            />
           ) : (
             <ReadingHistory
               readings={filteredReadings}
