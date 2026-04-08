@@ -95,8 +95,12 @@ export function Header({ offlineCount = 0 }: HeaderProps): JSX.Element {
 
   const handleSignOut = () => {
     void (async () => {
-      await signOut();
-      navigate("/auth");
+      try {
+        await signOut();
+        navigate("/auth");
+      } catch (error) {
+        console.error("Sign out failed:", error);
+      }
     })();
   };
 

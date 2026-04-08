@@ -64,7 +64,7 @@ function MonthlyStatRow({
             return (
               <div
                 key={item.tier}
-                className={`h-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES]}`}
+                className={`h-full ${TIER_BG_CLASSES[item.tier]}`}
                 style={{ width: `${segmentWidth}%` }}
               />
             );
@@ -75,9 +75,7 @@ function MonthlyStatRow({
       <div className="flex flex-wrap gap-x-1.5 text-[10px] text-muted-foreground">
         {tierBreakdown.map((item, index) => (
           <span key={item.tier}>
-            <span
-              className={`font-medium ${TIER_TEXT_CLASSES[item.tier as keyof typeof TIER_TEXT_CLASSES]}`}
-            >
+            <span className={`font-medium ${TIER_TEXT_CLASSES[item.tier]}`}>
               {roundUnits(item.units)}
             </span>
             <span> {item.label}</span>

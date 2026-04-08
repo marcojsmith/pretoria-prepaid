@@ -339,7 +339,7 @@ export function KPIBreakdown({
 
   return (
     <div className="space-y-4">
-      <p className="CARD_TITLE_CLASSES text-foreground">{userName}</p>
+      <p className={`${CARD_TITLE_CLASSES} text-foreground`}>{userName}</p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <EstimatedBalanceCard

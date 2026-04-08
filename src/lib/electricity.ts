@@ -1,3 +1,10 @@
+export enum Tier {
+  One = 1,
+  Two = 2,
+  Three = 3,
+  Four = 4,
+}
+
 export interface ElectricityRate {
   _id: string;
   tier_number: number;
@@ -8,7 +15,7 @@ export interface ElectricityRate {
 }
 
 export interface TierBreakdown {
-  tier: number;
+  tier: Tier;
   label: string;
   units: number;
   rate: number;
@@ -57,7 +64,7 @@ export function calculateCost(options: {
     if (unitsInThisTier > 0) {
       const cost = unitsInThisTier * rate.rate;
       breakdown.push({
-        tier: rate.tier_number,
+        tier: rate.tier_number as Tier,
         label: rate.tier_label,
         units: unitsInThisTier,
         rate: rate.rate,
@@ -82,6 +89,7 @@ import {
   MS_PER_DAY,
   UNLIMITED_TIER_ASSUMED_SIZE,
   MAX_TIER_PERCENTAGE,
+  MONTHS_IN_YEAR,
 } from "./constants";
 
 export function roundUnits(units: number): number {
@@ -98,8 +106,12 @@ export function getCurrentMonth(): string {
 }
 
 export function getMonthName(monthKey: string): string {
-  const [year = "0", month = "0"] = monthKey.split("-");
-  const date = new Date(parseInt(year), parseInt(month) - 1);
+  const match = /^(\d{4})-(\d{2})$/.exec(monthKey);
+  if (!match) return "Unknown";
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > MONTHS_IN_YEAR) return "Unknown";
+  const date = new Date(year, month - 1);
   return date.toLocaleDateString("en-ZA", { month: "long", year: "numeric" });
 }
 
@@ -245,18 +257,16 @@ export function getTierBreakdownForUnits(
 }
 
 // Tier colors for visual display
-/* eslint-disable llm-core/no-magic-numbers */
-export const TIER_BG_CLASSES = {
-  1: "bg-primary",
-  2: "bg-sky-500",
-  3: "bg-amber-500",
-  4: "bg-destructive",
-} as const;
+export const TIER_BG_CLASSES: Record<Tier, string> = {
+  [Tier.One]: "bg-primary",
+  [Tier.Two]: "bg-sky-500",
+  [Tier.Three]: "bg-amber-500",
+  [Tier.Four]: "bg-destructive",
+};
 
-export const TIER_TEXT_CLASSES = {
-  1: "text-primary",
-  2: "text-sky-500",
-  3: "text-amber-500",
-  4: "text-destructive",
-} as const;
-/* eslint-enable llm-core/no-magic-numbers */
+export const TIER_TEXT_CLASSES: Record<Tier, string> = {
+  [Tier.One]: "text-primary",
+  [Tier.Two]: "text-sky-500",
+  [Tier.Three]: "text-amber-500",
+  [Tier.Four]: "text-destructive",
+};

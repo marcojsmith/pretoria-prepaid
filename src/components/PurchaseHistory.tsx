@@ -125,7 +125,7 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps): 
                       return (
                         <div
                           key={item.tier}
-                          className={`h-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES] || "bg-primary"}`}
+                          className={`h-full ${TIER_BG_CLASSES[item.tier] || "bg-primary"}`}
                           style={{ width: `${segmentWidth}%` }}
                         />
                       );
@@ -139,9 +139,7 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps): 
                 {hasValidBreakdown &&
                   purchase.tierBreakdown.map((item, index) => (
                     <span key={item.tier}>
-                      <span
-                        className={`font-medium ${TIER_TEXT_CLASSES[item.tier as keyof typeof TIER_TEXT_CLASSES]}`}
-                      >
+                      <span className={`font-medium ${TIER_TEXT_CLASSES[item.tier]}`}>
                         {roundUnits(item.units)}
                       </span>
                       <span> {item.label}</span>

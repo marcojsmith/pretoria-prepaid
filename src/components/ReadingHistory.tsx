@@ -25,6 +25,11 @@ interface ReadingCardProps {
   onDelete: (id: Id<"meter_readings">) => void;
 }
 
+function parseLocalDate(d: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : new Date(d);
+}
+
 function ReadingCard({ reading, onDelete }: ReadingCardProps) {
   return (
     <Card key={reading._id} className="overflow-hidden">
@@ -46,7 +51,7 @@ function ReadingCard({ reading, onDelete }: ReadingCardProps) {
             </>
           )}
           <p className="text-[10px] text-muted-foreground">
-            {new Date(reading.date).toLocaleDateString("en-ZA", {
+            {parseLocalDate(reading.date).toLocaleDateString("en-ZA", {
               day: "numeric",
               month: "long",
               year: "numeric",
@@ -57,6 +62,7 @@ function ReadingCard({ reading, onDelete }: ReadingCardProps) {
           variant="ghost"
           size="sm"
           className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+          aria-label="Delete reading"
           onClick={() => onDelete(reading._id)}
         >
           <Trash2 className="h-4 w-4" />

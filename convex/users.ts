@@ -147,7 +147,7 @@ export const updateProfile = mutation({
 
     if (args.pushSubscription !== undefined) {
       updates.pushSubscription = args.pushSubscription;
-    } else if (!args.pushNotificationsEnabled) {
+    } else if (args.pushNotificationsEnabled !== undefined && !args.pushNotificationsEnabled) {
       updates.pushSubscription = undefined;
     }
 

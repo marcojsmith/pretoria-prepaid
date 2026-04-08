@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { getCurrentMonth, calculateRefillIntervals, type RefillInterval } from "@/lib/electricity";
-import type { Purchase, TierBreakdown } from "@/lib/electricity";
+import type { Purchase } from "@/lib/electricity";
 import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { DATE_MONTH_LENGTH, AVERAGE_MONTHS_LOOKBACK } from "@/lib/constants";
@@ -132,10 +132,13 @@ export function usePurchases(): UsePurchasesReturn {
       isSyncing.current = false;
     };
 
-    window.addEventListener("online", () => void syncQueue());
+    const handleOnline = () => {
+      void syncQueue();
+    };
+    window.addEventListener("online", handleOnline);
     if (navigator.onLine) void syncQueue();
 
-    return () => window.removeEventListener("online", () => void syncQueue());
+    return () => window.removeEventListener("online", handleOnline);
   }, [offlineQueue, addPurchaseMutation, deletePurchaseMutation]);
 
   // Update confirmed purchases when network data arrives
@@ -150,7 +153,7 @@ export function usePurchases(): UsePurchasesReturn {
       units: p.units,
       cost: p.cost,
       amountPaid: p.amountPaid,
-      tierBreakdown: (p.tierBreakdown as unknown as TierBreakdown[]) || [],
+      tierBreakdown: p.tierBreakdown || [],
     }));
     setConfirmedPurchases(mappedPurchases);
     localStorage.setItem(PURCHASES_CACHE_KEY, JSON.stringify(mappedPurchases));

@@ -12,7 +12,7 @@ import {
   roundUnits,
   getRemainingTierCapacity,
 } from "@/lib/electricity";
-import type { ElectricityRate } from "@/lib/electricity";
+import type { ElectricityRate, Tier } from "@/lib/electricity";
 import { Calculator, Lightbulb, Save, Loader2, Zap, AlertTriangle } from "lucide-react";
 
 interface PurchaseCalculatorProps {
@@ -85,7 +85,7 @@ function TierWarning({ exceedsTier, tierCapacity, costToStayInTier }: TierWarnin
 
 interface PriceBreakdownProps {
   calculation: {
-    breakdown: { tier: number; units: number; cost: number; rate: number; label: string }[];
+    breakdown: { tier: Tier; units: number; cost: number; rate: number; label: string }[];
     total: number;
   } | null;
   targetNum: number;
@@ -96,7 +96,7 @@ function BreakdownBar({
   calculation,
   targetNum,
 }: {
-  calculation: { breakdown: { tier: number | string; units: number }[] };
+  calculation: { breakdown: { tier: Tier; units: number }[] };
   targetNum: number;
 }) {
   return (
@@ -106,7 +106,7 @@ function BreakdownBar({
         return (
           <div
             key={item.tier}
-            className={`h-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES]}`}
+            className={`h-full ${TIER_BG_CLASSES[item.tier]}`}
             style={{ width: `${percentage}%` }}
           />
         );
@@ -120,7 +120,7 @@ function BreakdownRows({
 }: {
   calculation: {
     breakdown: {
-      tier: number | string;
+      tier: Tier;
       units: number;
       rate: number;
       cost: number;
@@ -133,12 +133,8 @@ function BreakdownRows({
       {calculation.breakdown.map((item) => (
         <div key={item.tier} className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${TIER_BG_CLASSES[item.tier as keyof typeof TIER_BG_CLASSES]}`}
-            />
-            <span className={TIER_TEXT_CLASSES[item.tier as keyof typeof TIER_TEXT_CLASSES]}>
-              {item.label}
-            </span>
+            <div className={`h-2 w-2 rounded-full ${TIER_BG_CLASSES[item.tier]}`} />
+            <span className={TIER_TEXT_CLASSES[item.tier]}>{item.label}</span>
             <span className="text-muted-foreground">
               {roundUnits(item.units)} kWh @ {formatCurrency(item.rate)}/kWh
             </span>
