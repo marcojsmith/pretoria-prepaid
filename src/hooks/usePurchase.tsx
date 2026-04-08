@@ -5,7 +5,7 @@ import { getCurrentMonth, calculateRefillIntervals, type RefillInterval } from "
 import type { Purchase } from "@/lib/electricity";
 import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
-import { DATE_MONTH_LENGTH, AVERAGE_MONTHS_LOOKBACK } from "@/lib/constants";
+import { DATE_MONTH_LENGTH, AVERAGE_MONTHS_LOOKBACK, MONTHS_IN_YEAR } from "@/lib/constants";
 
 const PURCHASES_CACHE_KEY = "purchases_history";
 const QUEUE_CACHE_KEY = "offline_purchases_queue";
@@ -56,22 +56,56 @@ export interface UsePurchasesReturn {
   offlineCount: number;
 }
 
-// eslint-disable-next-line llm-core/max-function-length
-export function usePurchases(): UsePurchasesReturn {
-  const purchasesData = useQuery(api.purchases.getPurchases);
-  const addPurchaseMutation = useMutation(api.purchases.addPurchase);
-  const deletePurchaseMutation = useMutation(api.purchases.deletePurchase);
+/**
+ * Validates if an object is a Purchase.
+ */
+function isPurchase(p: unknown): p is Purchase {
+  return (
+    typeof p === "object" &&
+    p !== null &&
+    "_id" in p &&
+    "date" in p &&
+    "units" in p &&
+    "amountPaid" in p
+  );
+}
 
+/**
+ * Validates if an object is a QueuedPurchase.
+ */
+function isQueuedPurchase(p: unknown): p is QueuedPurchase {
+  if (typeof p !== "object" || p === null) return false;
+  const item = p as Record<string, unknown>;
+  if (item["type"] === "add") {
+    return (
+      typeof item["id"] === "string" &&
+      typeof item["units"] === "number" &&
+      typeof item["amountPaid"] === "number" &&
+      typeof item["date"] === "string" &&
+      typeof item["meterReading"] === "number"
+    );
+  }
+  if (item["type"] === "delete") {
+    return typeof item["id"] === "string" && typeof item["purchaseId"] === "string";
+  }
+  return false;
+}
+
+/**
+ * Hook to handle purchase caching in localStorage.
+ */
+function usePurchaseCache() {
   const [confirmedPurchases, setConfirmedPurchases] = useState<Purchase[]>([]);
   const [offlineQueue, setOfflineQueue] = useState<QueuedPurchase[]>([]);
-  const isSyncing = useRef(false);
 
-  // Load from cache on mount
   useEffect(() => {
     const cachedPurchases = localStorage.getItem(PURCHASES_CACHE_KEY);
     if (cachedPurchases) {
       try {
-        setConfirmedPurchases(JSON.parse(cachedPurchases) as Purchase[]);
+        const parsed: unknown = JSON.parse(cachedPurchases);
+        if (Array.isArray(parsed)) {
+          setConfirmedPurchases(parsed.filter(isPurchase));
+        }
       } catch (error) {
         console.error("Failed to parse cached purchases", error);
       }
@@ -80,58 +114,107 @@ export function usePurchases(): UsePurchasesReturn {
     const cachedQueue = localStorage.getItem(QUEUE_CACHE_KEY);
     if (cachedQueue) {
       try {
-        setOfflineQueue(JSON.parse(cachedQueue) as QueuedPurchase[]);
+        const parsed: unknown = JSON.parse(cachedQueue);
+        if (Array.isArray(parsed)) {
+          setOfflineQueue(parsed.filter(isQueuedPurchase));
+        }
       } catch (error) {
         console.error("Failed to parse offline queue", error);
       }
     }
   }, []);
 
-  // Sync when coming online
-  useEffect(() => {
-    const syncQueue = async () => {
-      if (offlineQueue.length === 0 || isSyncing.current || !navigator.onLine) return;
+  const saveConfirmedPurchases = useCallback((purchases: Purchase[]) => {
+    setConfirmedPurchases(purchases);
+    localStorage.setItem(PURCHASES_CACHE_KEY, JSON.stringify(purchases));
+  }, []);
 
-      isSyncing.current = true;
-      const currentQueue = [...offlineQueue];
+  const saveOfflineQueue = useCallback((queue: QueuedPurchase[]) => {
+    setOfflineQueue(queue);
+    localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(queue));
+  }, []);
 
-      toast.info("Syncing offline actions...", {
-        description: String(currentQueue.length) + " items",
-      });
+  return {
+    confirmedPurchases,
+    offlineQueue,
+    saveConfirmedPurchases,
+    saveOfflineQueue,
+  };
+}
 
-      const remainingItems = [...currentQueue];
-      for (const item of currentQueue) {
-        if (!navigator.onLine) break;
+type AddPurchaseMutationFn = (args: {
+  date: string;
+  units: number;
+  cost: number;
+  amountPaid: number;
+  meterReading: number;
+}) => Promise<unknown>;
 
-        try {
-          if (item.type === "add") {
-            await addPurchaseMutation({
-              date: item.date,
-              units: item.units,
-              cost: 0,
-              amountPaid: item.amountPaid,
-              meterReading: item.meterReading,
-            });
-          } else if (item.type === "delete") {
-            await deletePurchaseMutation({ id: item.purchaseId as Id<"purchases"> });
-          }
+type DeletePurchaseMutationFn = (args: { id: Id<"purchases"> }) => Promise<unknown>;
 
-          remainingItems.shift();
-          const updatedQueue = [...remainingItems];
-          setOfflineQueue(updatedQueue);
-          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(updatedQueue));
-        } catch (error) {
-          console.error("Failed to sync action", error);
-          break; // Stop if sync fails
+type PurchaseQueueContext = {
+  offlineQueue: QueuedPurchase[];
+  saveOfflineQueue: (queue: QueuedPurchase[]) => void;
+};
+
+/**
+ * Hook to handle offline sync logic.
+ */
+function useOfflineSync({
+  offlineQueue,
+  saveOfflineQueue,
+  addPurchaseMutation,
+  deletePurchaseMutation,
+}: {
+  offlineQueue: QueuedPurchase[];
+  saveOfflineQueue: (queue: QueuedPurchase[]) => void;
+  addPurchaseMutation: AddPurchaseMutationFn;
+  deletePurchaseMutation: DeletePurchaseMutationFn;
+}) {
+  const isSyncing = useRef(false);
+
+  const syncQueue = useCallback(async () => {
+    if (offlineQueue.length === 0 || isSyncing.current || !navigator.onLine) return;
+
+    isSyncing.current = true;
+    const currentQueue = [...offlineQueue];
+
+    toast.info("Syncing offline actions...", {
+      description: String(currentQueue.length) + " items",
+    });
+
+    const remainingItems = [...currentQueue];
+    for (const item of currentQueue) {
+      if (!navigator.onLine) break;
+
+      try {
+        if (item.type === "add") {
+          await addPurchaseMutation({
+            date: item.date,
+            units: item.units,
+            cost: 0,
+            amountPaid: item.amountPaid,
+            meterReading: item.meterReading,
+          });
+        } else if (item.type === "delete") {
+          await deletePurchaseMutation({ id: item.purchaseId as Id<"purchases"> });
         }
-      }
 
-      if (remainingItems.length === 0) {
-        toast.success("All offline actions synced successfully!");
+        remainingItems.shift();
+        saveOfflineQueue([...remainingItems]);
+      } catch (error) {
+        console.error("Failed to sync action", error);
+        break;
       }
-      isSyncing.current = false;
-    };
+    }
 
+    if (remainingItems.length === 0) {
+      toast.success("All offline actions synced successfully!");
+    }
+    isSyncing.current = false;
+  }, [offlineQueue, addPurchaseMutation, deletePurchaseMutation, saveOfflineQueue]);
+
+  useEffect(() => {
     const handleOnline = () => {
       void syncQueue();
     };
@@ -139,7 +222,158 @@ export function usePurchases(): UsePurchasesReturn {
     if (navigator.onLine) void syncQueue();
 
     return () => window.removeEventListener("online", handleOnline);
-  }, [offlineQueue, addPurchaseMutation, deletePurchaseMutation]);
+  }, [syncQueue]);
+
+  return { syncQueue };
+}
+
+/**
+ * Calculates monthly statistics from purchases.
+ */
+function calculateMonthlyStats(purchases: Purchase[]): MonthlyStat[] {
+  const monthlyMap = new Map<string, { units: number; cost: number; purchases: number }>();
+
+  purchases.forEach((p) => {
+    const monthKey = p.date.substring(0, DATE_MONTH_LENGTH);
+    const existing = monthlyMap.get(monthKey) || { units: 0, cost: 0, purchases: 0 };
+    monthlyMap.set(monthKey, {
+      units: existing.units + p.units,
+      cost: existing.cost + p.amountPaid,
+      purchases: existing.purchases + 1,
+    });
+  });
+
+  return Array.from(monthlyMap.entries())
+    .map(([month, stats]) => ({ month, ...stats }))
+    .sort((a, b) => b.month.localeCompare(a.month));
+}
+
+async function performAddPurchase(
+  options: { units: number; amountPaid: number; date: string; meterReading: number },
+  ctx: { mutation: AddPurchaseMutationFn } & PurchaseQueueContext
+): Promise<void> {
+  const { units, amountPaid, date, meterReading } = options;
+  const { mutation, offlineQueue, saveOfflineQueue } = ctx;
+  const queueItem: QueuedPurchase = {
+    id: `offline-${Date.now()}`,
+    type: "add",
+    units,
+    amountPaid,
+    date,
+    meterReading,
+  };
+  if (!navigator.onLine) {
+    saveOfflineQueue([...offlineQueue, queueItem]);
+    toast.info("Purchase saved offline. Will sync when reconnected.");
+    return;
+  }
+  try {
+    await mutation({ date, units, cost: 0, amountPaid, meterReading });
+  } catch (error) {
+    console.warn("Mutation failed, queuing instead", error);
+    saveOfflineQueue([...offlineQueue, queueItem]);
+    toast.info("Purchase saved offline. Will sync when reconnected.");
+  }
+}
+
+async function performBatchAdd(
+  items: { units: number; amountPaid: number; date: string; meterReading: number }[],
+  ctx: { mutation: AddPurchaseMutationFn } & PurchaseQueueContext
+): Promise<void> {
+  const { mutation, offlineQueue, saveOfflineQueue } = ctx;
+  const newOfflineItems: QueuedPurchase[] = [];
+  let successCount = 0;
+  if (!navigator.onLine) {
+    items.forEach((item, index) => {
+      newOfflineItems.push({
+        id: `offline-${Date.now()}-${index}`,
+        type: "add",
+        units: item.units,
+        amountPaid: item.amountPaid,
+        date: item.date,
+        meterReading: item.meterReading,
+      });
+    });
+    saveOfflineQueue([...offlineQueue, ...newOfflineItems]);
+    toast.info("Purchases saved offline.", { description: String(items.length) + " purchases" });
+    return;
+  }
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item) continue;
+    try {
+      await mutation({
+        date: item.date,
+        units: item.units,
+        cost: 0,
+        amountPaid: item.amountPaid,
+        meterReading: item.meterReading,
+      });
+      successCount++;
+    } catch (error) {
+      console.warn("Batch item failed, queuing instead", error);
+      newOfflineItems.push({
+        id: `offline-${Date.now()}-${i}`,
+        type: "add",
+        units: item.units,
+        amountPaid: item.amountPaid,
+        date: item.date,
+        meterReading: item.meterReading,
+      });
+    }
+  }
+  if (newOfflineItems.length > 0) {
+    saveOfflineQueue([...offlineQueue, ...newOfflineItems]);
+    toast.info("Imported purchases. Some items queued for retry.", {
+      description:
+        "Imported: " + String(successCount) + ", queued: " + String(newOfflineItems.length),
+    });
+  } else {
+    toast.success(`Imported all ${successCount} purchases.`);
+  }
+}
+
+async function performDeletePurchase(
+  id: string,
+  ctx: { mutation: DeletePurchaseMutationFn } & PurchaseQueueContext
+): Promise<void> {
+  const { mutation, offlineQueue, saveOfflineQueue } = ctx;
+  if (id.startsWith("offline-")) {
+    saveOfflineQueue(offlineQueue.filter((item) => item.id !== id));
+    return;
+  }
+  const deleteAction: QueuedPurchase = {
+    id: `delete-${Date.now()}`,
+    type: "delete",
+    purchaseId: id,
+  };
+  if (!navigator.onLine) {
+    saveOfflineQueue([...offlineQueue, deleteAction]);
+    toast.info("Delete action saved offline. Will sync when reconnected.");
+    return;
+  }
+  try {
+    await mutation({ id: id as Id<"purchases"> });
+  } catch (error) {
+    console.warn("Delete mutation failed, queuing instead", error);
+    saveOfflineQueue([...offlineQueue, deleteAction]);
+    toast.info("Delete action saved offline. Will sync when reconnected.");
+  }
+}
+
+/**
+ * Main hook for managing electricity purchases.
+ * @returns An object containing purchases, stats, and actions.
+ */
+export function usePurchases(): UsePurchasesReturn {
+  const purchasesData = useQuery(api.purchases.getPurchases);
+  const addPurchaseMutation = useMutation(api.purchases.addPurchase);
+  const deletePurchaseMutation = useMutation(api.purchases.deletePurchase);
+
+  const { confirmedPurchases, offlineQueue, saveConfirmedPurchases, saveOfflineQueue } =
+    usePurchaseCache();
+
+  useOfflineSync({ offlineQueue, saveOfflineQueue, addPurchaseMutation, deletePurchaseMutation });
 
   // Update confirmed purchases when network data arrives
   useEffect(() => {
@@ -155,9 +389,8 @@ export function usePurchases(): UsePurchasesReturn {
       amountPaid: p.amountPaid,
       tierBreakdown: p.tierBreakdown || [],
     }));
-    setConfirmedPurchases(mappedPurchases);
-    localStorage.setItem(PURCHASES_CACHE_KEY, JSON.stringify(mappedPurchases));
-  }, [purchasesData]);
+    saveConfirmedPurchases(mappedPurchases);
+  }, [purchasesData, saveConfirmedPurchases]);
 
   // Combine confirmed and offline purchases for the UI
   const purchases = useMemo(() => {
@@ -166,7 +399,7 @@ export function usePurchases(): UsePurchasesReturn {
     );
 
     const optimisticPurchases: Purchase[] = offlineQueue
-      .filter((item) => item.type === "add")
+      .filter((item): item is Extract<QueuedPurchase, { type: "add" }> => item.type === "add")
       .map((item) => ({
         _id: item.id,
         date: item.date,
@@ -183,172 +416,29 @@ export function usePurchases(): UsePurchasesReturn {
   }, [confirmedPurchases, offlineQueue]);
 
   const addPurchase = useCallback(
-    async (options: { units: number; amountPaid: number; date: string; meterReading: number }) => {
-      const { units, amountPaid, date, meterReading } = options;
-
-      if (!navigator.onLine) {
-        const newOfflineItem: QueuedPurchase = {
-          id: `offline-${Date.now()}`,
-          type: "add",
-          units,
-          amountPaid,
-          date,
-          meterReading,
-        };
-
-        setOfflineQueue((prev) => {
-          const newQueue = [...prev, newOfflineItem];
-          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
-          return newQueue;
-        });
-        toast.info("Purchase saved offline. Will sync when reconnected.");
-        return;
-      }
-
-      try {
-        await addPurchaseMutation({
-          date,
-          units,
-          cost: 0,
-          amountPaid,
-          meterReading,
-        });
-      } catch (error) {
-        console.warn("Mutation failed, queuing instead", error);
-        const newOfflineItem: QueuedPurchase = {
-          id: `offline-${Date.now()}`,
-          type: "add",
-          units,
-          amountPaid,
-          date,
-          meterReading,
-        };
-        setOfflineQueue((prev) => {
-          const newQueue = [...prev, newOfflineItem];
-          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
-          return newQueue;
-        });
-        toast.info("Purchase saved offline. Will sync when reconnected.");
-      }
-    },
-    [addPurchaseMutation]
+    async (options: { units: number; amountPaid: number; date: string; meterReading: number }) =>
+      performAddPurchase(options, {
+        mutation: addPurchaseMutation,
+        offlineQueue,
+        saveOfflineQueue,
+      }),
+    [addPurchaseMutation, offlineQueue, saveOfflineQueue]
   );
 
   const addBatchPurchases = useCallback(
-    async (items: { units: number; amountPaid: number; date: string; meterReading: number }[]) => {
-      const offlineItems: QueuedPurchase[] = [];
-      let successCount = 0;
-
-      if (!navigator.onLine) {
-        items.forEach((item, index) => {
-          offlineItems.push({
-            id: `offline-${Date.now()}-${index}`,
-            type: "add",
-            units: item.units,
-            amountPaid: item.amountPaid,
-            date: item.date,
-            meterReading: item.meterReading,
-          });
-        });
-
-        setOfflineQueue((prev) => {
-          const newQueue = [...prev, ...offlineItems];
-          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
-          return newQueue;
-        });
-        toast.info("Purchases saved offline.", {
-          description: String(items.length) + " purchases",
-        });
-        return;
-      }
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (!item) continue;
-        try {
-          await addPurchaseMutation({
-            date: item.date,
-            units: item.units,
-            cost: 0,
-            amountPaid: item.amountPaid,
-            meterReading: item.meterReading,
-          });
-          successCount++;
-        } catch (error) {
-          console.warn("Batch item failed, queuing instead", error);
-          offlineItems.push({
-            id: `offline-${Date.now()}-${i}`,
-            type: "add",
-            units: item.units,
-            amountPaid: item.amountPaid,
-            date: item.date,
-            meterReading: item.meterReading,
-          });
-        }
-      }
-
-      if (offlineItems.length > 0) {
-        setOfflineQueue((prev) => {
-          const newQueue = [...prev, ...offlineItems];
-          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
-          return newQueue;
-        });
-        toast.info("Imported purchases. Some items queued for retry.", {
-          description:
-            "Imported: " + String(successCount) + ", queued: " + String(offlineItems.length),
-        });
-      } else {
-        toast.success(`Imported all ${successCount} purchases.`);
-      }
-    },
-    [addPurchaseMutation]
+    async (items: { units: number; amountPaid: number; date: string; meterReading: number }[]) =>
+      performBatchAdd(items, { mutation: addPurchaseMutation, offlineQueue, saveOfflineQueue }),
+    [addPurchaseMutation, offlineQueue, saveOfflineQueue]
   );
 
   const deletePurchase = useCallback(
-    async (id: string) => {
-      // If it's a pending addition, just remove it from the queue
-      if (id.startsWith("offline-")) {
-        setOfflineQueue((prev) => {
-          const newQueue = prev.filter((item) => item.id !== id);
-          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
-          return newQueue;
-        });
-        return;
-      }
-
-      if (!navigator.onLine) {
-        const newDeleteAction: QueuedPurchase = {
-          id: `delete-${Date.now()}`,
-          type: "delete",
-          purchaseId: id,
-        };
-        setOfflineQueue((prev) => {
-          const newQueue = [...prev, newDeleteAction];
-          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
-          return newQueue;
-        });
-        toast.info("Delete action saved offline. Will sync when reconnected.");
-        return;
-      }
-
-      try {
-        await deletePurchaseMutation({ id: id as Id<"purchases"> });
-      } catch (error) {
-        console.warn("Delete mutation failed, queuing instead", error);
-        const newDeleteAction: QueuedPurchase = {
-          id: `delete-${Date.now()}`,
-          type: "delete",
-          purchaseId: id,
-        };
-        setOfflineQueue((prev) => {
-          const newQueue = [...prev, newDeleteAction];
-          localStorage.setItem(QUEUE_CACHE_KEY, JSON.stringify(newQueue));
-          return newQueue;
-        });
-        toast.info("Delete action saved offline. Will sync when reconnected.");
-      }
-    },
-    [deletePurchaseMutation]
+    async (id: string) =>
+      performDeletePurchase(id, {
+        mutation: deletePurchaseMutation,
+        offlineQueue,
+        saveOfflineQueue,
+      }),
+    [deletePurchaseMutation, offlineQueue, saveOfflineQueue]
   );
 
   const getCurrentMonthPurchases = useCallback(() => {
@@ -357,21 +447,7 @@ export function usePurchases(): UsePurchasesReturn {
   }, [purchases]);
 
   const getMonthlyStats = useCallback(() => {
-    const monthlyMap = new Map<string, { units: number; cost: number; purchases: number }>();
-
-    purchases.forEach((p) => {
-      const monthKey = p.date.substring(0, DATE_MONTH_LENGTH);
-      const existing = monthlyMap.get(monthKey) || { units: 0, cost: 0, purchases: 0 };
-      monthlyMap.set(monthKey, {
-        units: existing.units + p.units,
-        cost: existing.cost + p.amountPaid,
-        purchases: existing.purchases + 1,
-      });
-    });
-
-    return Array.from(monthlyMap.entries())
-      .map(([month, stats]) => ({ month, ...stats }))
-      .sort((a, b) => b.month.localeCompare(a.month));
+    return calculateMonthlyStats(purchases);
   }, [purchases]);
 
   const getAverageMonthlyUsage = useCallback(() => {
@@ -395,12 +471,23 @@ export function usePurchases(): UsePurchasesReturn {
     const totalUnits = previousMonths.reduce((sum, s) => sum + s.units, 0);
 
     const totalDays = previousMonths.reduce((sum, s) => {
-      const [year = 0, month = 0] = s.month.split("-").map(Number);
-      const daysInMonth = new Date(year, month, 0).getDate();
-      return sum + daysInMonth;
+      const parts = s.month.split("-").map(Number);
+      const year = parts[0];
+      const month = parts[1];
+      if (
+        Number.isFinite(year) &&
+        Number.isFinite(month) &&
+        month !== undefined &&
+        month >= 1 &&
+        month <= MONTHS_IN_YEAR
+      ) {
+        const daysInMonth = new Date(year!, month, 0).getDate();
+        return sum + daysInMonth;
+      }
+      return sum;
     }, 0);
 
-    return totalUnits / totalDays;
+    return totalDays > 0 ? totalUnits / totalDays : 0;
   }, [getMonthlyStats]);
 
   const getAverageMonthlyCost = useCallback(() => {

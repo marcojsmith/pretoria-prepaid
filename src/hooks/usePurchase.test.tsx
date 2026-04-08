@@ -229,14 +229,33 @@ describe("usePurchases Hook - Offline Actions", () => {
     expect(queue).toHaveLength(1);
   });
 
-  it("loads cached data from localStorage safely", () => {
-    localStorage.setItem("purchases_history", JSON.stringify([{ _id: "cached-1", units: 10 }]));
+  it("loads cached data from localStorage safely", async () => {
+    // Simulate network still loading so cached purchases are not overwritten
+    vi.mocked(convexReact.useQuery).mockReturnValue(undefined);
+    localStorage.setItem(
+      "purchases_history",
+      JSON.stringify([
+        {
+          _id: "cached-1",
+          units: 10,
+          date: "2024-01-15",
+          amountPaid: 50,
+          cost: 0,
+          tierBreakdown: [],
+        },
+      ])
+    );
     localStorage.setItem(
       "offline_purchases_queue",
       JSON.stringify([{ id: "q-1", type: "add", units: 5 }])
     );
 
     const { result } = renderHook(() => usePurchases());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
     expect(result.current.purchases.length).toBeGreaterThan(0);
   });
 

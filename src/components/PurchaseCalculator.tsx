@@ -182,14 +182,24 @@ function PriceBreakdown({ calculation, targetNum, onSave }: PriceBreakdownProps)
   );
 }
 
-// eslint-disable-next-line llm-core/max-function-length
-export function PurchaseCalculator({
+/**
+ * Custom hook to handle purchase calculation logic.
+ */
+function usePurchaseCalculator({
   unitsAlreadyBought,
   averageMonthlyUsage,
   daysLeftInMonth,
   onSavePurchase,
-}: PurchaseCalculatorProps): JSX.Element {
-  const { rates, loading: ratesLoading } = useRates();
+  rates,
+  ratesLoading,
+}: {
+  unitsAlreadyBought: number;
+  averageMonthlyUsage: number;
+  daysLeftInMonth: number;
+  onSavePurchase?: (options: { units: number; amount: number; currentBalance?: number }) => void;
+  rates: ElectricityRate[];
+  ratesLoading: boolean;
+}) {
   const suggestedUnits = useMemo(() => {
     if (averageMonthlyUsage === 0) return 0;
     return Math.max(0, averageMonthlyUsage - unitsAlreadyBought);
@@ -210,7 +220,7 @@ export function PurchaseCalculator({
 
   const tierCapacity = useMemo(() => {
     if (ratesLoading || rates.length === 0) return null;
-    return getRemainingTierCapacity(unitsAlreadyBought, rates as ElectricityRate[]);
+    return getRemainingTierCapacity(unitsAlreadyBought, rates);
   }, [unitsAlreadyBought, rates, ratesLoading]);
 
   const exceedsTier = targetNum > (tierCapacity?.units || 0);
@@ -224,11 +234,37 @@ export function PurchaseCalculator({
     return calculateCost({
       units: targetNum,
       unitsAlreadyBought,
-      rates: rates as ElectricityRate[],
+      rates,
     });
   }, [targetNum, unitsAlreadyBought, rates, ratesLoading]);
 
-  const handleSavePurchase = () => {
+  const handleBalanceChange = (val: string) => {
+    setCurrentBalance(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && averageMonthlyUsage > 0) {
+      const now = new Date();
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const daysElapsed = Math.max(1, daysInMonth - daysLeftInMonth);
+
+      // Consumed units according to this reading.
+      // (Previous reading would be better, but we only have unitsAlreadyBought here)
+      // If we bought 100 units this month, and we have 20 left, we used 80.
+      const estimatedConsumed = Math.max(0, unitsAlreadyBought - num);
+
+      // Use either estimated burn rate or historical average
+      const burnRate =
+        estimatedConsumed > 0 ? estimatedConsumed / daysElapsed : averageMonthlyUsage / daysInMonth;
+
+      const neededRemaining = burnRate * daysLeftInMonth;
+      // We need 'neededRemaining' for the rest of the month, and we already have 'num'
+      const neededToBuy = Math.max(0, neededRemaining - num);
+      setTargetUnits(roundUnits(neededToBuy).toString());
+    } else if (val === "" && suggestedUnits > 0) {
+      setTargetUnits(roundUnits(suggestedUnits).toString());
+    }
+  };
+
+  const handleSave = () => {
     if (!calculation || !onSavePurchase) return;
     const options: { units: number; amount: number; currentBalance?: number } = {
       units: targetNum,
@@ -239,6 +275,56 @@ export function PurchaseCalculator({
     }
     onSavePurchase(options);
   };
+
+  return {
+    targetUnits,
+    setTargetUnits,
+    currentBalance,
+    handleBalanceChange,
+    targetNum,
+    balanceNum,
+    tierCapacity,
+    exceedsTier,
+    costToStayInTier,
+    calculation,
+    handleSave,
+    suggestedUnits,
+  };
+}
+
+/**
+ * Purchase calculator component.
+ * @param props Component props.
+ * @returns The PurchaseCalculator component.
+ */
+export function PurchaseCalculator({
+  unitsAlreadyBought,
+  averageMonthlyUsage,
+  daysLeftInMonth,
+  onSavePurchase,
+}: PurchaseCalculatorProps): JSX.Element {
+  const { rates, loading: ratesLoading } = useRates();
+  const {
+    targetUnits,
+    setTargetUnits,
+    currentBalance,
+    handleBalanceChange,
+    targetNum,
+    balanceNum,
+    tierCapacity,
+    exceedsTier,
+    costToStayInTier,
+    calculation,
+    handleSave,
+    suggestedUnits,
+  } = usePurchaseCalculator({
+    unitsAlreadyBought,
+    averageMonthlyUsage,
+    daysLeftInMonth,
+    ...(onSavePurchase !== undefined && { onSavePurchase }),
+    rates: rates as ElectricityRate[],
+    ratesLoading,
+  });
 
   if (ratesLoading) {
     return (
@@ -280,34 +366,7 @@ export function PurchaseCalculator({
               step="0.1"
               placeholder="e.g. 15.0"
               value={currentBalance}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCurrentBalance(val);
-                const num = parseFloat(val);
-                if (!isNaN(num) && averageMonthlyUsage > 0) {
-                  const now = new Date();
-                  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                  const daysElapsed = Math.max(1, daysInMonth - daysLeftInMonth);
-
-                  // Consumed units according to this reading.
-                  // (Previous reading would be better, but we only have unitsAlreadyBought here)
-                  // If we bought 100 units this month, and we have 20 left, we used 80.
-                  const estimatedConsumed = Math.max(0, unitsAlreadyBought - num);
-
-                  // Use either estimated burn rate or historical average
-                  const burnRate =
-                    estimatedConsumed > 0
-                      ? estimatedConsumed / daysElapsed
-                      : averageMonthlyUsage / daysInMonth;
-
-                  const neededRemaining = burnRate * daysLeftInMonth;
-                  // We need 'neededRemaining' for the rest of the month, and we already have 'num'
-                  const neededToBuy = Math.max(0, neededRemaining - num);
-                  setTargetUnits(roundUnits(neededToBuy).toString());
-                } else if (val === "" && suggestedUnits > 0) {
-                  setTargetUnits(roundUnits(suggestedUnits).toString());
-                }
-              }}
+              onChange={(e) => handleBalanceChange(e.target.value)}
               min="0"
               className="h-9"
             />
@@ -348,14 +407,8 @@ export function PurchaseCalculator({
         <PriceBreakdown
           calculation={calculation}
           targetNum={targetNum}
-          onSave={onSavePurchase ? handleSavePurchase : undefined}
+          onSave={onSavePurchase ? handleSave : undefined}
         />
-
-        {targetNum <= 0 && (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            Enter kWh to see the price breakdown.
-          </p>
-        )}
       </CardContent>
     </Card>
   );

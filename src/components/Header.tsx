@@ -13,12 +13,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Zap, LogOut, ArrowLeft, User } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
   offlineCount?: number;
 }
 
 const DASHBOARD_PATH = "/dashboard";
+const SETTINGS_PATH = "/settings";
 
 type UserMenuUser = {
   imageUrl?: string | null;
@@ -80,7 +82,7 @@ function UserMenu({ user, onSignOut }: { user: UserMenuUser; onSignOut: () => vo
       <UserMenuItems
         user={user}
         onSignOut={onSignOut}
-        onNavigateToSettings={() => navigate("/settings")}
+        onNavigateToSettings={() => navigate(SETTINGS_PATH)}
       />
     </DropdownMenu>
   );
@@ -90,8 +92,9 @@ export function Header({ offlineCount = 0 }: HeaderProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
 
-  const isDashboard = location.pathname === DASHBOARD_PATH || location.pathname === "/";
+  const isMainEntryPage = location.pathname === DASHBOARD_PATH || location.pathname === "/";
 
   const handleSignOut = () => {
     void (async () => {
@@ -100,6 +103,11 @@ export function Header({ offlineCount = 0 }: HeaderProps): JSX.Element {
         navigate("/auth");
       } catch (error) {
         console.error("Sign out failed:", error);
+        toast({
+          title: "Sign out failed",
+          description: "There was a problem signing you out. Please try again.",
+          variant: "destructive",
+        });
       }
     })();
   };
@@ -121,7 +129,7 @@ export function Header({ offlineCount = 0 }: HeaderProps): JSX.Element {
         </div>
 
         <div className="flex items-center gap-2">
-          {!isDashboard && (
+          {!isMainEntryPage && (
             <Button
               variant="ghost"
               size="sm"

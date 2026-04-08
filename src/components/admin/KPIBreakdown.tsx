@@ -24,37 +24,55 @@ const HEADER_CLASS = "bg-muted/50 transition-none hover:bg-muted/50";
 const CELL_XS = "text-xs";
 const MONO_XS = "font-mono text-xs";
 
+/**
+ * Interface for admin KPI statistics.
+ */
 interface AdminKPIDataStats {
   lastReadingDate: string;
   dailyBurnRate: number;
   estimatedBalance: number;
   daysRemaining: number;
-  averageDailyUsage: number;
   lastReading: number;
   isEstimatedBurnRate: boolean;
 }
 
+/**
+ * Interface for daily usage interval data.
+ */
 interface AdminKPIDataInterval {
   date: string;
   units: number;
 }
 
+/**
+ * Interface for purchase data in admin KPIs.
+ */
 interface AdminKPIDataPurchase {
   date: string;
   units: number;
   amountPaid: number;
-  readingPre: number | null;
-  readingPost: number | null;
+  readingPre?: number | null;
+  readingPost?: number | null;
 }
 
-interface AdminKPIData {
-  stats: AdminKPIDataStats | null;
-  intervals: AdminKPIDataInterval[];
-  currentMonthPurchases: AdminKPIDataPurchase[];
-  recentPurchases: AdminKPIDataPurchase[];
-  profile: { lowBalanceThreshold: number; defaultDailyUsage: number | null } | null;
+/**
+ * Helper to parse a YYYY-MM-DD date string as a local Date object.
+ * @param dateString The date string to parse.
+ * @returns A local Date object.
+ */
+function parseLocalDate(dateString: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    const [year, month, day] = dateString.split("-").map(Number);
+    return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
+  }
+  return new Date(dateString);
 }
 
+/**
+ * Card displaying estimated balance and projected remaining units.
+ * @param props Component props including stats and calculated usage.
+ * @returns A card component.
+ */
 function EstimatedBalanceCard({
   stats,
   daysSinceLastReading,
@@ -101,6 +119,11 @@ function EstimatedBalanceCard({
   );
 }
 
+/**
+ * Card displaying estimated days remaining based on burn rate.
+ * @param props Component props including stats and effective burn rate.
+ * @returns A card component.
+ */
 function DaysRemainingCard({
   stats,
   effectiveBurnRate,
@@ -141,6 +164,11 @@ function DaysRemainingCard({
   );
 }
 
+/**
+ * Card displaying monthly and average usage statistics.
+ * @param props Component props including monthly units, cost, and refill count.
+ * @returns A card component.
+ */
 function UsageStatsCard({
   stats,
   unitsThisMonth,
@@ -183,10 +211,10 @@ function UsageStatsCard({
             <TableRow className={ROW_CLASS}>
               <TableCell className={CELL_XS}>Daily avg (30d)</TableCell>
               <TableCell className={`${CELL_XS} ${MONO_XS}`}>
-                {stats.averageDailyUsage.toFixed(1)}
+                {stats.dailyBurnRate.toFixed(1)}
               </TableCell>
               <TableCell className={`${CELL_XS} ${MONO_XS}`}>
-                R{(stats.averageDailyUsage * ESTIMATED_RATE_PER_KWH).toFixed(0)}
+                R{(stats.dailyBurnRate * ESTIMATED_RATE_PER_KWH).toFixed(0)}
               </TableCell>
               <TableCell className={CELL_XS}>—</TableCell>
               <TableCell className={`${CELL_XS} ${MONO_XS}`}>—</TableCell>
@@ -198,6 +226,11 @@ function UsageStatsCard({
   );
 }
 
+/**
+ * Table displaying daily burn rate for the last 30 days.
+ * @param props Component props including usage intervals.
+ * @returns A table component.
+ */
 function BurnRateTable({ intervals }: { intervals: AdminKPIDataInterval[] }) {
   const BURN_RATE_TABLE_COLS = 5;
   const recentIntervals = intervals.slice(-BURN_RATE_DAYS);
@@ -228,7 +261,7 @@ function BurnRateTable({ intervals }: { intervals: AdminKPIDataInterval[] }) {
               {rows.map((row, rowIdx) => (
                 <TableRow key={rowIdx} className={ROW_CLASS}>
                   {row.map((interval, colIdx) => (
-                    <TableCell key={colIdx} className="cellXs text-center font-mono">
+                    <TableCell key={colIdx} className={`${CELL_XS} text-center font-mono`}>
                       <span
                         className={
                           interval.units > HIGH_USAGE_THRESHOLD
@@ -258,6 +291,11 @@ function BurnRateTable({ intervals }: { intervals: AdminKPIDataInterval[] }) {
   );
 }
 
+/**
+ * List of recent electricity refills/purchases.
+ * @param props Component props including recent purchases.
+ * @returns A list component.
+ */
 function RecentPurchasesList({ recentPurchases }: { recentPurchases: AdminKPIDataPurchase[] }) {
   return (
     <Card className="rounded-md border-border shadow-none">
@@ -277,7 +315,7 @@ function RecentPurchasesList({ recentPurchases }: { recentPurchases: AdminKPIDat
             {recentPurchases.slice(0, RECENT_PURCHASES_COUNT).map((purchase, idx) => (
               <TableRow key={idx} className={ROW_CLASS}>
                 <TableCell className={CELL_XS}>
-                  {new Date(purchase.date).toLocaleDateString("en-ZA", {
+                  {parseLocalDate(purchase.date).toLocaleDateString("en-ZA", {
                     day: "numeric",
                     month: "short",
                   })}
@@ -297,6 +335,11 @@ function RecentPurchasesList({ recentPurchases }: { recentPurchases: AdminKPIDat
   );
 }
 
+/**
+ * Main component for displaying user KPI breakdown for admin view.
+ * @param props Component props including userId and userName.
+ * @returns The KPIBreakdown component.
+ */
 export function KPIBreakdown({
   userId,
   userName,
@@ -304,7 +347,7 @@ export function KPIBreakdown({
   userId: string;
   userName: string;
 }): JSX.Element {
-  const kpiData = useQuery(api.admin.getUserKPIData, { userId }) as AdminKPIData | undefined;
+  const kpiData = useQuery(api.admin.getUserKPIData, { userId });
 
   if (kpiData === undefined) {
     return (
@@ -325,7 +368,7 @@ export function KPIBreakdown({
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const lastReadingDate = new Date(stats.lastReadingDate);
+  const lastReadingDate = parseLocalDate(stats.lastReadingDate);
   lastReadingDate.setHours(0, 0, 0, 0);
   const daysSinceLastReading = Math.max(
     0,
@@ -361,7 +404,13 @@ export function KPIBreakdown({
         purchaseCount={currentMonthPurchases.length}
       />
 
-      {intervals.length > 0 && <BurnRateTable intervals={intervals} />}
+      {intervals.length > 0 && (
+        <BurnRateTable
+          intervals={intervals
+            .filter((iv) => !iv.isSkipped)
+            .map((iv) => ({ date: iv.newerDate, units: iv.rate }))}
+        />
+      )}
 
       {recPurchases.length > 0 && <RecentPurchasesList recentPurchases={recPurchases} />}
     </div>

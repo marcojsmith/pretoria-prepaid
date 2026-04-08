@@ -139,7 +139,9 @@ export function PurchaseHistory({ purchases, onDelete }: PurchaseHistoryProps): 
                 {hasValidBreakdown &&
                   purchase.tierBreakdown.map((item, index) => (
                     <span key={item.tier}>
-                      <span className={`font-medium ${TIER_TEXT_CLASSES[item.tier]}`}>
+                      <span
+                        className={`font-medium ${TIER_TEXT_CLASSES[item.tier] || "text-primary"}`}
+                      >
                         {roundUnits(item.units)}
                       </span>
                       <span> {item.label}</span>

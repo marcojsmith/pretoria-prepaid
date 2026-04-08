@@ -1,8 +1,29 @@
+import {
+  UNITS_PRECISION_FACTOR,
+  CURRENCY_PRECISION_FACTOR,
+  MS_PER_DAY,
+  UNLIMITED_TIER_ASSUMED_SIZE,
+  MAX_TIER_PERCENTAGE,
+  MONTHS_IN_YEAR,
+} from "./constants";
+
 export enum Tier {
   One = 1,
   Two = 2,
   Three = 3,
   Four = 4,
+}
+
+const VALID_TIER_VALUES = new Set<number>([Tier.One, Tier.Two, Tier.Three, Tier.Four]);
+
+/**
+ * Validates a number is a valid Tier.
+ * @param val The value to validate.
+ * @returns A valid Tier or Tier.One as fallback.
+ */
+export function toTier(val: number): Tier {
+  if (VALID_TIER_VALUES.has(val)) return val as Tier;
+  return Tier.One;
 }
 
 export interface ElectricityRate {
@@ -64,7 +85,7 @@ export function calculateCost(options: {
     if (unitsInThisTier > 0) {
       const cost = unitsInThisTier * rate.rate;
       breakdown.push({
-        tier: rate.tier_number as Tier,
+        tier: toTier(rate.tier_number),
         label: rate.tier_label,
         units: unitsInThisTier,
         rate: rate.rate,
@@ -82,15 +103,6 @@ export function calculateCost(options: {
 export function formatCurrency(amount: number): string {
   return "R " + roundCurrency(amount).toFixed(2);
 }
-
-import {
-  UNITS_PRECISION_FACTOR,
-  CURRENCY_PRECISION_FACTOR,
-  MS_PER_DAY,
-  UNLIMITED_TIER_ASSUMED_SIZE,
-  MAX_TIER_PERCENTAGE,
-  MONTHS_IN_YEAR,
-} from "./constants";
 
 export function roundUnits(units: number): number {
   return Math.round(units * UNITS_PRECISION_FACTOR) / UNITS_PRECISION_FACTOR;

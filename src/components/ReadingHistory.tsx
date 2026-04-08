@@ -32,7 +32,7 @@ function parseLocalDate(d: string): Date {
 
 function ReadingCard({ reading, onDelete }: ReadingCardProps) {
   return (
-    <Card key={reading._id} className="overflow-hidden">
+    <Card className="overflow-hidden">
       <CardContent className="flex items-center justify-between pt-4">
         <div className="space-y-0.5">
           {reading.source === "onboarding" ? (
