@@ -1,36 +1,18 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCallback, useEffect, useState, useRef, useMemo } from "react";
-import { getCurrentMonth, calculateRefillIntervals, type RefillInterval } from "@/lib/electricity";
+import { getCurrentMonth } from "@/lib/electricity";
 import type { Purchase } from "@/lib/electricity";
 import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
-import { DATE_MONTH_LENGTH, AVERAGE_MONTHS_LOOKBACK, MONTHS_IN_YEAR } from "@/lib/constants";
+import { usePurchaseStats, type MonthlyStat } from "./usePurchaseStats";
+import { usePurchaseAnalytics } from "./usePurchaseAnalytics";
+import { useBatchImport } from "./useBatchImport";
+import type { RefillInterval } from "@/lib/electricity";
+import type { QueuedPurchase } from "@/types/purchases";
 
 const PURCHASES_CACHE_KEY = "purchases_history";
 const QUEUE_CACHE_KEY = "offline_purchases_queue";
-
-type QueuedPurchase =
-  | {
-      id: string;
-      type: "add";
-      units: number;
-      amountPaid: number;
-      date: string;
-      meterReading: number;
-    }
-  | {
-      id: string;
-      type: "delete";
-      purchaseId: string;
-    };
-
-interface MonthlyStat {
-  month: string;
-  units: number;
-  cost: number;
-  purchases: number;
-}
 
 export interface UsePurchasesReturn {
   purchases: Purchase[];
@@ -227,27 +209,6 @@ function useOfflineSync({
   return { syncQueue };
 }
 
-/**
- * Calculates monthly statistics from purchases.
- */
-function calculateMonthlyStats(purchases: Purchase[]): MonthlyStat[] {
-  const monthlyMap = new Map<string, { units: number; cost: number; purchases: number }>();
-
-  purchases.forEach((p) => {
-    const monthKey = p.date.substring(0, DATE_MONTH_LENGTH);
-    const existing = monthlyMap.get(monthKey) || { units: 0, cost: 0, purchases: 0 };
-    monthlyMap.set(monthKey, {
-      units: existing.units + p.units,
-      cost: existing.cost + p.amountPaid,
-      purchases: existing.purchases + 1,
-    });
-  });
-
-  return Array.from(monthlyMap.entries())
-    .map(([month, stats]) => ({ month, ...stats }))
-    .sort((a, b) => b.month.localeCompare(a.month));
-}
-
 async function performAddPurchase(
   options: { units: number; amountPaid: number; date: string; meterReading: number },
   ctx: { mutation: AddPurchaseMutationFn } & PurchaseQueueContext
@@ -273,63 +234,6 @@ async function performAddPurchase(
     console.warn("Mutation failed, queuing instead", error);
     saveOfflineQueue([...offlineQueue, queueItem]);
     toast.info("Purchase saved offline. Will sync when reconnected.");
-  }
-}
-
-async function performBatchAdd(
-  items: { units: number; amountPaid: number; date: string; meterReading: number }[],
-  ctx: { mutation: AddPurchaseMutationFn } & PurchaseQueueContext
-): Promise<void> {
-  const { mutation, offlineQueue, saveOfflineQueue } = ctx;
-  const newOfflineItems: QueuedPurchase[] = [];
-  let successCount = 0;
-  if (!navigator.onLine) {
-    items.forEach((item, index) => {
-      newOfflineItems.push({
-        id: `offline-${Date.now()}-${index}`,
-        type: "add",
-        units: item.units,
-        amountPaid: item.amountPaid,
-        date: item.date,
-        meterReading: item.meterReading,
-      });
-    });
-    saveOfflineQueue([...offlineQueue, ...newOfflineItems]);
-    toast.info("Purchases saved offline.", { description: String(items.length) + " purchases" });
-    return;
-  }
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (!item) continue;
-    try {
-      await mutation({
-        date: item.date,
-        units: item.units,
-        cost: 0,
-        amountPaid: item.amountPaid,
-        meterReading: item.meterReading,
-      });
-      successCount++;
-    } catch (error) {
-      console.warn("Batch item failed, queuing instead", error);
-      newOfflineItems.push({
-        id: `offline-${Date.now()}-${i}`,
-        type: "add",
-        units: item.units,
-        amountPaid: item.amountPaid,
-        date: item.date,
-        meterReading: item.meterReading,
-      });
-    }
-  }
-  if (newOfflineItems.length > 0) {
-    saveOfflineQueue([...offlineQueue, ...newOfflineItems]);
-    toast.info("Imported purchases. Some items queued for retry.", {
-      description:
-        "Imported: " + String(successCount) + ", queued: " + String(newOfflineItems.length),
-    });
-  } else {
-    toast.success(`Imported all ${successCount} purchases.`);
   }
 }
 
@@ -425,12 +329,6 @@ export function usePurchases(): UsePurchasesReturn {
     [addPurchaseMutation, offlineQueue, saveOfflineQueue]
   );
 
-  const addBatchPurchases = useCallback(
-    async (items: { units: number; amountPaid: number; date: string; meterReading: number }[]) =>
-      performBatchAdd(items, { mutation: addPurchaseMutation, offlineQueue, saveOfflineQueue }),
-    [addPurchaseMutation, offlineQueue, saveOfflineQueue]
-  );
-
   const deletePurchase = useCallback(
     async (id: string) =>
       performDeletePurchase(id, {
@@ -446,63 +344,14 @@ export function usePurchases(): UsePurchasesReturn {
     return purchases.filter((p) => p.date && p.date.startsWith(currentMonth));
   }, [purchases]);
 
-  const getMonthlyStats = useCallback(() => {
-    return calculateMonthlyStats(purchases);
-  }, [purchases]);
-
-  const getAverageMonthlyUsage = useCallback(() => {
-    const monthlyStats = getMonthlyStats();
-    const currentMonth = getCurrentMonth();
-    const previousMonths = monthlyStats
-      .filter((s) => s.month !== currentMonth)
-      .slice(0, AVERAGE_MONTHS_LOOKBACK);
-    if (previousMonths.length === 0) return 0;
-    return Math.round(previousMonths.reduce((sum, s) => sum + s.units, 0) / previousMonths.length);
-  }, [getMonthlyStats]);
-
-  const getDailyAverageUsage = useCallback(() => {
-    const monthlyStats = getMonthlyStats();
-    const currentMonth = getCurrentMonth();
-    const previousMonths = monthlyStats
-      .filter((s) => s.month !== currentMonth)
-      .slice(0, AVERAGE_MONTHS_LOOKBACK);
-    if (previousMonths.length === 0) return 0;
-
-    const totalUnits = previousMonths.reduce((sum, s) => sum + s.units, 0);
-
-    const totalDays = previousMonths.reduce((sum, s) => {
-      const parts = s.month.split("-").map(Number);
-      const year = parts[0];
-      const month = parts[1];
-      if (
-        Number.isFinite(year) &&
-        Number.isFinite(month) &&
-        month !== undefined &&
-        month >= 1 &&
-        month <= MONTHS_IN_YEAR
-      ) {
-        const daysInMonth = new Date(year!, month, 0).getDate();
-        return sum + daysInMonth;
-      }
-      return sum;
-    }, 0);
-
-    return totalDays > 0 ? totalUnits / totalDays : 0;
-  }, [getMonthlyStats]);
-
-  const getAverageMonthlyCost = useCallback(() => {
-    const monthlyStats = getMonthlyStats();
-    const currentMonth = getCurrentMonth();
-    const previousMonths = monthlyStats
-      .filter((s) => s.month !== currentMonth)
-      .slice(0, AVERAGE_MONTHS_LOOKBACK);
-    if (previousMonths.length === 0) return 0;
-    return previousMonths.reduce((sum, s) => sum + s.cost, 0) / previousMonths.length;
-  }, [getMonthlyStats]);
-
-  const getRefillAnalysis = useCallback(() => {
-    return calculateRefillIntervals(purchases);
-  }, [purchases]);
+  const { getMonthlyStats, getAverageMonthlyUsage, getDailyAverageUsage, getAverageMonthlyCost } =
+    usePurchaseStats(purchases);
+  const { getRefillAnalysis } = usePurchaseAnalytics(purchases);
+  const { addBatchPurchases } = useBatchImport({
+    addPurchaseMutation,
+    offlineQueue,
+    saveOfflineQueue,
+  });
 
   const currentMonthPurchases = getCurrentMonthPurchases();
   const unitsThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.units, 0);
