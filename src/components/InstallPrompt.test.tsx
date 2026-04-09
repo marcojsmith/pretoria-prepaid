@@ -138,7 +138,7 @@ describe("InstallPrompt", () => {
     expect(localStorage.getItem("pwa-prompt-dismissed")).toBeDefined();
   });
 
-  it.skip("should handle install errors gracefully", async () => {
+  it("should handle install errors gracefully", async () => {
     render(<InstallPrompt />);
 
     const event = createBeforeInstallPromptEvent();
@@ -155,7 +155,9 @@ describe("InstallPrompt", () => {
       fireEvent.click(installButton);
     });
 
-    expect(consoleSpy).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+    });
     await waitFor(() => {
       expect(screen.queryByText(/Install Pretoria Prepaid/i)).not.toBeInTheDocument();
     });
