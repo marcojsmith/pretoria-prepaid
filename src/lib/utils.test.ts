@@ -100,4 +100,59 @@ describe("CSV utilities", () => {
     expect(mockElement.setAttribute).toHaveBeenCalledWith("download", "test.csv");
     expect(mockElement.click).toHaveBeenCalled();
   });
+
+  it("prevents CSV injection - values starting with =", () => {
+    const data = [{ formula: "=CMD|'/C calc'!A0" }];
+    const csv = convertToCSV(data);
+    expect(csv).toContain("'=CMD|'/C calc'!A0");
+  });
+
+  it("prevents CSV injection - values starting with +", () => {
+    const data = [{ formula: "+ATTACH|'/C calc'!A0" }];
+    const csv = convertToCSV(data);
+    expect(csv).toContain("'+ATTACH");
+  });
+
+  it("prevents CSV injection - values starting with -", () => {
+    const data = [{ formula: "-SHEET|'/C calc'!A0" }];
+    const csv = convertToCSV(data);
+    expect(csv).toContain("'-SHEET");
+  });
+
+  it("prevents CSV injection - values starting with @", () => {
+    const data = [{ formula: "@SUM(1+1)" }];
+    const csv = convertToCSV(data);
+    expect(csv).toContain("'@SUM");
+  });
+
+  it("prevents CSV injection - values starting with tab", () => {
+    const data = [{ formula: "\t hidden" }];
+    const csv = convertToCSV(data);
+    expect(csv).toContain("'\t");
+  });
+
+  it("prevents CSV injection - values starting with carriage return", () => {
+    const data = [{ formula: "\r hidden" }];
+    const csv = convertToCSV(data);
+    expect(csv).toContain("'\r");
+  });
+
+  it("does not prefix normal values with quote", () => {
+    const data = [{ name: "John", count: 42 }];
+    const csv = convertToCSV(data);
+    expect(csv).toBe("name,count\nJohn,42");
+  });
+
+  it("handles null and undefined with CSV injection protection", () => {
+    const data = [{ name: "John", age: null, city: undefined }];
+    const csv = convertToCSV(data);
+    expect(csv).toBe("name,age,city\nJohn,,");
+  });
+
+  it("sanitises formula-injected value in full CSV round-trip", () => {
+    const data = [{ data: "=CMD|' /C calc'!A0" }];
+    const csv = convertToCSV(data);
+    const lines = csv.split("\n");
+    expect(lines[1]).toContain("'=CMD");
+  });
 });
