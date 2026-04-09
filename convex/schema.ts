@@ -60,6 +60,12 @@ export default defineSchema({
     .index("by_userId_source", ["userId", "source"]),
   user_roles: defineTable({
     userId: v.string(),
-    role: v.union(v.literal("admin"), v.string()), // Convex literal or fallback
+    role: v.union(v.literal("admin"), v.string()),
   }).index("by_userId", ["userId"]),
+  rate_limits: defineTable({
+    userId: v.string(),
+    action: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+  }).index("by_userId_action", ["userId", "action"]),
 });

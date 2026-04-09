@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimiter";
 
 const ERR_NOT_AUTHENTICATED = "Not authenticated";
 const ERR_PROFILE_NOT_FOUND = "Profile not found";
@@ -37,11 +38,20 @@ export const syncUser = mutation({
     email: v.union(v.string(), v.null()),
     preferredName: v.optional(v.string()),
   },
+  // eslint-disable-next-line llm-core/max-function-length
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error(ERR_NOT_AUTHENTICATED);
     }
+
+    await checkRateLimit({
+      ctx,
+      userId: identity.tokenIdentifier,
+      action: "syncUser",
+      limit: RATE_LIMITS.syncUser.limit,
+      windowMs: RATE_LIMITS.syncUser.windowMs,
+    });
 
     const existingProfile = await ctx.db
       .query("profiles")
