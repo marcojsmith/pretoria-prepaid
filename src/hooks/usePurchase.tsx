@@ -9,24 +9,10 @@ import { usePurchaseStats, type MonthlyStat } from "./usePurchaseStats";
 import { usePurchaseAnalytics } from "./usePurchaseAnalytics";
 import { useBatchImport } from "./useBatchImport";
 import type { RefillInterval } from "@/lib/electricity";
+import type { QueuedPurchase } from "@/types/purchases";
 
 const PURCHASES_CACHE_KEY = "purchases_history";
 const QUEUE_CACHE_KEY = "offline_purchases_queue";
-
-type QueuedPurchase =
-  | {
-      id: string;
-      type: "add";
-      units: number;
-      amountPaid: number;
-      date: string;
-      meterReading: number;
-    }
-  | {
-      id: string;
-      type: "delete";
-      purchaseId: string;
-    };
 
 export interface UsePurchasesReturn {
   purchases: Purchase[];

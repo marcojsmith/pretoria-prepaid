@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useBatchImport } from "./useBatchImport";
 import { toast } from "sonner";
+import type { QueuedPurchase } from "@/types/purchases";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -10,17 +11,6 @@ vi.mock("sonner", () => ({
     error: vi.fn(),
   },
 }));
-
-type QueuedPurchase =
-  | {
-      id: string;
-      type: "add";
-      units: number;
-      amountPaid: number;
-      date: string;
-      meterReading: number;
-    }
-  | { id: string; type: "delete"; purchaseId: string };
 
 const batchItems = [
   { units: 100, amountPaid: 300, date: "2024-02-25T10:00:00.000Z", meterReading: 500 },

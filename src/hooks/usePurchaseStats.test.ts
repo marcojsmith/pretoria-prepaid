@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { usePurchaseStats, calculateMonthlyStats } from "./usePurchaseStats";
 import type { Purchase } from "@/lib/electricity";
@@ -7,6 +7,10 @@ describe("usePurchaseStats", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2024-02-25T10:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("calculateMonthlyStats", () => {

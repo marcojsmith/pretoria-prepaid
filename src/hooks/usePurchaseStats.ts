@@ -72,7 +72,7 @@ export function usePurchaseStats(purchases: Purchase[]): {
   const getAverageMonthlyCost = useCallback(() => {
     const previousMonths = getPreviousMonths(getMonthlyStats(), getCurrentMonth());
     if (previousMonths.length === 0) return 0;
-    return previousMonths.reduce((sum, s) => sum + s.cost, 0) / previousMonths.length;
+    return Math.round(previousMonths.reduce((sum, s) => sum + s.cost, 0) / previousMonths.length);
   }, [getMonthlyStats]);
 
   return { getMonthlyStats, getAverageMonthlyUsage, getDailyAverageUsage, getAverageMonthlyCost };

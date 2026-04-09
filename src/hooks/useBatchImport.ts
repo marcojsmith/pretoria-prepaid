@@ -1,20 +1,6 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
-
-type QueuedPurchase =
-  | {
-      id: string;
-      type: "add";
-      units: number;
-      amountPaid: number;
-      date: string;
-      meterReading: number;
-    }
-  | {
-      id: string;
-      type: "delete";
-      purchaseId: string;
-    };
+import type { QueuedPurchase } from "@/types/purchases";
 
 type AddPurchaseMutationFn = (args: {
   date: string;
@@ -90,6 +76,13 @@ async function performBatchAdd(items: BatchItem[], ctx: BatchCtx): Promise<void>
   await submitOnline(items, ctx);
 }
 
+/**
+ * Hook for batch importing electricity purchases.
+ * @param addPurchaseMutation - The mutation function to add a single purchase.
+ * @param offlineQueue - The current offline queue of pending purchases.
+ * @param saveOfflineQueue - Function to save the offline queue.
+ * @returns An object with addBatchPurchases function that calls performBatchAdd with the provided mutation and queue.
+ */
 export function useBatchImport({
   addPurchaseMutation,
   offlineQueue,

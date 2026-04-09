@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { usePurchaseAnalytics } from "./usePurchaseAnalytics";
-import type { Purchase } from "@/lib/electricity";
+import type { Purchase, RefillInterval } from "@/lib/electricity";
 
 describe("usePurchaseAnalytics", () => {
   it("returns empty array for empty purchases", () => {
@@ -19,6 +19,6 @@ describe("usePurchaseAnalytics", () => {
     const analysis = result.current.getRefillAnalysis();
 
     expect(analysis).toHaveLength(2);
-    expect((analysis[1] as { daysSinceLastRefill: number | null }).daysSinceLastRefill).toBe(4);
+    expect((analysis[1] as RefillInterval).daysSinceLastRefill).toBe(4);
   });
 });
