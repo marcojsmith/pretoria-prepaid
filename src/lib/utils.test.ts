@@ -125,6 +125,18 @@ describe("CSV utilities", () => {
     expect(csv).toContain("'@SUM");
   });
 
+  it("prevents CSV injection - values starting with tab", () => {
+    const data = [{ formula: "\t hidden" }];
+    const csv = convertToCSV(data);
+    expect(csv).toContain("'\t");
+  });
+
+  it("prevents CSV injection - values starting with carriage return", () => {
+    const data = [{ formula: "\r hidden" }];
+    const csv = convertToCSV(data);
+    expect(csv).toContain("'\r");
+  });
+
   it("does not prefix normal values with quote", () => {
     const data = [{ name: "John", count: 42 }];
     const csv = convertToCSV(data);

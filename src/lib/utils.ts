@@ -34,7 +34,7 @@ export function convertToCSV(data: (Record<string, unknown> | null)[]): string {
 
   const escapeValue = (val: unknown): string => {
     if (val === null || val === undefined) return "";
-    const strVal = sanitiseCsvCell(String(val));
+    const strVal = typeof val === "string" ? sanitiseCsvCell(val) : String(val);
     if (strVal.includes(",") || strVal.includes('"') || strVal.includes("\n")) {
       return `"${strVal.replace(/"/g, '""')}"`;
     }
