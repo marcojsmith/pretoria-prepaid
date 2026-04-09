@@ -89,7 +89,7 @@ export const addPurchase = mutation({
 
     await checkRateLimit({
       ctx,
-      userId: identity.tokenIdentifier,
+      userId: identity.subject,
       action: "addPurchase",
       limit: RATE_LIMITS.addPurchase.limit,
       windowMs: RATE_LIMITS.addPurchase.windowMs,
@@ -157,7 +157,7 @@ export const deletePurchase = mutation({
 
     await checkRateLimit({
       ctx,
-      userId: identity.tokenIdentifier,
+      userId: identity.subject,
       action: "deletePurchase",
       limit: RATE_LIMITS.deletePurchase.limit,
       windowMs: RATE_LIMITS.deletePurchase.windowMs,

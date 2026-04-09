@@ -47,7 +47,7 @@ export const syncUser = mutation({
 
     await checkRateLimit({
       ctx,
-      userId: identity.tokenIdentifier,
+      userId: identity.subject,
       action: "syncUser",
       limit: RATE_LIMITS.syncUser.limit,
       windowMs: RATE_LIMITS.syncUser.windowMs,

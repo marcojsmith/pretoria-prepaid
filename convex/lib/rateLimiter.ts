@@ -1,4 +1,5 @@
 import type { MutationCtx } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
 import { ConvexError } from "convex/values";
 
 const WRITES_PER_MINUTE = 60;
@@ -9,6 +10,7 @@ export const RATE_LIMITS = {
   addPurchase: { limit: WRITES_PER_MINUTE, windowMs: ONE_MINUTE_MS },
   deletePurchase: { limit: WRITES_PER_MINUTE, windowMs: ONE_MINUTE_MS },
   syncUser: { limit: SYNC_PER_MINUTE, windowMs: ONE_MINUTE_MS },
+  addOnboardingReading: { limit: WRITES_PER_MINUTE, windowMs: ONE_MINUTE_MS },
 } as const;
 
 export interface CheckRateLimitOptions {
@@ -56,3 +58,24 @@ export async function checkRateLimit(options: CheckRateLimitOptions): Promise<vo
     count: existingRow.count + 1,
   });
 }
+
+const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+export const purgeStaleRateLimits = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const staleThreshold = now - STALE_THRESHOLD_MS;
+
+    const staleRows = await ctx.db
+      .query("rate_limits")
+      .filter((q) => q.lt(q.field("windowStart"), staleThreshold))
+      .collect();
+
+    for (const row of staleRows) {
+      await ctx.db.delete(row._id);
+    }
+
+    return { deletedCount: staleRows.length };
+  },
+});

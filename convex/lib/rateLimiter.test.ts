@@ -24,7 +24,20 @@ describe("rateLimiter", () => {
         });
       }
 
-      expect(true).toBe(true);
+      await t.mutation(async (ctx) => {
+        const rateLimitRow = await ctx.db
+          .query("rate_limits")
+          .withIndex("by_userId_action", (q) =>
+            q.eq("userId", "user-123").eq("action", "testAction")
+          )
+          .unique();
+
+        expect(rateLimitRow).not.toBeNull();
+        expect(rateLimitRow!.count).toBe(5);
+        expect(rateLimitRow!.userId).toBe("user-123");
+        expect(rateLimitRow!.action).toBe("testAction");
+        expect(rateLimitRow!.windowStart).toBeGreaterThan(Date.now() - 60_000);
+      });
     });
 
     it("throws ConvexError when limit is exceeded", async () => {
@@ -69,47 +82,53 @@ describe("rateLimiter", () => {
         });
       });
 
-      let insertedNewRow = false;
       await t.mutation(async (ctx) => {
-        const existing = await ctx.db
+        await checkRateLimit({
+          ctx,
+          userId: "user-123",
+          action: "testAction",
+          limit: 10,
+          windowMs: 60_000,
+        });
+
+        const rateLimitRow = await ctx.db
           .query("rate_limits")
           .withIndex("by_userId_action", (q) =>
             q.eq("userId", "user-123").eq("action", "testAction")
           )
           .unique();
 
-        if (existing && existing.windowStart + 60_000 < Date.now()) {
-          insertedNewRow = true;
-        }
+        expect(rateLimitRow).not.toBeNull();
+        expect(rateLimitRow!.count).toBe(1);
+        expect(rateLimitRow!.windowStart).toBeGreaterThan(Date.now() - 60_000);
       });
-
-      expect(insertedNewRow).toBe(true);
     });
 
     it("creates new row when no existing row exists", async () => {
       const t = convexTest(schema, modules);
 
-      let rowCreated = false;
       await t.mutation(async (ctx) => {
-        const existing = await ctx.db
+        await checkRateLimit({
+          ctx,
+          userId: "new-user",
+          action: "newAction",
+          limit: 10,
+          windowMs: 60_000,
+        });
+
+        const rateLimitRow = await ctx.db
           .query("rate_limits")
           .withIndex("by_userId_action", (q) =>
             q.eq("userId", "new-user").eq("action", "newAction")
           )
           .unique();
 
-        if (!existing) {
-          await ctx.db.insert("rate_limits", {
-            userId: "new-user",
-            action: "newAction",
-            windowStart: Date.now(),
-            count: 1,
-          });
-          rowCreated = true;
-        }
+        expect(rateLimitRow).not.toBeNull();
+        expect(rateLimitRow!.userId).toBe("new-user");
+        expect(rateLimitRow!.action).toBe("newAction");
+        expect(rateLimitRow!.count).toBe(1);
+        expect(rateLimitRow!.windowStart).toBeGreaterThan(Date.now() - 60_000);
       });
-
-      expect(rowCreated).toBe(true);
     });
 
     it("increments count when within window and under limit", async () => {
@@ -124,22 +143,25 @@ describe("rateLimiter", () => {
         });
       });
 
-      let incrementSuccessful = false;
       await t.mutation(async (ctx) => {
-        const existing = await ctx.db
+        await checkRateLimit({
+          ctx,
+          userId: "user-123",
+          action: "testAction",
+          limit: 10,
+          windowMs: 60_000,
+        });
+
+        const rateLimitRow = await ctx.db
           .query("rate_limits")
           .withIndex("by_userId_action", (q) =>
             q.eq("userId", "user-123").eq("action", "testAction")
           )
           .unique();
 
-        if (existing && existing.count < 10) {
-          await ctx.db.patch(existing._id, { count: existing.count + 1 });
-          incrementSuccessful = true;
-        }
+        expect(rateLimitRow).not.toBeNull();
+        expect(rateLimitRow!.count).toBe(6);
       });
-
-      expect(incrementSuccessful).toBe(true);
     });
   });
 });

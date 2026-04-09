@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { calculateConsumptionStats } from "./electricity_logic";
 import { DEFAULT_READINGS_TAKE, DEFAULT_LOW_BALANCE_THRESHOLD } from "./constants";
+import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimiter";
 
 export const getReadings = query({
   args: {},
@@ -22,9 +23,18 @@ export const addOnboardingReading = mutation({
     reading: v.number(),
     defaultDailyUsage: v.optional(v.number()),
   },
+  // eslint-disable-next-line llm-core/max-function-length
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    await checkRateLimit({
+      ctx,
+      userId: identity.subject,
+      action: "addOnboardingReading",
+      limit: RATE_LIMITS.addOnboardingReading.limit,
+      windowMs: RATE_LIMITS.addOnboardingReading.windowMs,
+    });
 
     // Check if user already has any readings
     const existingReadings = await ctx.db
