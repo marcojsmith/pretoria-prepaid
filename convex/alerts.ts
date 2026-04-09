@@ -56,6 +56,7 @@ async function sendLowBalanceNotification(options: {
       });
     } else {
       console.error("Error sending push to user", { userId: profile.userId, error });
+      throw error;
     }
   }
 }
@@ -145,8 +146,20 @@ export const checkLowBalances = action({
 
     const nowTimestamp = Date.now();
 
+    let failureCount = 0;
     for (const profile of profiles) {
-      await processProfileAlert({ ctx, profile, nowTimestamp });
+      try {
+        await processProfileAlert({ ctx, profile, nowTimestamp });
+      } catch (error) {
+        failureCount++;
+        console.error("Failed to process alert for profile", { userId: profile.userId, error });
+      }
+    }
+    if (failureCount > 0) {
+      console.error("Alert processing complete with failures", {
+        failureCount,
+        totalProfiles: profiles.length,
+      });
     }
   },
 });
