@@ -61,7 +61,17 @@ export const updateRate = mutation({
       throw new Error(`Rate not found: ${args.id}`);
     }
 
-    const { id, ...updates } = args;
+    const { id, rate, ...restUpdates } = args;
+
+    if (rate !== undefined) {
+      const MIN_RATE = 0.01;
+      const MAX_RATE = 100;
+      if (rate < MIN_RATE || rate > MAX_RATE) {
+        throw new Error(`Rate must be between R${MIN_RATE} and R${MAX_RATE} per kWh`);
+      }
+    }
+
+    const updates = restUpdates;
     if (Object.keys(updates).length === 0) return;
 
     await ctx.db.patch(id, updates);

@@ -12,6 +12,16 @@ import { Pencil, Check, X, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/electricity";
 import { useToast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 interface ElectricityRateRow {
   _id: string;
@@ -95,6 +105,11 @@ export default function Rates(): JSX.Element | null {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pendingSave, setPendingSave] = useState<{
+    id: string;
+    newRate: number;
+    oldRate: number;
+  } | null>(null);
 
   if (authLoading || ratesLoading || roleLoading) {
     return (
@@ -122,40 +137,38 @@ export default function Rates(): JSX.Element | null {
     setEditValue("");
   };
 
-  const handleSave = async (id: string): Promise<void> => {
+  const handleSave = (id: string): void => {
+    const MIN_RATE = 0.01;
+    const MAX_RATE = 100;
     const newRate = parseFloat(editValue);
-    if (isNaN(newRate) || newRate <= 0) {
+    if (isNaN(newRate) || newRate < MIN_RATE || newRate > MAX_RATE) {
       toast({
         title: "Invalid rate",
-        description: "Please enter a valid positive number",
+        description: "Rate must be between R0.01 and R100.00 per kWh",
         variant: "destructive",
       });
       return;
     }
+    const currentRate = rates.find((r) => r._id === id);
+    setPendingSave({ id, newRate, oldRate: currentRate?.rate ?? 0 });
+  };
+
+  const confirmSave = async (): Promise<void> => {
+    if (!pendingSave) return;
     setSaving(true);
     try {
-      const { error } = await updateRate(id, newRate);
+      const { error } = await updateRate(pendingSave.id, pendingSave.newRate);
       if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to update rate",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to update rate", variant: "destructive" });
         return;
       }
-      toast({
-        title: "Success",
-        description: "Rate updated successfully",
-      });
+      toast({ title: "Success", description: "Rate updated successfully" });
       setEditingId(null);
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to update rate",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update rate", variant: "destructive" });
     } finally {
       setSaving(false);
+      setPendingSave(null);
     }
   };
 
@@ -188,7 +201,7 @@ export default function Rates(): JSX.Element | null {
                     isAdmin={isAdmin}
                     onEdit={handleEdit}
                     onSave={(id) => {
-                      void handleSave(id);
+                      handleSave(id);
                     }}
                     onCancel={handleCancel}
                     onEditValueChange={setEditValue}
@@ -205,6 +218,35 @@ export default function Rates(): JSX.Element | null {
           </Card>
         </div>
       </main>
+      <AlertDialog
+        open={pendingSave !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSave(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Rate Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              Change rate from{" "}
+              <strong>{pendingSave ? formatCurrency(pendingSave.oldRate) : ""}/kWh</strong> to{" "}
+              <strong>{pendingSave ? formatCurrency(pendingSave.newRate) : ""}/kWh</strong>? This
+              will affect all users' cost calculations.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingSave(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                void confirmSave();
+              }}
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

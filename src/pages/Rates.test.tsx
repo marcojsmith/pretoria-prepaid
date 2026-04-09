@@ -34,6 +34,45 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuSeparator: () => <hr />,
 }));
 
+// Mock AlertDialog component
+vi.mock("@/components/ui/alert-dialog", () => ({
+  AlertDialog: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode;
+    open: boolean;
+    onOpenChange?: (open: boolean) => void;
+  }) => (open ? <div data-testid="alert-dialog">{children}</div> : null),
+  AlertDialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogAction: ({
+    children,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+  }) => (
+    <button onClick={onClick} data-testid="alert-dialog-confirm">
+      {children}
+    </button>
+  ),
+  AlertDialogCancel: ({
+    children,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+  }) => (
+    <button onClick={onClick} data-testid="alert-dialog-cancel">
+      {children}
+    </button>
+  ),
+}));
+
 describe("Rates Page", () => {
   const mockToast = vi.fn();
 
@@ -378,5 +417,99 @@ describe("Rates Page", () => {
     fireEvent.click(saveButton as HTMLElement);
 
     expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Success" }));
+  });
+
+  it("shows confirmation dialog when rate is valid", async () => {
+    const updateRate = vi.fn().mockResolvedValue({ error: null });
+    setupAdminWithRate(updateRate);
+
+    render(
+      <BrowserRouter>
+        <Rates />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId("edit-rate-button"));
+
+    const input = screen.getByRole("spinbutton");
+    fireEvent.change(input, { target: { value: "4.5" } });
+
+    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
+    fireEvent.click(saveButton as HTMLElement);
+
+    expect(screen.getByTestId("alert-dialog")).toBeInTheDocument();
+    expect(screen.getByText("Confirm Rate Change")).toBeInTheDocument();
+
+    const confirmButton = screen.getByTestId("alert-dialog-confirm");
+    fireEvent.click(confirmButton);
+
+    await vi.waitFor(() => {
+      expect(updateRate).toHaveBeenCalledWith("1", 4.5);
+    });
+  });
+
+  it("shows error toast when rate is below minimum (0.01)", () => {
+    setupAdminWithRate();
+
+    render(
+      <BrowserRouter>
+        <Rates />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId("edit-rate-button"));
+
+    const input = screen.getByRole("spinbutton");
+    fireEvent.change(input, { target: { value: "0.005" } });
+
+    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
+    fireEvent.click(saveButton as HTMLElement);
+
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Invalid rate" }));
+  });
+
+  it("shows error toast when rate exceeds maximum (100)", () => {
+    setupAdminWithRate();
+
+    render(
+      <BrowserRouter>
+        <Rates />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId("edit-rate-button"));
+
+    const input = screen.getByRole("spinbutton");
+    fireEvent.change(input, { target: { value: "150" } });
+
+    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
+    fireEvent.click(saveButton as HTMLElement);
+
+    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Invalid rate" }));
+  });
+
+  it("closes confirmation dialog on cancel", () => {
+    setupAdminWithRate();
+
+    render(
+      <BrowserRouter>
+        <Rates />
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByTestId("edit-rate-button"));
+
+    const input = screen.getByRole("spinbutton");
+    fireEvent.change(input, { target: { value: "4.5" } });
+
+    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
+    fireEvent.click(saveButton as HTMLElement);
+
+    expect(screen.getByTestId("alert-dialog")).toBeInTheDocument();
+
+    const cancelButton = screen.getByTestId("alert-dialog-cancel");
+    fireEvent.click(cancelButton);
+
+    expect(screen.queryByTestId("alert-dialog")).not.toBeInTheDocument();
   });
 });
