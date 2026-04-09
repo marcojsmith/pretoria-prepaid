@@ -15,6 +15,10 @@ import {
   TIER_4_RATE,
 } from "./constants";
 
+export const RATE_MIN = 0.01;
+export const RATE_MAX = 100;
+export const RATE_INVALID_MESSAGE = "Rate must be between R0.01 and R100.00 per kWh";
+
 /**
  * Helper to check if the current user is an admin.
  * @param ctx - The query or mutation context.
@@ -63,15 +67,11 @@ export const updateRate = mutation({
 
     const { id, rate, ...restUpdates } = args;
 
-    if (rate !== undefined) {
-      const MIN_RATE = 0.01;
-      const MAX_RATE = 100;
-      if (rate < MIN_RATE || rate > MAX_RATE) {
-        throw new Error(`Rate must be between R${MIN_RATE} and R${MAX_RATE} per kWh`);
-      }
+    if (rate !== undefined && (rate < RATE_MIN || rate > RATE_MAX)) {
+      throw new Error(`Rate must be between R${RATE_MIN} and R${RATE_MAX} per kWh`);
     }
 
-    const updates = restUpdates;
+    const updates = { ...restUpdates, ...(rate !== undefined ? { rate } : {}) };
     if (Object.keys(updates).length === 0) return;
 
     await ctx.db.patch(id, updates);

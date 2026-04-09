@@ -172,10 +172,13 @@ describe("KPIBreakdown", () => {
   });
 
   it("should calculate usage since last reading", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-03-15T12:00:00"));
+
     const today = new Date();
     const lastWeek = new Date(today);
     lastWeek.setDate(today.getDate() - 7);
-    const lastWeekStr = lastWeek.toISOString().split("T")[0];
+    const lastWeekStr = `${lastWeek.getFullYear()}-${String(lastWeek.getMonth() + 1).padStart(2, "0")}-${String(lastWeek.getDate()).padStart(2, "0")}`;
 
     vi.mocked(useQuery).mockReturnValue({
       stats: {
@@ -195,5 +198,7 @@ describe("KPIBreakdown", () => {
 
     expect(screen.getByText(/usage since last reading/i)).toBeInTheDocument();
     expect(screen.getByText(/\(7 days\)/)).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 });

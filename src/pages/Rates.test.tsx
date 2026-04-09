@@ -39,11 +39,20 @@ vi.mock("@/components/ui/alert-dialog", () => ({
   AlertDialog: ({
     children,
     open,
+    onOpenChange,
   }: {
     children: React.ReactNode;
     open: boolean;
     onOpenChange?: (open: boolean) => void;
-  }) => (open ? <div data-testid="alert-dialog">{children}</div> : null),
+  }) => {
+    // Store onOpenChange globally for test access
+    if (onOpenChange) {
+      (
+        window as unknown as { __alertDialogOnOpenChange?: (open: boolean) => void }
+      ).__alertDialogOnOpenChange = onOpenChange;
+    }
+    return open ? <div data-testid="alert-dialog">{children}</div> : null;
+  },
   AlertDialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertDialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertDialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -67,7 +76,16 @@ vi.mock("@/components/ui/alert-dialog", () => ({
     children: React.ReactNode;
     onClick?: () => void;
   }) => (
-    <button onClick={onClick} data-testid="alert-dialog-cancel">
+    <button
+      onClick={() => {
+        if (onClick) onClick();
+        const globalHandler = (
+          window as unknown as { __alertDialogOnOpenChange?: (open: boolean) => void }
+        ).__alertDialogOnOpenChange;
+        if (globalHandler) globalHandler(false);
+      }}
+      data-testid="alert-dialog-cancel"
+    >
       {children}
     </button>
   ),

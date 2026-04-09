@@ -22,6 +22,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import { RATE_MIN, RATE_MAX, RATE_INVALID_MESSAGE } from "../../convex/rates";
 
 interface ElectricityRateRow {
   _id: string;
@@ -138,13 +139,11 @@ export default function Rates(): JSX.Element | null {
   };
 
   const handleSave = (id: string): void => {
-    const MIN_RATE = 0.01;
-    const MAX_RATE = 100;
     const newRate = parseFloat(editValue);
-    if (isNaN(newRate) || newRate < MIN_RATE || newRate > MAX_RATE) {
+    if (isNaN(newRate) || newRate < RATE_MIN || newRate > RATE_MAX) {
       toast({
         title: "Invalid rate",
-        description: "Rate must be between R0.01 and R100.00 per kWh",
+        description: RATE_INVALID_MESSAGE,
         variant: "destructive",
       });
       return;
