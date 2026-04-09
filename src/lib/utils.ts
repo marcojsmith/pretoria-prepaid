@@ -6,6 +6,19 @@ export function cn(...inputs: ClassValue[]): string {
 }
 
 /**
+ * Sanitises a value to prevent CSV formula injection by prefixing dangerous
+ * characters (=, +, -, @, tab, carriage return) with a single quote.
+ * @param value The string value to sanitise
+ * @returns The sanitised string
+ */
+function sanitiseCsvCell(value: string): string {
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return `'${value}`;
+  }
+  return value;
+}
+
+/**
  * Converts an array of objects to a CSV string.
  * @param data Array of objects to convert
  * @returns CSV string
@@ -21,7 +34,7 @@ export function convertToCSV(data: (Record<string, unknown> | null)[]): string {
 
   const escapeValue = (val: unknown): string => {
     if (val === null || val === undefined) return "";
-    const strVal = String(val);
+    const strVal = sanitiseCsvCell(String(val));
     if (strVal.includes(",") || strVal.includes('"') || strVal.includes("\n")) {
       return `"${strVal.replace(/"/g, '""')}"`;
     }
