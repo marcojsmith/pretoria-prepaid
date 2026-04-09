@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { calculateTierBreakdown } from "./electricity_logic";
 import { DATE_MONTH_LENGTH } from "./constants";
+import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimiter";
 
 /**
  * Recalculates all purchases for a specific user and month.
@@ -79,11 +80,20 @@ export const addPurchase = mutation({
     amountPaid: v.number(),
     meterReading: v.number(), // Current reading before purchase (now required)
   },
+  // eslint-disable-next-line llm-core/max-function-length
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
     }
+
+    await checkRateLimit({
+      ctx,
+      userId: identity.subject,
+      action: "addPurchase",
+      limit: RATE_LIMITS.addPurchase.limit,
+      windowMs: RATE_LIMITS.addPurchase.windowMs,
+    });
 
     if (args.units < 0 || args.cost < 0 || args.amountPaid < 0) {
       throw new Error("Values cannot be negative");
@@ -144,6 +154,14 @@ export const deletePurchase = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    await checkRateLimit({
+      ctx,
+      userId: identity.subject,
+      action: "deletePurchase",
+      limit: RATE_LIMITS.deletePurchase.limit,
+      windowMs: RATE_LIMITS.deletePurchase.windowMs,
+    });
 
     const purchase = await ctx.db.get(args.id);
     if (!purchase) return;
