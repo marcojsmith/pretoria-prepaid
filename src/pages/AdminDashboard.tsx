@@ -25,7 +25,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { SEO } from "@/components/SEO";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -36,6 +36,7 @@ import {
   MAX_TIER_PERCENTAGE,
   USER_ID_PREVIEW_LENGTH,
 } from "@/lib/constants";
+import { USERS_LIST_PAGE_SIZE } from "../../convex/constants";
 
 const BURN_RATE_TABLE_COLS = 5;
 
@@ -353,7 +354,17 @@ const INVALID_INPUT_TITLE = "Invalid Input";
 
 // eslint-disable-next-line llm-core/max-function-length
 export default function AdminDashboard(): JSX.Element {
-  const { loading, globalStats, usersList, recentPurchases, rates, updateRate } = useAdmin();
+  const {
+    loading,
+    globalStats,
+    usersList,
+    usersListStatus,
+    loadMoreUsers,
+    recentPurchases,
+    rates,
+    updateRate,
+  } = useAdmin();
+
   const { toast } = useToast();
 
   const [editingRateId, setEditingRateId] = useState<Id<"electricity_rates"> | null>(null);
@@ -364,7 +375,14 @@ export default function AdminDashboard(): JSX.Element {
     rate: number;
   } | null>(null);
 
+  const [activeTab, setActiveTab] = useState("overview");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+
+  useEffect(() => {
+    if (usersListStatus === "CanLoadMore" && (activeTab === "users" || activeTab === "kpi")) {
+      loadMoreUsers(USERS_LIST_PAGE_SIZE);
+    }
+  }, [usersListStatus, loadMoreUsers, activeTab]);
 
   const startEditing = (rate: {
     _id: Id<"electricity_rates">;
@@ -453,7 +471,7 @@ export default function AdminDashboard(): JSX.Element {
     })();
   };
 
-  if (loading || !globalStats || !usersList || !recentPurchases || !rates) {
+  if (loading || !globalStats || !recentPurchases || !rates) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -477,7 +495,7 @@ export default function AdminDashboard(): JSX.Element {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="overview" onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="h-auto w-full justify-start gap-4 rounded-none border-b border-border bg-transparent p-0">
             <TabsTrigger value="overview" className={tabTriggerClass}>
               Overview
@@ -611,6 +629,12 @@ export default function AdminDashboard(): JSX.Element {
                     ))}
                   </TableBody>
                 </Table>
+                {usersListStatus === "LoadingMore" && (
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading more…
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -714,6 +738,12 @@ export default function AdminDashboard(): JSX.Element {
                     </option>
                   ))}
                 </select>
+                {usersListStatus === "LoadingMore" && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading more users…
+                  </div>
+                )}
               </CardContent>
             </Card>
 

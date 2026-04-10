@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { calculateConsumptionStats } from "./electricity_logic";
 import {
   EXPONENTIAL_DECAY_FACTOR,
@@ -136,21 +137,23 @@ async function checkAdmin(ctx: QueryCtx) {
 }
 
 export const getUsersList = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
     await checkAdmin(ctx);
 
-    const profiles = await ctx.db.query("profiles").collect();
-    const roles = await ctx.db.query("user_roles").collect();
+    const paginatedProfiles = await ctx.db.query("profiles").paginate(args.paginationOpts);
 
-    // Join profiles with roles
-    return profiles.map((profile) => {
-      const userRole = roles.find((r) => r.userId === profile.userId);
-      return {
-        ...profile,
-        role: userRole?.role ?? "user",
-      };
-    });
+    const page = await Promise.all(
+      paginatedProfiles.page.map(async (profile) => {
+        const [userRole] = await ctx.db
+          .query("user_roles")
+          .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
+          .take(1);
+        return { ...profile, role: userRole?.role ?? "user" };
+      })
+    );
+
+    return { ...paginatedProfiles, page };
   },
 });
 
@@ -193,13 +196,14 @@ export const getRecentPurchases = query({
       Map<string, { readingPre: number; readingPost: number; date: string }>
     >();
 
-    const readingsByUser = await Promise.all(
+    await Promise.all(
       userIds.map(async (uid) => {
         const userReadings = await ctx.db
           .query("meter_readings")
           .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
           .order("desc")
           .take(DEFAULT_READINGS_TAKE);
+
         const dateMap = new Map<
           string,
           { readingPre: number; readingPost: number; date: string }
@@ -207,12 +211,9 @@ export const getRecentPurchases = query({
         for (const reading of userReadings) {
           dateMap.set(reading.date, reading);
         }
-        return [uid, dateMap] as const;
+        userReadingsMap.set(uid, dateMap);
       })
     );
-    for (const [uid, dateMap] of readingsByUser) {
-      userReadingsMap.set(uid, dateMap);
-    }
 
     const result = [];
     for (const purchase of purchases) {

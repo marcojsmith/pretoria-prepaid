@@ -1,8 +1,9 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, usePaginatedQuery, useMutation } from "convex/react";
+import type { PaginationStatus, PaginatedQueryItem } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import type { Doc } from "../../convex/_generated/dataModel";
 import type { ElectricityRate } from "./useRates";
+import { USERS_LIST_PAGE_SIZE } from "../../convex/constants";
 
 interface GlobalStats {
   totalUsers: number;
@@ -12,9 +13,7 @@ interface GlobalStats {
   avgUnitsPerUser: number;
 }
 
-interface UserWithRole extends Doc<"profiles"> {
-  role: string;
-}
+type UserWithRole = PaginatedQueryItem<typeof api.admin.getUsersList>;
 
 interface RecentPurchase {
   _id: string;
@@ -33,7 +32,9 @@ interface RecentPurchase {
 export interface UseAdminReturn {
   loading: boolean;
   globalStats: GlobalStats | undefined;
-  usersList: UserWithRole[] | undefined;
+  usersList: UserWithRole[];
+  usersListStatus: PaginationStatus;
+  loadMoreUsers: (numItems: number) => void;
   recentPurchases: RecentPurchase[] | undefined;
   rates: ElectricityRate[] | undefined;
   updateRate: (params: {
@@ -50,12 +51,17 @@ export interface UseAdminReturn {
  */
 export function useAdmin(): UseAdminReturn {
   const globalStats = useQuery(api.admin.getGlobalStats);
-  const usersList = useQuery(api.admin.getUsersList);
+  const {
+    results: usersList,
+    status: usersListStatus,
+    loadMore: loadMoreUsers,
+  } = usePaginatedQuery(api.admin.getUsersList, {}, { initialNumItems: USERS_LIST_PAGE_SIZE });
   const recentPurchases = useQuery(api.admin.getRecentPurchases);
   const rates = useQuery(api.rates.getRates);
   const updateRateMutation = useMutation(api.rates.updateRate);
 
-  const loading = !globalStats || !usersList || !recentPurchases || !rates;
+  const loading =
+    !globalStats || usersListStatus === "LoadingFirstPage" || !recentPurchases || !rates;
 
   const updateRate = async (params: {
     id: Id<"electricity_rates">;
@@ -71,6 +77,8 @@ export function useAdmin(): UseAdminReturn {
     loading,
     globalStats,
     usersList,
+    usersListStatus,
+    loadMoreUsers,
     recentPurchases,
     rates,
     updateRate,
