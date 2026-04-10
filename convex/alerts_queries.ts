@@ -1,5 +1,6 @@
 import { internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { MAX_ALERT_PURCHASES } from "./constants";
 
 /**
  * Internal query to fetch all profiles with push enabled.
@@ -29,7 +30,8 @@ export const getUserDataForAlert = internalQuery({
     const purchases = await ctx.db
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .order("desc")
+      .take(MAX_ALERT_PURCHASES);
 
     return { readings, purchases };
   },
