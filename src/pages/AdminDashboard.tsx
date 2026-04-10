@@ -629,6 +629,12 @@ export default function AdminDashboard(): JSX.Element {
                     ))}
                   </TableBody>
                 </Table>
+                {usersListStatus === "LoadingMore" && (
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading more…
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -732,6 +738,12 @@ export default function AdminDashboard(): JSX.Element {
                     </option>
                   ))}
                 </select>
+                {usersListStatus === "LoadingMore" && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading more users…
+                  </div>
+                )}
               </CardContent>
             </Card>
 
