@@ -19,6 +19,8 @@ interface PurchaseCalculatorProps {
   unitsAlreadyBought: number;
   averageMonthlyUsage: number;
   daysLeftInMonth: number;
+  dailyBurnRate?: number;
+  estimatedBalance?: number;
   onSavePurchase?: (options: { units: number; amount: number; currentBalance?: number }) => void;
 }
 
@@ -192,6 +194,8 @@ function usePurchaseCalculator({
   onSavePurchase,
   rates,
   ratesLoading,
+  dailyBurnRate = 0,
+  estimatedBalance = 0,
 }: {
   unitsAlreadyBought: number;
   averageMonthlyUsage: number;
@@ -199,11 +203,22 @@ function usePurchaseCalculator({
   onSavePurchase?: (options: { units: number; amount: number; currentBalance?: number }) => void;
   rates: ElectricityRate[];
   ratesLoading: boolean;
+  dailyBurnRate?: number;
+  estimatedBalance?: number;
 }) {
   const suggestedUnits = useMemo(() => {
-    if (averageMonthlyUsage === 0) return 0;
-    return Math.max(0, averageMonthlyUsage - unitsAlreadyBought);
-  }, [averageMonthlyUsage, unitsAlreadyBought]);
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const effectiveBurnRate =
+      dailyBurnRate > 0
+        ? dailyBurnRate
+        : averageMonthlyUsage > 0
+          ? averageMonthlyUsage / daysInMonth
+          : 0;
+    if (effectiveBurnRate <= 0) return 0;
+    const needed = effectiveBurnRate * daysLeftInMonth;
+    return Math.max(0, needed - estimatedBalance);
+  }, [averageMonthlyUsage, dailyBurnRate, estimatedBalance, daysLeftInMonth]);
 
   const [targetUnits, setTargetUnits] = useState("");
   const [currentBalance, setCurrentBalance] = useState("");
@@ -241,24 +256,19 @@ function usePurchaseCalculator({
   const handleBalanceChange = (val: string) => {
     setCurrentBalance(val);
     const num = parseFloat(val);
-    if (!isNaN(num) && averageMonthlyUsage > 0) {
+    if (!isNaN(num) && num >= 0) {
       const now = new Date();
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const daysElapsed = Math.max(1, daysInMonth - daysLeftInMonth);
-
-      // Consumed units according to this reading.
-      // (Previous reading would be better, but we only have unitsAlreadyBought here)
-      // If we bought 100 units this month, and we have 20 left, we used 80.
-      const estimatedConsumed = Math.max(0, unitsAlreadyBought - num);
-
-      // Use either estimated burn rate or historical average
-      const burnRate =
-        estimatedConsumed > 0 ? estimatedConsumed / daysElapsed : averageMonthlyUsage / daysInMonth;
-
-      const neededRemaining = burnRate * daysLeftInMonth;
-      // We need 'neededRemaining' for the rest of the month, and we already have 'num'
-      const neededToBuy = Math.max(0, neededRemaining - num);
-      setTargetUnits(roundUnits(neededToBuy).toString());
+      const effectiveBurnRate =
+        dailyBurnRate > 0
+          ? dailyBurnRate
+          : averageMonthlyUsage > 0
+            ? averageMonthlyUsage / daysInMonth
+            : 0;
+      if (effectiveBurnRate > 0) {
+        const neededToBuy = Math.max(0, effectiveBurnRate * daysLeftInMonth - num);
+        setTargetUnits(roundUnits(neededToBuy).toString());
+      }
     } else if (val === "" && suggestedUnits > 0) {
       setTargetUnits(roundUnits(suggestedUnits).toString());
     }
@@ -301,6 +311,8 @@ export function PurchaseCalculator({
   unitsAlreadyBought,
   averageMonthlyUsage,
   daysLeftInMonth,
+  dailyBurnRate = 0,
+  estimatedBalance = 0,
   onSavePurchase,
 }: PurchaseCalculatorProps): JSX.Element {
   const { rates, loading: ratesLoading } = useRates();
@@ -324,6 +336,8 @@ export function PurchaseCalculator({
     ...(onSavePurchase !== undefined && { onSavePurchase }),
     rates: rates as ElectricityRate[],
     ratesLoading,
+    dailyBurnRate,
+    estimatedBalance,
   });
 
   if (ratesLoading) {

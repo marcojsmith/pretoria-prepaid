@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { usePurchases } from "@/hooks/usePurchase";
+import { useConsumption } from "@/hooks/useConsumption";
 import { getDaysLeftInMonth } from "@/lib/electricity";
 import { PurchaseCalculator } from "@/components/PurchaseCalculator";
 import { Header } from "@/components/Header";
@@ -16,6 +17,7 @@ export default function CalculatorPage(): JSX.Element | null {
     getAverageMonthlyUsage,
     offlineCount,
   } = usePurchases();
+  const { stats, loading: consumptionLoading } = useConsumption();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -48,7 +50,7 @@ export default function CalculatorPage(): JSX.Element | null {
     });
   };
 
-  if (authLoading || purchasesLoading) {
+  if (authLoading || purchasesLoading || consumptionLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary"></div>
@@ -75,6 +77,8 @@ export default function CalculatorPage(): JSX.Element | null {
             averageMonthlyUsage={averageMonthlyUsage}
             daysLeftInMonth={daysLeft}
             onSavePurchase={handleSavePurchase}
+            dailyBurnRate={stats?.dailyBurnRate ?? 0}
+            estimatedBalance={stats?.estimatedBalance ?? 0}
           />
         </div>
       </main>
