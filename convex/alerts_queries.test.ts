@@ -28,8 +28,7 @@ describe("alerts_queries", () => {
 
       const result = await t.query(internal.alerts_queries.getUserDataForAlert, { userId });
 
-      expect(result.purchases.length).toBeLessThanOrEqual(MAX_ALERT_PURCHASES);
-      expect(result.purchases.length).toBeGreaterThan(0);
+      expect(result.purchases.length).toBe(MAX_ALERT_PURCHASES);
     });
   });
 });
