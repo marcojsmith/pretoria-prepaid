@@ -87,14 +87,19 @@ async function fetchRecentPurchasesWithReadings(
     .order("desc")
     .take(DEFAULT_PURCHASES_TAKE);
 
+  const readingsMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
+  const allReadings = await ctx.db
+    .query("meter_readings")
+    .withIndex("by_userId_source", (q) => q.eq("userId", userId).eq("source", "purchase"))
+    .order("desc")
+    .take(DEFAULT_READINGS_TAKE);
+  for (const reading of allReadings) {
+    readingsMap.set(reading.date, reading);
+  }
+
   const result = [];
   for (const purchase of docs) {
-    const readings = await ctx.db
-      .query("meter_readings")
-      .withIndex("by_userId_date", (q) => q.eq("userId", userId).eq("date", purchase.date))
-      .filter((q) => q.eq(q.field("source"), "purchase"))
-      .take(1);
-    const reading = readings[0];
+    const reading = readingsMap.get(purchase.date);
     result.push({
       date: purchase.date,
       units: purchase.units,
@@ -179,22 +184,40 @@ export const getRecentPurchases = query({
 
     const purchases = await ctx.db.query("purchases").order("desc").take(MAX_RECENT_PURCHASES);
 
-    // Build a profile lookup map for user names
     const profiles = await ctx.db.query("profiles").collect();
     const profileMap = new Map(profiles.map((p) => [p.userId, p]));
 
+    const userIds = [...new Set(purchases.map((p) => p.userId))];
+    const userReadingsMap = new Map<
+      string,
+      Map<string, { readingPre: number; readingPost: number; date: string }>
+    >();
+
+    const readingsByUser = await Promise.all(
+      userIds.map(async (uid) => {
+        const userReadings = await ctx.db
+          .query("meter_readings")
+          .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
+          .order("desc")
+          .take(DEFAULT_READINGS_TAKE);
+        const dateMap = new Map<
+          string,
+          { readingPre: number; readingPost: number; date: string }
+        >();
+        for (const reading of userReadings) {
+          dateMap.set(reading.date, reading);
+        }
+        return [uid, dateMap] as const;
+      })
+    );
+    for (const [uid, dateMap] of readingsByUser) {
+      userReadingsMap.set(uid, dateMap);
+    }
+
     const result = [];
     for (const purchase of purchases) {
-      // Fetch associated meter reading by userId + date + source=purchase
-      const readings = await ctx.db
-        .query("meter_readings")
-        .withIndex("by_userId_date", (q) =>
-          q.eq("userId", purchase.userId).eq("date", purchase.date)
-        )
-        .filter((q) => q.eq(q.field("source"), "purchase"))
-        .take(1);
-
-      const reading = readings[0];
+      const readingsMap = userReadingsMap.get(purchase.userId);
+      const reading = readingsMap?.get(purchase.date);
       const profile = profileMap.get(purchase.userId);
 
       result.push({
