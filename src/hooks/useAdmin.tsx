@@ -1,7 +1,7 @@
 import { useQuery, usePaginatedQuery, useMutation } from "convex/react";
+import type { PaginationStatus, PaginatedQueryItem } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import type { Doc } from "../../convex/_generated/dataModel";
 import type { ElectricityRate } from "./useRates";
 import { USERS_LIST_PAGE_SIZE } from "../../convex/constants";
 
@@ -13,9 +13,7 @@ interface GlobalStats {
   avgUnitsPerUser: number;
 }
 
-interface UserWithRole extends Doc<"profiles"> {
-  role: string;
-}
+type UserWithRole = PaginatedQueryItem<typeof api.admin.getUsersList>;
 
 interface RecentPurchase {
   _id: string;
@@ -35,7 +33,7 @@ export interface UseAdminReturn {
   loading: boolean;
   globalStats: GlobalStats | undefined;
   usersList: UserWithRole[];
-  usersListStatus: string;
+  usersListStatus: PaginationStatus;
   loadMoreUsers: (numItems: number) => void;
   recentPurchases: RecentPurchase[] | undefined;
   rates: ElectricityRate[] | undefined;
@@ -78,7 +76,7 @@ export function useAdmin(): UseAdminReturn {
   return {
     loading,
     globalStats,
-    usersList: usersList as UserWithRole[],
+    usersList,
     usersListStatus,
     loadMoreUsers,
     recentPurchases,

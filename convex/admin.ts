@@ -196,7 +196,6 @@ export const getRecentPurchases = query({
       Map<string, { readingPre: number; readingPost: number; date: string }>
     >();
 
-<<<<<<< HEAD
     for (const uid of userIds) {
       const userReadings = await ctx.db
         .query("meter_readings")
@@ -208,25 +207,6 @@ export const getRecentPurchases = query({
       for (const reading of userReadings) {
         dateMap.set(reading.date, reading);
       }
-      userReadingsMap.set(uid, dateMap);
-    }
-        return [uid, dateMap] as const;
-      })
-    );
-    for (const [uid, dateMap] of readingsByUser) {
-=======
-    for (const uid of userIds) {
-      const userReadings = await ctx.db
-        .query("meter_readings")
-        .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
-        .order("desc")
-        .take(DEFAULT_READINGS_TAKE);
-
-      const dateMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
-      for (const reading of userReadings) {
-        dateMap.set(reading.date, reading);
-      }
->>>>>>> 043e496 (perf: paginate getUsersList to prevent unbounded document reads)
       userReadingsMap.set(uid, dateMap);
     }
 

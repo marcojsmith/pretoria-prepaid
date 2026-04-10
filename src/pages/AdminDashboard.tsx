@@ -25,7 +25,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { SEO } from "@/components/SEO";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -36,6 +36,7 @@ import {
   MAX_TIER_PERCENTAGE,
   USER_ID_PREVIEW_LENGTH,
 } from "@/lib/constants";
+import { USERS_LIST_PAGE_SIZE } from "../../convex/constants";
 
 const BURN_RATE_TABLE_COLS = 5;
 
@@ -353,7 +354,22 @@ const INVALID_INPUT_TITLE = "Invalid Input";
 
 // eslint-disable-next-line llm-core/max-function-length
 export default function AdminDashboard(): JSX.Element {
-  const { loading, globalStats, usersList, recentPurchases, rates, updateRate } = useAdmin();
+  const {
+    loading,
+    globalStats,
+    usersList,
+    usersListStatus,
+    loadMoreUsers,
+    recentPurchases,
+    rates,
+    updateRate,
+  } = useAdmin();
+
+  useEffect(() => {
+    if (usersListStatus === "CanLoadMore") {
+      loadMoreUsers(USERS_LIST_PAGE_SIZE);
+    }
+  }, [usersListStatus, loadMoreUsers]);
   const { toast } = useToast();
 
   const [editingRateId, setEditingRateId] = useState<Id<"electricity_rates"> | null>(null);
