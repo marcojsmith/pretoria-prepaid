@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import basicSsl from "@vitejs/plugin-basic-ssl";
+import { version } from "./package.json";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -11,6 +12,9 @@ export default defineConfig({
   },
   preview: {
     host: true,
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
   },
   plugins: [
     react(),
@@ -64,11 +68,19 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom", "react-router-dom"],
-          "vendor-utils": ["@tanstack/react-query", "framer-motion", "lucide-react"],
-          "vendor-clerk": ["@clerk/clerk-react"],
-          "vendor-convex": ["convex"],
+        manualChunks: (id: string) => {
+          if (["react", "react-dom", "react-router-dom"].some((pkg) => id.includes(`/node_modules/${pkg}/`))) {
+            return "vendor-react";
+          }
+          if (["@tanstack/react-query", "framer-motion", "lucide-react"].some((pkg) => id.includes(`/node_modules/${pkg}/`))) {
+            return "vendor-utils";
+          }
+          if (id.includes("/node_modules/@clerk/clerk-react/")) {
+            return "vendor-clerk";
+          }
+          if (id.includes("/node_modules/convex/")) {
+            return "vendor-convex";
+          }
         },
       },
     },

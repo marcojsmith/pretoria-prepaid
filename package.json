@@ -1,7 +1,7 @@
 {
   "name": "pretoria-prepaid",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "scripts": {
     "dev": "bun x vite",
@@ -48,7 +48,7 @@
     "@tanstack/react-query": "^5.22.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
-    "convex": "^1.11.0",
+    "convex": "^1.35.1",
     "framer-motion": "^11.0.8",
     "lucide-react": "^0.446.0",
     "next-themes": "^0.4.6",
@@ -99,7 +99,7 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
     "typescript-eslint": "^7.0.2",
-    "vite": "^5.1.4",
+    "vite": "^8.0.8",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^1.3.1"
   }

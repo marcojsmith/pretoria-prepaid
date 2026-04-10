@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { version } from "./package.json";
 
 const COVERAGE_THRESHOLD_LINES = 90;
 const COVERAGE_THRESHOLD_FUNCTIONS = 90;
@@ -51,6 +52,9 @@ export default defineConfig({
         statements: COVERAGE_THRESHOLD_STATEMENTS,
       },
     },
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
   },
   resolve: {
     alias: {

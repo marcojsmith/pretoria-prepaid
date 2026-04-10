@@ -128,6 +128,7 @@ function RatesFooter(): JSX.Element {
         >
           View All Rates
         </Button>
+        <p className="text-[10px] text-muted-foreground">v{__APP_VERSION__}</p>
       </div>
     </footer>
   );
