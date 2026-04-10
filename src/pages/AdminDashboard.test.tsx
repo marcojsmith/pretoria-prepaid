@@ -197,11 +197,13 @@ describe("AdminDashboard", () => {
     expect(screen.getByTestId("loader")).toBeInTheDocument();
   });
 
-  it("renders loading state when usersList is null", () => {
+  it("renders loading state when usersListStatus is LoadingFirstPage", () => {
     (useAdmin as ReturnType<typeof vi.fn>).mockReturnValue({
-      loading: false,
+      loading: true,
       globalStats: mockGlobalStats,
-      usersList: null, // Trigger loading branch
+      usersList: [],
+      usersListStatus: "LoadingFirstPage",
+      loadMoreUsers: vi.fn(),
       recentPurchases: [],
       rates: [],
       updateRate: mockUpdateRate,

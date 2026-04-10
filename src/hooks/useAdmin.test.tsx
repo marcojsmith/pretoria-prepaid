@@ -1,11 +1,12 @@
 import { renderHook } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useAdmin } from "./useAdmin";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, usePaginatedQuery, useMutation } from "convex/react";
 import type { Id } from "../../convex/_generated/dataModel";
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
+  usePaginatedQuery: vi.fn(),
   useMutation: vi.fn(),
 }));
 
@@ -17,6 +18,12 @@ describe("useAdmin Hook", () => {
     vi.mocked(useMutation).mockReturnValue(
       mockMutation as unknown as ReturnType<typeof useMutation>
     );
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: [],
+      status: "LoadingFirstPage",
+      loadMore: vi.fn(),
+      isLoading: true,
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
   });
 
   it("returns loading true when queries are undefined", () => {
@@ -29,10 +36,14 @@ describe("useAdmin Hook", () => {
 
   it("returns data and loading false when queries are resolved", () => {
     vi.mocked(useQuery).mockImplementation(() => {
-      // Use truthy values for all 4 queries to satisfy the loading check
-      // if (!globalStats || !usersList || !recentPurchases || !rates)
       return { _id: "mock-data" };
     });
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: [],
+      status: "Exhausted",
+      loadMore: vi.fn(),
+      isLoading: false,
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
 
     const { result } = renderHook(() => useAdmin());
 
@@ -43,6 +54,12 @@ describe("useAdmin Hook", () => {
 
   it("calls updateRate mutation correctly", async () => {
     vi.mocked(useQuery).mockReturnValue({});
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: [],
+      status: "Exhausted",
+      loadMore: vi.fn(),
+      isLoading: false,
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
 
     const { result } = renderHook(() => useAdmin());
 

@@ -453,7 +453,7 @@ export default function AdminDashboard(): JSX.Element {
     })();
   };
 
-  if (loading || !globalStats || !usersList || !recentPurchases || !rates) {
+  if (loading || !globalStats || !recentPurchases || !rates) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />

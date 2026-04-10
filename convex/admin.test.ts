@@ -168,6 +168,67 @@ describe("admin", () => {
     });
   });
 
+  describe("getUsersList", () => {
+    it("paginates profiles and joins roles via index", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("user_roles", { userId: "admin-user-id", role: "admin" });
+        for (let i = 1; i <= 3; i++) {
+          await ctx.db.insert("profiles", {
+            userId: `user-${String(i)}`,
+            email: `user${String(i)}@test.com`,
+          });
+          await ctx.db.insert("user_roles", {
+            userId: `user-${String(i)}`,
+            role: i === 1 ? "admin" : "user",
+          });
+        }
+      });
+
+      const page1 = await t
+        .withIdentity({ subject: "admin-user-id" })
+        .query(api.admin.getUsersList, { paginationOpts: { numItems: 2, cursor: null } });
+
+      expect(page1.page).toHaveLength(2);
+      expect(page1.isDone).toBe(false);
+
+      const page2 = await t
+        .withIdentity({ subject: "admin-user-id" })
+        .query(api.admin.getUsersList, {
+          paginationOpts: { numItems: 2, cursor: page1.continueCursor },
+        });
+
+      expect(page2.page).toHaveLength(1);
+      expect(page2.isDone).toBe(true);
+
+      const allUsers = [...page1.page, ...page2.page];
+      expect(allUsers).toHaveLength(3);
+
+      const adminUser = allUsers.find((u) => u.userId === "user-1");
+      expect(adminUser?.role).toBe("admin");
+
+      const regularUser = allUsers.find((u) => u.userId === "user-2");
+      expect(regularUser?.role).toBe("user");
+    });
+
+    it("assigns default user role when no user_roles entry exists", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("user_roles", { userId: "admin-user-id", role: "admin" });
+        await ctx.db.insert("profiles", { userId: "no-role-user", email: "norole@test.com" });
+      });
+
+      const result = await t
+        .withIdentity({ subject: "admin-user-id" })
+        .query(api.admin.getUsersList, { paginationOpts: { numItems: 10, cursor: null } });
+
+      const user = result.page.find((u) => u.userId === "no-role-user");
+      expect(user?.role).toBe("user");
+    });
+  });
+
   describe("getUserKPIData", () => {
     it("returns correct reading data joined from purchases", async () => {
       const t = convexTest(schema, modules);

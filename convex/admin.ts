@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { calculateConsumptionStats } from "./electricity_logic";
 import {
   EXPONENTIAL_DECAY_FACTOR,
@@ -136,21 +137,23 @@ async function checkAdmin(ctx: QueryCtx) {
 }
 
 export const getUsersList = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
     await checkAdmin(ctx);
 
-    const profiles = await ctx.db.query("profiles").collect();
-    const roles = await ctx.db.query("user_roles").collect();
+    const paginatedProfiles = await ctx.db.query("profiles").paginate(args.paginationOpts);
 
-    // Join profiles with roles
-    return profiles.map((profile) => {
-      const userRole = roles.find((r) => r.userId === profile.userId);
-      return {
-        ...profile,
-        role: userRole?.role ?? "user",
-      };
-    });
+    const page = await Promise.all(
+      paginatedProfiles.page.map(async (profile) => {
+        const userRole = await ctx.db
+          .query("user_roles")
+          .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
+          .unique();
+        return { ...profile, role: userRole?.role ?? "user" };
+      })
+    );
+
+    return { ...paginatedProfiles, page };
   },
 });
 
@@ -193,24 +196,37 @@ export const getRecentPurchases = query({
       Map<string, { readingPre: number; readingPost: number; date: string }>
     >();
 
-    const readingsByUser = await Promise.all(
-      userIds.map(async (uid) => {
-        const userReadings = await ctx.db
-          .query("meter_readings")
-          .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
-          .order("desc")
-          .take(DEFAULT_READINGS_TAKE);
-        const dateMap = new Map<
-          string,
-          { readingPre: number; readingPost: number; date: string }
-        >();
-        for (const reading of userReadings) {
-          dateMap.set(reading.date, reading);
-        }
+<<<<<<< HEAD
+    for (const uid of userIds) {
+      const userReadings = await ctx.db
+        .query("meter_readings")
+        .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
+        .order("desc")
+        .take(DEFAULT_READINGS_TAKE);
+
+      const dateMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
+      for (const reading of userReadings) {
+        dateMap.set(reading.date, reading);
+      }
+      userReadingsMap.set(uid, dateMap);
+    }
         return [uid, dateMap] as const;
       })
     );
     for (const [uid, dateMap] of readingsByUser) {
+=======
+    for (const uid of userIds) {
+      const userReadings = await ctx.db
+        .query("meter_readings")
+        .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
+        .order("desc")
+        .take(DEFAULT_READINGS_TAKE);
+
+      const dateMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
+      for (const reading of userReadings) {
+        dateMap.set(reading.date, reading);
+      }
+>>>>>>> 043e496 (perf: paginate getUsersList to prevent unbounded document reads)
       userReadingsMap.set(uid, dateMap);
     }
 
