@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, renderHook } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, renderHook, waitFor } from "@testing-library/react";
 import { useAuth } from "./useAuth";
 import { AuthProvider } from "../contexts/AuthContext";
 import * as clerkReact from "@clerk/clerk-react";
 import * as convexReact from "convex/react";
+import { toast } from "sonner";
 
 vi.mock("@clerk/clerk-react", () => ({
   useUser: vi.fn(),
@@ -15,7 +16,19 @@ vi.mock("convex/react", () => ({
   useConvexAuth: vi.fn(() => ({ isAuthenticated: true })),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 describe("AuthProvider", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders children when loaded", () => {
     vi.mocked(clerkReact.useUser).mockReturnValue({
       isLoaded: true,
@@ -41,9 +54,12 @@ describe("AuthProvider", () => {
   });
 
   it("syncs user when signed in", () => {
-    const syncUserMock = Object.assign(vi.fn(), {
-      withOptimisticUpdate: vi.fn().mockReturnThis(),
-    });
+    const syncUserMock = Object.assign(
+      vi.fn(() => Promise.resolve()),
+      {
+        withOptimisticUpdate: vi.fn().mockReturnThis(),
+      }
+    );
     vi.mocked(convexReact.useMutation).mockReturnValue(
       syncUserMock as unknown as ReturnType<typeof convexReact.useMutation>
     );
@@ -66,6 +82,34 @@ describe("AuthProvider", () => {
       email: "test@example.com",
       preferredName: "Test",
     });
+  });
+
+  it("shows error toast when syncUser fails", async () => {
+    const syncUserMock = vi.fn(() => Promise.reject(new Error("sync failed")));
+    vi.mocked(convexReact.useMutation).mockReturnValue(
+      syncUserMock as unknown as ReturnType<typeof convexReact.useMutation>
+    );
+    vi.mocked(clerkReact.useUser).mockReturnValue({
+      isLoaded: true,
+      isSignedIn: true,
+      user: {
+        primaryEmailAddress: { emailAddress: "test@example.com" },
+        firstName: "Test",
+      },
+    } as unknown as ReturnType<typeof clerkReact.useUser>);
+
+    render(
+      <AuthProvider>
+        <div>Content</div>
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(syncUserMock).toHaveBeenCalled();
+    });
+    expect(toast.error).toHaveBeenCalledWith(
+      "Session sync failed. Some features may be unavailable."
+    );
   });
 
   it("useAuth throws error when outside provider", () => {
@@ -109,7 +153,7 @@ describe("AuthProvider", () => {
     const signOutMock = vi.fn();
     const getTokenMock = vi.fn().mockResolvedValue("token");
     vi.mocked(convexReact.useMutation).mockReturnValue(
-      vi.fn() as unknown as ReturnType<typeof convexReact.useMutation>
+      vi.fn(() => Promise.resolve()) as unknown as ReturnType<typeof convexReact.useMutation>
     );
     vi.mocked(clerkReact.useUser).mockReturnValue({
       isLoaded: true,

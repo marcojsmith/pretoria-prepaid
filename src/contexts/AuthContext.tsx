@@ -3,6 +3,7 @@ import { useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { AuthContext } from "./AuthContextTypes";
 
 export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
@@ -24,7 +25,10 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     if (user.firstName) {
       args.preferredName = user.firstName;
     }
-    void syncUser(args);
+    syncUser(args).catch((err) => {
+      console.error("syncUser failed:", err);
+      toast.error("Session sync failed. Some features may be unavailable.");
+    });
   }, [isLoaded, isSignedIn, user, isAuthenticated, syncUser]);
 
   return (
