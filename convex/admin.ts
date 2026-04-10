@@ -145,10 +145,10 @@ export const getUsersList = query({
 
     const page = await Promise.all(
       paginatedProfiles.page.map(async (profile) => {
-        const userRole = await ctx.db
+        const [userRole] = await ctx.db
           .query("user_roles")
           .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
-          .unique();
+          .take(1);
         return { ...profile, role: userRole?.role ?? "user" };
       })
     );
@@ -196,19 +196,24 @@ export const getRecentPurchases = query({
       Map<string, { readingPre: number; readingPost: number; date: string }>
     >();
 
-    for (const uid of userIds) {
-      const userReadings = await ctx.db
-        .query("meter_readings")
-        .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
-        .order("desc")
-        .take(DEFAULT_READINGS_TAKE);
+    await Promise.all(
+      userIds.map(async (uid) => {
+        const userReadings = await ctx.db
+          .query("meter_readings")
+          .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
+          .order("desc")
+          .take(DEFAULT_READINGS_TAKE);
 
-      const dateMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
-      for (const reading of userReadings) {
-        dateMap.set(reading.date, reading);
-      }
-      userReadingsMap.set(uid, dateMap);
-    }
+        const dateMap = new Map<
+          string,
+          { readingPre: number; readingPost: number; date: string }
+        >();
+        for (const reading of userReadings) {
+          dateMap.set(reading.date, reading);
+        }
+        userReadingsMap.set(uid, dateMap);
+      })
+    );
 
     const result = [];
     for (const purchase of purchases) {

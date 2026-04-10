@@ -365,11 +365,6 @@ export default function AdminDashboard(): JSX.Element {
     updateRate,
   } = useAdmin();
 
-  useEffect(() => {
-    if (usersListStatus === "CanLoadMore") {
-      loadMoreUsers(USERS_LIST_PAGE_SIZE);
-    }
-  }, [usersListStatus, loadMoreUsers]);
   const { toast } = useToast();
 
   const [editingRateId, setEditingRateId] = useState<Id<"electricity_rates"> | null>(null);
@@ -380,7 +375,14 @@ export default function AdminDashboard(): JSX.Element {
     rate: number;
   } | null>(null);
 
+  const [activeTab, setActiveTab] = useState("overview");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+
+  useEffect(() => {
+    if (usersListStatus === "CanLoadMore" && (activeTab === "users" || activeTab === "kpi")) {
+      loadMoreUsers(USERS_LIST_PAGE_SIZE);
+    }
+  }, [usersListStatus, loadMoreUsers, activeTab]);
 
   const startEditing = (rate: {
     _id: Id<"electricity_rates">;
@@ -493,7 +495,7 @@ export default function AdminDashboard(): JSX.Element {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="overview" onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="h-auto w-full justify-start gap-4 rounded-none border-b border-border bg-transparent p-0">
             <TabsTrigger value="overview" className={tabTriggerClass}>
               Overview
