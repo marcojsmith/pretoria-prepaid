@@ -25,6 +25,7 @@ export const MAX_RECENT_PURCHASES = 50;
 export const MAX_INTERVAL_READINGS = 6;
 export const DEFAULT_PURCHASES_TO_SHOW = 7;
 export const USERS_LIST_PAGE_SIZE = 50;
+export const MAX_ALERT_PURCHASES = 100;
 
 export const CRON_HOUR_MORNING = 6;
 export const CRON_HOUR_EVENING = 16;
