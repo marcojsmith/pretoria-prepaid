@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import basicSsl from "@vitejs/plugin-basic-ssl";
+import { version } from "./package.json";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -11,6 +12,9 @@ export default defineConfig({
   },
   preview: {
     host: true,
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
   },
   plugins: [
     react(),
