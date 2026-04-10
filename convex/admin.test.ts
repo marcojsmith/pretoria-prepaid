@@ -95,6 +95,77 @@ describe("admin", () => {
       expect(result[0]?.readingPre).toBeNull();
       expect(result[0]?.readingPost).toBeNull();
     });
+
+    it("returns null readings for purchase when readings exist but none match the purchase date", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("user_roles", { userId: "admin-user-id", role: "admin" });
+        await ctx.db.insert("profiles", { userId: "user-1", email: "user1@test.com" });
+        await ctx.db.insert("purchases", {
+          userId: "user-1",
+          date: "2024-01-15",
+          units: 100,
+          cost: 342.59,
+          amountPaid: 350,
+          tierBreakdown: [],
+        });
+        await ctx.db.insert("meter_readings", {
+          userId: "user-1",
+          date: "2024-01-10",
+          readingPre: 500,
+          readingPost: 600,
+          source: "purchase",
+        });
+      });
+
+      const result = await t
+        .withIdentity({ subject: "admin-user-id" })
+        .query(api.admin.getRecentPurchases, {});
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.readingPre).toBeNull();
+      expect(result[0]?.readingPost).toBeNull();
+    });
+
+    it("uses oldest reading when duplicate meter readings exist for same user and date", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("user_roles", { userId: "admin-user-id", role: "admin" });
+        await ctx.db.insert("profiles", { userId: "user-1", email: "user1@test.com" });
+        await ctx.db.insert("purchases", {
+          userId: "user-1",
+          date: "2024-01-15",
+          units: 100,
+          cost: 342.59,
+          amountPaid: 350,
+          tierBreakdown: [],
+        });
+        await ctx.db.insert("meter_readings", {
+          userId: "user-1",
+          date: "2024-01-15",
+          readingPre: 1000,
+          readingPost: 1100,
+          source: "purchase",
+        });
+        await ctx.db.insert("meter_readings", {
+          userId: "user-1",
+          date: "2024-01-15",
+          readingPre: 3000,
+          readingPost: 3100,
+          source: "purchase",
+        });
+      });
+
+      const result = await t
+        .withIdentity({ subject: "admin-user-id" })
+        .query(api.admin.getRecentPurchases, {});
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.readingPre).toBe(1000);
+      expect(result[0]?.readingPost).toBe(1100);
+    });
   });
 
   describe("getUserKPIData", () => {
@@ -151,6 +222,85 @@ describe("admin", () => {
       expect(result.recentPurchases[1]?.date).toBe("2024-01-10");
       expect(result.recentPurchases[1]?.readingPre).toBe(950);
       expect(result.recentPurchases[1]?.readingPost).toBe(1000);
+    });
+
+    it("returns null readingPre/readingPost for purchase with no matching meter reading date", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("user_roles", { userId: "admin-user-id", role: "admin" });
+        await ctx.db.insert("profiles", {
+          userId: "test-user",
+          email: "testuser@test.com",
+          lowBalanceThreshold: 10,
+        });
+        await ctx.db.insert("purchases", {
+          userId: "test-user",
+          date: "2024-01-15",
+          units: 100,
+          cost: 342.59,
+          amountPaid: 350,
+          tierBreakdown: [],
+        });
+        await ctx.db.insert("meter_readings", {
+          userId: "test-user",
+          date: "2024-01-10",
+          readingPre: 500,
+          readingPost: 600,
+          source: "purchase",
+        });
+      });
+
+      const result = await t
+        .withIdentity({ subject: "admin-user-id" })
+        .query(api.admin.getUserKPIData, { userId: "test-user" });
+
+      expect(result.recentPurchases).toHaveLength(1);
+      expect(result.recentPurchases[0]?.readingPre).toBeNull();
+      expect(result.recentPurchases[0]?.readingPost).toBeNull();
+    });
+
+    it("uses oldest reading when duplicate meter readings exist for same user and date", async () => {
+      const t = convexTest(schema, modules);
+
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("user_roles", { userId: "admin-user-id", role: "admin" });
+        await ctx.db.insert("profiles", {
+          userId: "test-user",
+          email: "testuser@test.com",
+          lowBalanceThreshold: 10,
+        });
+        await ctx.db.insert("purchases", {
+          userId: "test-user",
+          date: "2024-01-15",
+          units: 100,
+          cost: 342.59,
+          amountPaid: 350,
+          tierBreakdown: [],
+        });
+        await ctx.db.insert("meter_readings", {
+          userId: "test-user",
+          date: "2024-01-15",
+          readingPre: 1000,
+          readingPost: 1100,
+          source: "purchase",
+        });
+        await ctx.db.insert("meter_readings", {
+          userId: "test-user",
+          date: "2024-01-15",
+          readingPre: 3000,
+          readingPost: 3100,
+          source: "purchase",
+        });
+      });
+
+      const result = await t
+        .withIdentity({ subject: "admin-user-id" })
+        .query(api.admin.getUserKPIData, { userId: "test-user" });
+
+      expect(result.recentPurchases).toHaveLength(1);
+      expect(result.recentPurchases[0]?.readingPre).toBe(1000);
+      expect(result.recentPurchases[0]?.readingPost).toBe(1100);
     });
   });
 });

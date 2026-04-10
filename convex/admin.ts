@@ -193,17 +193,24 @@ export const getRecentPurchases = query({
       Map<string, { readingPre: number; readingPost: number; date: string }>
     >();
 
-    for (const uid of userIds) {
-      const userReadings = await ctx.db
-        .query("meter_readings")
-        .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
-        .order("desc")
-        .take(DEFAULT_READINGS_TAKE);
-
-      const dateMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
-      for (const reading of userReadings) {
-        dateMap.set(reading.date, reading);
-      }
+    const readingsByUser = await Promise.all(
+      userIds.map(async (uid) => {
+        const userReadings = await ctx.db
+          .query("meter_readings")
+          .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
+          .order("desc")
+          .take(DEFAULT_READINGS_TAKE);
+        const dateMap = new Map<
+          string,
+          { readingPre: number; readingPost: number; date: string }
+        >();
+        for (const reading of userReadings) {
+          dateMap.set(reading.date, reading);
+        }
+        return [uid, dateMap] as const;
+      })
+    );
+    for (const [uid, dateMap] of readingsByUser) {
       userReadingsMap.set(uid, dateMap);
     }
 
