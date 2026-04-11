@@ -61,10 +61,14 @@ describe("PurchaseCalculator", () => {
   });
 
   it("suggests units based on average usage", () => {
+    // March has 31 days: effectiveBurnRate = 300/31 ≈ 9.677, suggested = 9.677 * 15 - 0 = 145.2
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-16T12:00:00Z"));
     render(
       <PurchaseCalculator unitsAlreadyBought={100} averageMonthlyUsage={300} daysLeftInMonth={15} />
     );
-    expect(screen.getByText((content) => content.includes("200 more kWh"))).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes("145.2 more kWh"))).toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it("calculates breakdown when units are entered", () => {
@@ -111,14 +115,17 @@ describe("PurchaseCalculator", () => {
       <PurchaseCalculator unitsAlreadyBought={50} averageMonthlyUsage={300} daysLeftInMonth={15} />
     );
 
+    // March has 31 days: effectiveBurnRate = 300/31 ≈ 9.677
+    // suggestedUnits = 9.677 * 15 - 0 (no estimatedBalance) = 145.2
     const targetInput = screen.getByLabelText(/kWh to buy/i) as HTMLInputElement;
-    expect(targetInput.value).toBe("250");
+    expect(targetInput.value).toBe("145.2");
 
     fireEvent.change(screen.getByLabelText(/Current Meter \(kWh\)/i), {
       target: { value: "20" },
     });
 
-    expect(targetInput.value).toBe("8.1");
+    // neededToBuy = max(0, 9.677 * 15 - 20) = 125.2
+    expect(targetInput.value).toBe("125.2");
 
     vi.useRealTimers();
   });
@@ -153,12 +160,15 @@ describe("PurchaseCalculator", () => {
   });
 
   it("resets to suggested units when balance input is cleared", () => {
+    // March has 31 days: effectiveBurnRate = 300/31 ≈ 9.677, suggested = 9.677 * 15 = 145.2
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-16T12:00:00Z"));
     render(
       <PurchaseCalculator unitsAlreadyBought={100} averageMonthlyUsage={300} daysLeftInMonth={15} />
     );
 
     const targetInput = screen.getByLabelText(/kWh to buy/i) as HTMLInputElement;
-    expect(targetInput.value).toBe("200");
+    expect(targetInput.value).toBe("145.2");
 
     fireEvent.change(screen.getByLabelText(/Current Meter \(kWh\)/i), {
       target: { value: "20" },
@@ -168,6 +178,45 @@ describe("PurchaseCalculator", () => {
       target: { value: "" },
     });
 
-    expect(targetInput.value).toBe("200");
+    expect(targetInput.value).toBe("145.2");
+    vi.useRealTimers();
+  });
+
+  it("uses backend dailyBurnRate when provided for suggested units and meter reading", () => {
+    // When backend provides dailyBurnRate=8 and estimatedBalance=30:
+    // suggestedUnits = 8 * 15 - 30 = 90
+    render(
+      <PurchaseCalculator
+        unitsAlreadyBought={50}
+        averageMonthlyUsage={300}
+        daysLeftInMonth={15}
+        dailyBurnRate={8}
+        estimatedBalance={30}
+      />
+    );
+
+    const targetInput = screen.getByLabelText(/kWh to buy/i) as HTMLInputElement;
+    expect(targetInput.value).toBe("90");
+
+    // After entering meter reading of 40: neededToBuy = 8 * 15 - 40 = 80
+    fireEvent.change(screen.getByLabelText(/Current Meter \(kWh\)/i), {
+      target: { value: "40" },
+    });
+    expect(targetInput.value).toBe("80");
+  });
+
+  it("shows 0 suggested units when burn rate and average usage are both zero", () => {
+    render(
+      <PurchaseCalculator
+        unitsAlreadyBought={0}
+        averageMonthlyUsage={0}
+        daysLeftInMonth={15}
+        dailyBurnRate={0}
+        estimatedBalance={0}
+      />
+    );
+
+    const targetInput = screen.getByLabelText(/kWh to buy/i) as HTMLInputElement;
+    expect(targetInput.value).toBe("");
   });
 });
