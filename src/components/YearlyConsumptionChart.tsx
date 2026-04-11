@@ -26,7 +26,13 @@ import {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const YEAR_COLORS = ["#3b82f6", "#f97316", "#22c55e", "#a855f7", "#ef4444"];
+const YEAR_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
 
 function getYearsWithData(allMonthlyStats: { month: string }[]): number[] {
   if (!allMonthlyStats || allMonthlyStats.length === 0) return [];
@@ -68,12 +74,13 @@ export function YearlyConsumptionChart(): JSX.Element {
     () => (localStorage.getItem("yearly_consumption_chart_type") as "bar" | "line") ?? "bar"
   );
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [selectedYear, setSelectedYear] = useState<number>(
+    () => getYearsWithData(allMonthlyStats)[0] ?? currentYear
+  );
 
   const years = useMemo(() => {
     const y = getYearsWithData(allMonthlyStats);
-    if (!y.includes(currentYear)) y.unshift(currentYear);
-    return y;
+    return y.length > 0 ? y : [currentYear];
   }, [allMonthlyStats, currentYear]);
 
   const barData = useMemo(
@@ -114,6 +121,7 @@ export function YearlyConsumptionChart(): JSX.Element {
                 localStorage.setItem("yearly_consumption_chart_type", "bar");
               }}
               aria-label="Bar chart"
+              aria-pressed={chartType === "bar"}
             >
               <BarChart2 className="h-3.5 w-3.5" />
             </Button>
@@ -126,6 +134,7 @@ export function YearlyConsumptionChart(): JSX.Element {
                 localStorage.setItem("yearly_consumption_chart_type", "line");
               }}
               aria-label="Line chart"
+              aria-pressed={chartType === "line"}
             >
               <TrendingUp className="h-3.5 w-3.5" />
             </Button>
@@ -173,7 +182,7 @@ export function YearlyConsumptionChart(): JSX.Element {
                     key={year}
                     type="monotone"
                     dataKey={String(year)}
-                    stroke={YEAR_COLORS[i % YEAR_COLORS.length] ?? "#3b82f6"}
+                    stroke={YEAR_COLORS[i % YEAR_COLORS.length]!}
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     activeDot={{ r: 5 }}

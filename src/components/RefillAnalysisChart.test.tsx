@@ -28,7 +28,7 @@ describe("RefillAnalysisChart", () => {
   it("limits display to last 7 intervals", () => {
     const intervals: RefillInterval[] = [
       { date: "2024-01-01", daysSinceLastRefill: null, units: 10 },
-      { date: "2024-01-02", daysSinceLastRefill: 1, units: 10 },
+      { date: "2024-01-02", daysSinceLastRefill: 100, units: 10 },
       { date: "2024-01-03", daysSinceLastRefill: 1, units: 10 },
       { date: "2024-01-04", daysSinceLastRefill: 1, units: 10 },
       { date: "2024-01-05", daysSinceLastRefill: 1, units: 10 },

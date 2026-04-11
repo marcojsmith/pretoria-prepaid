@@ -15,12 +15,16 @@ interface PurchaseFrequencyChartProps {
   stats: MonthlyStat[];
 }
 
-function prepareChartData(stats: MonthlyStat[]) {
+// eslint-disable-next-line react-refresh/only-export-components
+export function prepareChartData(
+  stats: MonthlyStat[]
+): Array<{ month: string; purchases: number; units: number }> {
   return [...stats]
     .slice(0, MAX_PURCHASE_FREQUENCY_ITEMS)
     .reverse()
     .map((s) => {
-      const date = new Date(s.month + "-01");
+      const [yearStr, monthStr] = s.month.split("-");
+      const date = new Date(Number(yearStr), Number(monthStr) - 1, 1);
       return {
         month: date.toLocaleDateString("en-ZA", { month: "short", year: "2-digit" }),
         purchases: s.purchases,

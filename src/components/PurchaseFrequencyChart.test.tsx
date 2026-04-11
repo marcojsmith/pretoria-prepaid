@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { PurchaseFrequencyChart } from "./PurchaseFrequencyChart";
+import { PurchaseFrequencyChart, prepareChartData } from "./PurchaseFrequencyChart";
+import { MAX_PURCHASE_FREQUENCY_ITEMS } from "@/lib/constants";
 
 describe("PurchaseFrequencyChart", () => {
   const mockStats = [
@@ -27,12 +28,13 @@ describe("PurchaseFrequencyChart", () => {
       month: `2025-${(12 - i).toString().padStart(2, "0")}`,
       units: 100,
       cost: 300,
-      purchases: 1,
+      purchases: i + 1,
     }));
 
-    render(<PurchaseFrequencyChart stats={manyStats} />);
-    expect(document.querySelector(".recharts-responsive-container")).toBeInTheDocument();
-    expect(screen.getByText(/Current Month:/i)).toBeInTheDocument();
+    const result = prepareChartData(manyStats);
+    expect(result).toHaveLength(MAX_PURCHASE_FREQUENCY_ITEMS);
+    expect(result.at(-1)?.purchases).toBe(1);
+    expect(result.at(0)?.purchases).toBe(6);
   });
 
   it("shows current month purchase count in footer", () => {

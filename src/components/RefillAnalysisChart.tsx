@@ -1,25 +1,56 @@
-/* eslint-disable llm-core/no-magic-numbers */
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { RefillInterval } from "@/lib/electricity";
 import { History } from "lucide-react";
 import { MAX_REFILL_ANALYSIS_ITEMS } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
+const CHART_HEIGHT = 140;
+// eslint-disable-next-line llm-core/no-magic-numbers
+const CHART_MARGIN = { top: 8, right: 8, left: -20, bottom: 0 } as const;
+const AXIS_TICK_FONT_SIZE = 9;
+const XAXIS_ANGLE = -35;
+const XAXIS_HEIGHT = 36;
+const TOOLTIP_FONT_SIZE = 11;
+const TOOLTIP_BORDER_RADIUS = 6;
+// eslint-disable-next-line llm-core/no-magic-numbers
+const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
+const BAR_MAX_SIZE = 28;
+
 interface RefillAnalysisChartProps {
   intervals: RefillInterval[];
 }
 
+/**
+ * Transforms raw refill intervals into chart-ready data points.
+ * Filters out entries where `daysSinceLastRefill` is null (i.e. the first
+ * purchase with no prior reference), then limits to the last
+ * `MAX_REFILL_ANALYSIS_ITEMS` entries so the chart stays readable.
+ *
+ * @param intervals - Refill interval records from purchase history
+ * @returns Array of `{ date, days, units }` objects ready for recharts
+ */
 function prepareChartData(intervals: RefillInterval[]) {
   return intervals
     .filter((i) => i.daysSinceLastRefill !== null)
     .slice(-MAX_REFILL_ANALYSIS_ITEMS)
     .map((i) => ({
-      date: new Date(i.date).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" }),
+      date: new Date(i.date + "T00:00:00").toLocaleDateString("en-ZA", {
+        day: "2-digit",
+        month: "short",
+      }),
       days: i.daysSinceLastRefill ?? 0,
       units: i.units,
     }));
 }
 
+/**
+ * Bar chart displaying the number of days between recent electricity refills.
+ *
+ * Returns `null` when every interval has `daysSinceLastRefill === null`
+ * (i.e. there is only one purchase and no gap can be computed).
+ *
+ * @param props.intervals - Refill interval data derived from purchase history
+ */
 export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JSX.Element | null {
   const chartData = prepareChartData(intervals);
 
@@ -41,24 +72,29 @@ export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JS
         <CardDescription className="text-[10px]">Days between recent purchases</CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={140}>
-          <BarChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+          <BarChart data={chartData} margin={CHART_MARGIN}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 9 }}
+              tick={{ fontSize: AXIS_TICK_FONT_SIZE }}
               tickLine={false}
               axisLine={false}
-              angle={-35}
+              angle={XAXIS_ANGLE}
               textAnchor="end"
-              height={36}
+              height={XAXIS_HEIGHT}
             />
-            <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: AXIS_TICK_FONT_SIZE }} tickLine={false} axisLine={false} />
             <Tooltip
-              contentStyle={{ fontSize: 11, borderRadius: 6 }}
+              contentStyle={{ fontSize: TOOLTIP_FONT_SIZE, borderRadius: TOOLTIP_BORDER_RADIUS }}
               formatter={(value) => [value, "Days"]}
             />
-            <Bar dataKey="days" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} maxBarSize={28} />
+            <Bar
+              dataKey="days"
+              fill="hsl(var(--primary))"
+              radius={BAR_RADIUS}
+              maxBarSize={BAR_MAX_SIZE}
+            />
           </BarChart>
         </ResponsiveContainer>
         <div className="mt-6 flex items-center justify-between border-t pt-2 text-[9px] text-muted-foreground">

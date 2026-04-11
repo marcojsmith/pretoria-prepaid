@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { AverageDailyUsageChart } from "./AverageDailyUsageChart";
 import { usePurchases } from "@/hooks/usePurchase";
 
@@ -75,5 +75,24 @@ describe("AverageDailyUsageChart", () => {
     const barBtn = screen.getByRole("button", { name: /bar chart/i });
     expect(barBtn).toBeInTheDocument();
     expect(screen.getByText("All years — Jan to Dec")).toBeInTheDocument();
+  });
+
+  it("year selector changes the displayed year", () => {
+    const multiYearStats = [
+      { month: "2026-03", units: 310, cost: 1000, purchases: 2 },
+      { month: "2025-03", units: 280, cost: 900, purchases: 1 },
+    ];
+    vi.mocked(usePurchases).mockReturnValue({
+      getMonthlyStats: () => multiYearStats,
+    } as unknown as ReturnType<typeof usePurchases>);
+
+    render(<AverageDailyUsageChart />);
+
+    expect(screen.getByText("2026 — Jan to Dec")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(screen.getByRole("option", { name: "2025" }));
+
+    expect(screen.getByText("2025 — Jan to Dec")).toBeInTheDocument();
   });
 });
