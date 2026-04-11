@@ -24,14 +24,6 @@ const prefersReducedMotion =
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const YEAR_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
-
 const BAR_CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 interface MonthlyStat {
@@ -230,7 +222,7 @@ export const MultiYearChart = React.memo(function MultiYearChart(
                     key={year}
                     type="monotone"
                     dataKey={String(year)}
-                    stroke={YEAR_COLORS[i % YEAR_COLORS.length]!}
+                    stroke={BAR_CHART_COLORS[i % BAR_CHART_COLORS.length]!}
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     activeDot={{ r: 5 }}
