@@ -5,19 +5,33 @@ import { MAX_REFILL_ANALYSIS_ITEMS } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const CHART_HEIGHT = 140;
-// eslint-disable-next-line llm-core/no-magic-numbers
-const CHART_MARGIN = { top: 8, right: 8, left: -20, bottom: 0 } as const;
+const MARGIN_TOP = 8;
+const MARGIN_RIGHT = 8;
+const MARGIN_LEFT = -20;
+const MARGIN_BOTTOM = 0;
+const CHART_MARGIN = {
+  top: MARGIN_TOP,
+  right: MARGIN_RIGHT,
+  left: MARGIN_LEFT,
+  bottom: MARGIN_BOTTOM,
+} as const;
 const AXIS_TICK_FONT_SIZE = 9;
 const XAXIS_ANGLE = -35;
 const XAXIS_HEIGHT = 36;
 const TOOLTIP_FONT_SIZE = 11;
 const TOOLTIP_BORDER_RADIUS = 6;
-// eslint-disable-next-line llm-core/no-magic-numbers
-const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
+const BAR_CORNER_RADIUS = 3;
+const BAR_RADIUS: [number, number, number, number] = [BAR_CORNER_RADIUS, BAR_CORNER_RADIUS, 0, 0];
 const BAR_MAX_SIZE = 28;
 
 interface RefillAnalysisChartProps {
   intervals: RefillInterval[];
+}
+
+type ChartDatum = { date: string; days: number; units: number };
+
+function hasValidDays(i: RefillInterval): i is RefillInterval & { daysSinceLastRefill: number } {
+  return i.daysSinceLastRefill !== null;
 }
 
 /**
@@ -27,18 +41,18 @@ interface RefillAnalysisChartProps {
  * `MAX_REFILL_ANALYSIS_ITEMS` entries so the chart stays readable.
  *
  * @param intervals - Refill interval records from purchase history
- * @returns Array of `{ date, days, units }` objects ready for recharts
+ * @returns Array of `ChartDatum` objects (`{ date, days, units }`) ready for recharts
  */
-function prepareChartData(intervals: RefillInterval[]) {
+function prepareChartData(intervals: RefillInterval[]): ChartDatum[] {
   return intervals
-    .filter((i) => i.daysSinceLastRefill !== null)
+    .filter(hasValidDays)
     .slice(-MAX_REFILL_ANALYSIS_ITEMS)
     .map((i) => ({
       date: new Date(i.date + "T00:00:00").toLocaleDateString("en-ZA", {
         day: "2-digit",
         month: "short",
       }),
-      days: i.daysSinceLastRefill ?? 0,
+      days: i.daysSinceLastRefill,
       units: i.units,
     }));
 }

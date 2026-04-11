@@ -1,5 +1,5 @@
 /* eslint-disable llm-core/no-magic-numbers */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePurchases } from "@/hooks/usePurchase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,6 +87,12 @@ export function AverageDailyUsageChart(): JSX.Element {
     return y.length > 0 ? y : [currentYear];
   }, [allMonthlyStats, currentYear]);
 
+  useEffect(() => {
+    if (!years.includes(selectedYear)) {
+      setSelectedYear(years[0] ?? currentYear);
+    }
+  }, [years, selectedYear, currentYear]);
+
   const barData = useMemo(
     () => prepareBarData(allMonthlyStats, selectedYear),
     [allMonthlyStats, selectedYear]
@@ -103,7 +109,7 @@ export function AverageDailyUsageChart(): JSX.Element {
         <div className="flex items-center gap-2">
           {chartType === "bar" && (
             <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-              <SelectTrigger className="h-7 w-[90px] text-xs">
+              <SelectTrigger className="h-7 w-[90px] text-xs" aria-label="Select year">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
