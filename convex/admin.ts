@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { calculateConsumptionStats } from "./electricity_logic";
@@ -162,8 +163,12 @@ export const getGlobalStats = query({
   handler: async (ctx) => {
     await checkAdmin(ctx);
 
-    const profiles = await ctx.db.query("profiles").collect();
-    const purchases = await ctx.db.query("purchases").collect();
+    // NOTE: These are bounded to prevent timeouts. For true unlimited aggregates,
+    // use denormalized counters updated in mutations.
+    const MAX_GLOBAL_PROFILES = 10000;
+    const MAX_GLOBAL_PURCHASES = 100000;
+    const profiles = await ctx.db.query("profiles").take(MAX_GLOBAL_PROFILES);
+    const purchases = await ctx.db.query("purchases").take(MAX_GLOBAL_PURCHASES);
 
     const totalUsers = profiles.length;
     const totalUnits = purchases.reduce((sum, p) => sum + p.units, 0);
@@ -180,40 +185,63 @@ export const getGlobalStats = query({
   },
 });
 
+async function fetchProfileMap(
+  ctx: QueryCtx,
+  userIds: string[]
+): Promise<Map<string, Doc<"profiles">>> {
+  const entries = await Promise.all(
+    userIds.map(async (uid) => {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", uid))
+        .unique();
+      return [uid, profile] as const;
+    })
+  );
+  return new Map(
+    entries
+      .filter((e): e is [string, NonNullable<(typeof e)[1]>] => e[1] !== null)
+      .map(([uid, p]) => [uid, p])
+  );
+}
+
+async function fetchUserReadingsMap(
+  ctx: QueryCtx,
+  userIds: string[]
+): Promise<Map<string, Map<string, { readingPre: number; readingPost: number; date: string }>>> {
+  const userReadingsMap = new Map<
+    string,
+    Map<string, { readingPre: number; readingPost: number; date: string }>
+  >();
+  await Promise.all(
+    userIds.map(async (uid) => {
+      const userReadings = await ctx.db
+        .query("meter_readings")
+        .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
+        .order("desc")
+        .take(DEFAULT_READINGS_TAKE);
+      const dateMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
+      for (const reading of userReadings) {
+        dateMap.set(reading.date, reading);
+      }
+      userReadingsMap.set(uid, dateMap);
+    })
+  );
+  return userReadingsMap;
+}
+
 export const getRecentPurchases = query({
   args: {},
   handler: async (ctx) => {
     await checkAdmin(ctx);
 
     const purchases = await ctx.db.query("purchases").order("desc").take(MAX_RECENT_PURCHASES);
-
-    const profiles = await ctx.db.query("profiles").collect();
-    const profileMap = new Map(profiles.map((p) => [p.userId, p]));
-
     const userIds = [...new Set(purchases.map((p) => p.userId))];
-    const userReadingsMap = new Map<
-      string,
-      Map<string, { readingPre: number; readingPost: number; date: string }>
-    >();
 
-    await Promise.all(
-      userIds.map(async (uid) => {
-        const userReadings = await ctx.db
-          .query("meter_readings")
-          .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
-          .order("desc")
-          .take(DEFAULT_READINGS_TAKE);
-
-        const dateMap = new Map<
-          string,
-          { readingPre: number; readingPost: number; date: string }
-        >();
-        for (const reading of userReadings) {
-          dateMap.set(reading.date, reading);
-        }
-        userReadingsMap.set(uid, dateMap);
-      })
-    );
+    const [profileMap, userReadingsMap] = await Promise.all([
+      fetchProfileMap(ctx, userIds),
+      fetchUserReadingsMap(ctx, userIds),
+    ]);
 
     const result = [];
     for (const purchase of purchases) {

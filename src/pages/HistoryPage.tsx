@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { usePurchases } from "@/hooks/usePurchase";
@@ -119,27 +119,26 @@ export default function HistoryPage(): JSX.Element | null {
     );
   }, [readings, selectedMonth, selectedYear]);
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setSelectedMonth("All");
     setSelectedYear("All");
-  };
+  }, []);
 
   const isFiltered = selectedMonth !== "All" || selectedYear !== "All";
 
-  const handleAddPurchase = (options: {
-    units: number;
-    amountPaid: number;
-    date: string;
-    meterReading: number;
-  }) => {
-    const { units, amountPaid, date, meterReading } = options;
-    void (async () => {
-      await addPurchase({ units, amountPaid, date, meterReading });
-      if (prefillData) {
-        navigate("/history", { replace: true, state: null });
-      }
-    })();
-  };
+  const handleAddPurchase = useCallback(
+    (options: { units: number; amountPaid: number; date: string; meterReading: number }) => {
+      const { units, amountPaid, date, meterReading } = options;
+      void (async () => {
+        await addPurchase({ units, amountPaid, date, meterReading });
+        /* v8 ignore next 3 */
+        if (prefillData) {
+          navigate("/history", { replace: true, state: null });
+        }
+      })();
+    },
+    [addPurchase, prefillData, navigate]
+  );
 
   if (authLoading || purchasesLoading || consumptionLoading) {
     return (

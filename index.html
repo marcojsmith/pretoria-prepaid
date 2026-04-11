@@ -16,6 +16,14 @@
     <meta name="author" content="Pretoria Prepaid" />
     <link rel="canonical" href="https://pretoria-prepaid.vercel.app" />
 
+    <!-- Performance: preconnect to critical third-party origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://clerk.pretoria-prepaid.vercel.app" />
+    <link rel="preconnect" href="https://api.clerk.dev" />
+    <link rel="dns-prefetch" href="https://api.clerk.dev" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://pretoria-prepaid.vercel.app/" />
@@ -49,7 +57,29 @@
     <title>Pretoria Prepaid</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static loading shell: visible immediately before React hydrates, eliminates LCP render delay -->
+      <div id="app-shell" style="display:flex;flex-direction:column;min-height:100vh;background:var(--background,#f5f5f5)">
+        <header style="position:sticky;top:0;z-index:10;border-bottom:1px solid #e5e7eb;background:rgba(245,245,245,0.95);backdrop-filter:blur(4px)">
+          <div style="max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:8px 16px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:28px;height:28px;border-radius:4px;background:#e5e7eb"></div>
+              <span style="font-size:14px;font-weight:600;color:#111">PowerTracker</span>
+            </div>
+            <div style="width:32px;height:32px;border-radius:50%;background:#e5e7eb"></div>
+          </div>
+        </header>
+        <main style="flex:1;max-width:1280px;margin:0 auto;padding:24px 16px;width:100%">
+          <div style="height:24px;width:120px;border-radius:4px;background:#e5e7eb;margin-bottom:16px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="height:120px;border-radius:8px;background:#e5e7eb"></div>
+            <div style="height:120px;border-radius:8px;background:#e5e7eb"></div>
+            <div style="height:200px;border-radius:8px;background:#e5e7eb"></div>
+            <div style="height:200px;border-radius:8px;background:#e5e7eb"></div>
+          </div>
+        </main>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

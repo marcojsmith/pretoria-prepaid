@@ -97,6 +97,7 @@ describe("CalculatorPage", () => {
       getCurrentMonthPurchases: vi.fn(() => []),
       getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
+      monthlyStats: [],
     } as ReturnType<typeof usePurchases>);
     vi.mocked(useRates).mockReturnValue({
       loading: false,
@@ -202,6 +203,7 @@ describe("CalculatorPage", () => {
       ]),
       getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
+      monthlyStats: [],
     } as ReturnType<typeof usePurchases>);
 
     vi.mocked(useNavigate).mockReturnValue(vi.fn() as unknown as ReturnType<typeof useNavigate>);

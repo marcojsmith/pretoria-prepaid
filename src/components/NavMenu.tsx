@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
@@ -35,10 +35,13 @@ export function NavMenu({ offlineCount }: NavMenuProps): JSX.Element {
   const location = useLocation();
   const { isAdmin } = useUserRole();
 
-  const handleNavigate = (path: string) => {
-    navigate(path);
-    setOpen(false);
-  };
+  const handleNavigate = useCallback(
+    (path: string) => {
+      navigate(path);
+      setOpen(false);
+    },
+    [navigate]
+  );
 
   const menuItems = [...navItems];
   if (isAdmin) {

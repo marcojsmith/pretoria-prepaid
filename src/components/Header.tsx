@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Zap, LogOut, ArrowLeft, User } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
+import { memo } from "react";
 
 interface HeaderProps {
   offlineCount?: number;
@@ -88,7 +89,7 @@ function UserMenu({ user, onSignOut }: { user: UserMenuUser; onSignOut: () => vo
   );
 }
 
-export function Header({ offlineCount = 0 }: HeaderProps): JSX.Element {
+export const Header = memo(function Header({ offlineCount = 0 }: HeaderProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
@@ -148,4 +149,4 @@ export function Header({ offlineCount = 0 }: HeaderProps): JSX.Element {
       </div>
     </header>
   );
-}
+});

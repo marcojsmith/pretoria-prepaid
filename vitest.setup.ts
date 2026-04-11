@@ -20,6 +20,22 @@ vi.mock("virtual:pwa-register/react", () => ({
   })),
 }));
 
+// Mock matchMedia
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  configurable: true,
+  value: vi.fn((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 // Mock IntersectionObserver
 class MockIntersectionObserver {
   observe = vi.fn();

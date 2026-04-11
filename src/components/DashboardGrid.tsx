@@ -1,12 +1,22 @@
+import { memo, useMemo, lazy, Suspense } from "react";
 import { ConsumptionStatsCard } from "@/components/ConsumptionStatsCard";
 import { DashboardStats } from "@/components/DashboardStats";
 import { TierProgress } from "@/components/TierProgress";
 import { MonthlyStats } from "@/components/MonthlyStats";
-import { YearlyConsumptionChart } from "@/components/YearlyConsumptionChart";
-import { AverageDailyUsageChart } from "@/components/AverageDailyUsageChart";
-import { PurchaseFrequencyChart } from "@/components/PurchaseFrequencyChart";
 import type { CardConfig } from "@/hooks/useDashboardLayout";
 import type { ConsumptionStats } from "@/hooks/useConsumption";
+
+const YearlyConsumptionChart = lazy(() =>
+  import("@/components/YearlyConsumptionChart").then((m) => ({ default: m.YearlyConsumptionChart }))
+);
+const AverageDailyUsageChart = lazy(() =>
+  import("@/components/AverageDailyUsageChart").then((m) => ({ default: m.AverageDailyUsageChart }))
+);
+const PurchaseFrequencyChart = lazy(() =>
+  import("@/components/PurchaseFrequencyChart").then((m) => ({ default: m.PurchaseFrequencyChart }))
+);
+
+const ChartSkeleton = () => <div className="h-[240px] w-full animate-pulse rounded-lg bg-muted" />;
 
 interface MonthlyStat {
   month: string;
@@ -27,7 +37,7 @@ interface DashboardGridProps {
 
 type CardRenderer = () => JSX.Element | null;
 
-export function DashboardGrid({
+export const DashboardGrid = memo(function DashboardGrid({
   cards,
   consumptionStats,
   unitsThisMonth,
@@ -38,27 +48,55 @@ export function DashboardGrid({
 }: DashboardGridProps): JSX.Element {
   const hasHistory = monthlyStats.length > 0;
 
-  const renderers: Record<string, CardRenderer> = {
-    "consumption-stats": () => (
-      <ConsumptionStatsCard
-        stats={consumptionStats}
-        unitsThisMonth={unitsThisMonth}
-        costThisMonth={costThisMonth}
-      />
-    ),
-    "dashboard-stats": () => (
-      <DashboardStats
-        averageMonthlyUsage={averageMonthlyUsage}
-        averageMonthlyCost={averageMonthlyCost}
-      />
-    ),
-    "tier-progress": () => <TierProgress unitsBought={unitsThisMonth} />,
-    "monthly-stats": () =>
-      hasHistory ? <MonthlyStats stats={monthlyStats} averageUsage={averageMonthlyUsage} /> : null,
-    "yearly-chart": () => (hasHistory ? <YearlyConsumptionChart /> : null),
-    "daily-chart": () => (hasHistory ? <AverageDailyUsageChart /> : null),
-    "frequency-chart": () => (hasHistory ? <PurchaseFrequencyChart stats={monthlyStats} /> : null),
-  };
+  const renderers: Record<string, CardRenderer> = useMemo(
+    () => ({
+      "consumption-stats": () => (
+        <ConsumptionStatsCard
+          stats={consumptionStats}
+          unitsThisMonth={unitsThisMonth}
+          costThisMonth={costThisMonth}
+        />
+      ),
+      "dashboard-stats": () => (
+        <DashboardStats
+          averageMonthlyUsage={averageMonthlyUsage}
+          averageMonthlyCost={averageMonthlyCost}
+        />
+      ),
+      "tier-progress": () => <TierProgress unitsBought={unitsThisMonth} />,
+      "monthly-stats": () =>
+        hasHistory ? (
+          <MonthlyStats stats={monthlyStats} averageUsage={averageMonthlyUsage} />
+        ) : null,
+      "yearly-chart": () =>
+        hasHistory ? (
+          <Suspense fallback={<ChartSkeleton />}>
+            <YearlyConsumptionChart />
+          </Suspense>
+        ) : null,
+      "daily-chart": () =>
+        hasHistory ? (
+          <Suspense fallback={<ChartSkeleton />}>
+            <AverageDailyUsageChart />
+          </Suspense>
+        ) : null,
+      "frequency-chart": () =>
+        hasHistory ? (
+          <Suspense fallback={<ChartSkeleton />}>
+            <PurchaseFrequencyChart stats={monthlyStats} />
+          </Suspense>
+        ) : null,
+    }),
+    [
+      consumptionStats,
+      unitsThisMonth,
+      costThisMonth,
+      averageMonthlyUsage,
+      averageMonthlyCost,
+      monthlyStats,
+      hasHistory,
+    ]
+  );
 
   const visibleCards = cards.filter((c) => c.visible);
 
@@ -81,4 +119,4 @@ export function DashboardGrid({
       })}
     </div>
   );
-}
+});
