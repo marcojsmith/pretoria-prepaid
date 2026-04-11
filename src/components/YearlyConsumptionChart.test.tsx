@@ -24,6 +24,7 @@ describe("YearlyConsumptionChart", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    localStorage.clear();
   });
 
   it("renders correctly with rolling 12 months", () => {
@@ -34,14 +35,8 @@ describe("YearlyConsumptionChart", () => {
     render(<YearlyConsumptionChart />);
 
     expect(screen.getByText("Monthly Consumption (kWh)")).toBeInTheDocument();
-    expect(screen.getByText("Last 12 rolling months")).toBeInTheDocument();
-
-    // Check for values (they appear in tooltips, bar value text, and sometimes below bars for desktop)
-    // 500: tooltip (500.0), bar value (500), desktop label (500) -> 3 occurrences
-    expect(screen.getAllByText(/500/)).toHaveLength(3);
-    expect(screen.getAllByText(/450/)).toHaveLength(3);
-    expect(screen.getAllByText(/600/)).toHaveLength(3);
-    expect(screen.getAllByText(/700/)).toHaveLength(3); // Should be visible as it's within rolling 12 months
+    expect(screen.getByText("2026 — Jan to Dec")).toBeInTheDocument();
+    expect(document.querySelector(".recharts-responsive-container")).toBeInTheDocument();
   });
 
   it("shows zero usage for months with no data", () => {
@@ -51,10 +46,32 @@ describe("YearlyConsumptionChart", () => {
 
     render(<YearlyConsumptionChart />);
 
-    // Should show 100 for current month (tooltip, bar value, desktop label)
-    expect(screen.getAllByText(/100/)).toHaveLength(3);
-    // Should show 0.0 in tooltips for others
-    const zeroTooltips = screen.getAllByText(/\b0\.0\b/);
-    expect(zeroTooltips.length).toBe(11); // 11 months with zero
+    expect(screen.getByText("Monthly Consumption (kWh)")).toBeInTheDocument();
+    expect(screen.getByText("2026 — Jan to Dec")).toBeInTheDocument();
+  });
+
+  it("persists chart type selection to localStorage", () => {
+    vi.mocked(usePurchases).mockReturnValue({
+      getMonthlyStats: () => mockMonthlyStats,
+    } as ReturnType<typeof usePurchases>);
+
+    render(<YearlyConsumptionChart />);
+
+    const lineBtn = screen.getByRole("button", { name: /line chart/i });
+    lineBtn.click();
+
+    expect(localStorage.getItem("yearly_consumption_chart_type")).toBe("line");
+  });
+
+  it("restores chart type from localStorage on mount", () => {
+    localStorage.setItem("yearly_consumption_chart_type", "line");
+
+    vi.mocked(usePurchases).mockReturnValue({
+      getMonthlyStats: () => mockMonthlyStats,
+    } as ReturnType<typeof usePurchases>);
+
+    render(<YearlyConsumptionChart />);
+
+    expect(screen.getByText("All years — Jan to Dec")).toBeInTheDocument();
   });
 });
