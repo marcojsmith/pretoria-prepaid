@@ -1,122 +1,189 @@
-import { useMemo } from "react";
+/* eslint-disable llm-core/no-magic-numbers */
+import { useMemo, useState } from "react";
 import { usePurchases } from "@/hooks/usePurchase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { BarChart2, TrendingUp } from "lucide-react";
 import {
-  MONTHS_IN_YEAR,
-  MAX_TIER_PERCENTAGE,
-  CHART_SCALE_1_1,
-  ANIMATION_DURATION_BASE,
-  ANIMATION_DELAY_MULTIPLIER,
-} from "@/lib/constants";
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function YearlyBar({
-  data,
-  maxUnits,
-  index,
-}: {
-  data: { month: string | undefined; units: number; monthKey: string };
-  maxUnits: number;
-  index: number;
-}) {
-  const height = (data.units / maxUnits) * 100;
-  return (
-    <div key={data.monthKey} className="group relative flex h-full flex-1 flex-col items-center">
-      <div className="absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-secondary px-1.5 py-0.5 text-[10px] text-secondary-foreground group-hover:block">
-        {data.units.toFixed(1)} kWh
-      </div>
-      {data.units > 0 && (
-        <span className="mb-1 text-[11px] font-bold text-primary" aria-hidden="true">
-          {Math.round(data.units)}
-        </span>
-      )}
-      <div
-        className="relative flex w-full flex-1 flex-col justify-end overflow-hidden rounded-t-sm bg-muted/30"
-        aria-label={`${data.month}: ${data.units.toFixed(1)} kWh`}
-      >
-        <motion.div
-          initial={{ height: 0 }}
-          animate={{ height: `${height}%` }}
-          transition={{
-            duration: ANIMATION_DURATION_BASE,
-            delay: index * ANIMATION_DELAY_MULTIPLIER,
-          }}
-          className="w-full bg-primary/80 transition-colors group-hover:bg-primary"
-        />
-      </div>
-      <span
-        className="mt-2 text-[10px] font-medium text-muted-foreground sm:text-[11px]"
-        aria-hidden="true"
-      >
-        {data.month}
-      </span>
-      <span
-        className="mt-0.5 hidden h-3 text-[9px] text-muted-foreground/70 lg:block"
-        aria-hidden="true"
-      >
-        {data.units > 0 ? `${Math.round(data.units)}` : ""}
-      </span>
-    </div>
-  );
+const YEAR_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
+
+const BAR_CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+
+function getYearsWithData(allMonthlyStats: { month: string }[]): number[] {
+  if (!allMonthlyStats || allMonthlyStats.length === 0) return [];
+  const years = new Set(allMonthlyStats.map((s) => Number(s.month.split("-")[0])));
+  return Array.from(years).sort((a, b) => b - a);
 }
 
-function prepareRollingData(allMonthlyStats: { month: string; units: number }[]) {
-  const data = [];
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-
-  for (let i = MONTHS_IN_YEAR - 1; i >= 0; i--) {
-    const d = new Date(currentYear, currentMonth - i, 1);
-    const year = d.getFullYear();
-    const month = d.getMonth();
-    const monthKey = `${year}-${(month + 1).toString().padStart(2, "0")}`;
-
-    const stats = allMonthlyStats.find((s) => s.month === monthKey);
-    data.push({
-      month: MONTHS[month],
-      units: stats?.units || 0,
-      monthKey,
+function prepareBarData(
+  allMonthlyStats: { month: string; units: number }[],
+  compareYears: number[]
+): Record<string, string | number>[] {
+  return MONTHS.map((label, i) => {
+    const row: Record<string, string | number> = { month: label };
+    compareYears.forEach((year) => {
+      const monthKey = `${year}-${(i + 1).toString().padStart(2, "0")}`;
+      const stats = allMonthlyStats.find((s) => s.month === monthKey);
+      row[String(year)] = stats?.units ?? 0;
     });
-  }
-
-  return data;
+    return row;
+  });
 }
 
-function calculateMaxUnits(rollingData: { units: number }[]) {
-  const max = Math.max(...rollingData.map((d) => d.units));
-  return max === 0 ? MAX_TIER_PERCENTAGE : max * CHART_SCALE_1_1;
+function prepareLineData(
+  allMonthlyStats: { month: string; units: number }[],
+  years: number[]
+): Record<string, string | number>[] {
+  return MONTHS.map((label, i) => {
+    const row: Record<string, string | number> = { month: label };
+    years.forEach((year) => {
+      const monthKey = `${year}-${(i + 1).toString().padStart(2, "0")}`;
+      const stats = allMonthlyStats.find((s) => s.month === monthKey);
+      if (stats) row[String(year)] = stats.units;
+    });
+    return row;
+  });
 }
 
 export function YearlyConsumptionChart(): JSX.Element {
   const { getMonthlyStats } = usePurchases();
   const allMonthlyStats = useMemo(() => getMonthlyStats(), [getMonthlyStats]);
 
-  const rollingData = useMemo(() => prepareRollingData(allMonthlyStats), [allMonthlyStats]);
-  const maxUnits = useMemo(() => calculateMaxUnits(rollingData), [rollingData]);
+  const [chartType, setChartType] = useState<"bar" | "line">(
+    () => (localStorage.getItem("yearly_consumption_chart_type") as "bar" | "line") ?? "bar"
+  );
+  const currentYear = new Date().getFullYear();
+
+  const years = useMemo(() => {
+    const y = getYearsWithData(allMonthlyStats);
+    return y.length > 0 ? y : [currentYear];
+  }, [allMonthlyStats, currentYear]);
+
+  const compareYears = useMemo(() => years.slice(0, 3), [years]);
+
+  const barData = useMemo(
+    () => prepareBarData(allMonthlyStats, compareYears),
+    [allMonthlyStats, compareYears]
+  );
+
+  const lineData = useMemo(() => prepareLineData(allMonthlyStats, years), [allMonthlyStats, years]);
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-semibold tracking-tight">
           Monthly Consumption (kWh)
         </CardTitle>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border">
+            <Button
+              variant={chartType === "bar" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 rounded-r-none px-2"
+              onClick={() => {
+                setChartType("bar");
+                localStorage.setItem("yearly_consumption_chart_type", "bar");
+              }}
+              aria-label="Bar chart"
+              aria-pressed={chartType === "bar"}
+            >
+              <BarChart2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant={chartType === "line" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 rounded-l-none border-l px-2"
+              onClick={() => {
+                setChartType("line");
+                localStorage.setItem("yearly_consumption_chart_type", "line");
+              }}
+              aria-label="Line chart"
+              aria-pressed={chartType === "line"}
+            >
+              <TrendingUp className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <div
-          className="flex h-[180px] justify-between gap-1 pt-4 sm:gap-2"
-          role="img"
-          aria-label={`Yearly consumption chart showing the last 12 rolling months of electricity usage in kWh. Peak consumption was ${Math.round(
-            maxUnits / CHART_SCALE_1_1
-          )} kWh.`}
-        >
-          {rollingData.map((data, index) => (
-            <YearlyBar key={data.monthKey} data={data} maxUnits={maxUnits} index={index} />
-          ))}
-        </div>
-        <p className="mt-4 text-center text-[10px] text-muted-foreground">Last 12 rolling months</p>
+        {chartType === "bar" ? (
+          <>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={barData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ fontSize: 11, borderRadius: 6 }}
+                  formatter={(value: unknown) => [`${(value as number).toFixed(1)} kWh`, "Usage"]}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                {compareYears.map((year, i) => (
+                  <Bar
+                    key={year}
+                    dataKey={String(year)}
+                    fill={BAR_CHART_COLORS[i % BAR_CHART_COLORS.length]}
+                    radius={[3, 3, 0, 0]}
+                    maxBarSize={20}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+            <p className="mt-4 text-center text-[10px] text-muted-foreground">
+              Last {compareYears.length} year{compareYears.length !== 1 ? "s" : ""} — Jan to Dec
+            </p>
+          </>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={lineData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ fontSize: 11, borderRadius: 6 }}
+                  formatter={(value: unknown) => [`${(value as number).toFixed(1)} kWh`, ""]}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                {years.map((year, i) => (
+                  <Line
+                    key={year}
+                    type="monotone"
+                    dataKey={String(year)}
+                    stroke={YEAR_COLORS[i % YEAR_COLORS.length]!}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                    connectNulls={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+            <p className="mt-4 text-center text-[10px] text-muted-foreground">
+              All years — Jan to Dec
+            </p>
+          </>
+        )}
       </CardContent>
     </Card>
   );

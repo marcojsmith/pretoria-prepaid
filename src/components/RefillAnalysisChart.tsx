@@ -1,24 +1,79 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { RefillInterval } from "@/lib/electricity";
 import { History } from "lucide-react";
-import { MAX_REFILL_ANALYSIS_ITEMS, MIN_CHART_BAR_PERCENT, MIN_CHART_VALUE } from "@/lib/constants";
+import { MAX_REFILL_ANALYSIS_ITEMS } from "@/lib/constants";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+
+const CHART_HEIGHT = 140;
+const MARGIN_TOP = 8;
+const MARGIN_RIGHT = 8;
+const MARGIN_LEFT = -20;
+const MARGIN_BOTTOM = 0;
+const CHART_MARGIN = {
+  top: MARGIN_TOP,
+  right: MARGIN_RIGHT,
+  left: MARGIN_LEFT,
+  bottom: MARGIN_BOTTOM,
+} as const;
+const AXIS_TICK_FONT_SIZE = 9;
+const XAXIS_ANGLE = -35;
+const XAXIS_HEIGHT = 36;
+const TOOLTIP_FONT_SIZE = 11;
+const TOOLTIP_BORDER_RADIUS = 6;
+const BAR_CORNER_RADIUS = 3;
+const BAR_RADIUS: [number, number, number, number] = [BAR_CORNER_RADIUS, BAR_CORNER_RADIUS, 0, 0];
+const BAR_MAX_SIZE = 28;
 
 interface RefillAnalysisChartProps {
   intervals: RefillInterval[];
 }
 
-export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JSX.Element | null {
-  const displayData = intervals
-    .filter((i) => i.daysSinceLastRefill !== null)
-    .slice(-MAX_REFILL_ANALYSIS_ITEMS);
+type ChartDatum = { date: string; days: number; units: number };
 
-  if (displayData.length === 0) {
+function hasValidDays(i: RefillInterval): i is RefillInterval & { daysSinceLastRefill: number } {
+  return i.daysSinceLastRefill !== null;
+}
+
+/**
+ * Transforms raw refill intervals into chart-ready data points.
+ * Filters out entries where `daysSinceLastRefill` is null (i.e. the first
+ * purchase with no prior reference), then limits to the last
+ * `MAX_REFILL_ANALYSIS_ITEMS` entries so the chart stays readable.
+ *
+ * @param intervals - Refill interval records from purchase history
+ * @returns Array of `ChartDatum` objects (`{ date, days, units }`) ready for recharts
+ */
+function prepareChartData(intervals: RefillInterval[]): ChartDatum[] {
+  return intervals
+    .filter(hasValidDays)
+    .slice(-MAX_REFILL_ANALYSIS_ITEMS)
+    .map((i) => ({
+      date: new Date(i.date + "T00:00:00").toLocaleDateString("en-ZA", {
+        day: "2-digit",
+        month: "short",
+      }),
+      days: i.daysSinceLastRefill,
+      units: i.units,
+    }));
+}
+
+/**
+ * Bar chart displaying the number of days between recent electricity refills.
+ *
+ * Returns `null` when every interval has `daysSinceLastRefill === null`
+ * (i.e. there is only one purchase and no gap can be computed).
+ *
+ * @param props.intervals - Refill interval data derived from purchase history
+ */
+export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JSX.Element | null {
+  const chartData = prepareChartData(intervals);
+
+  if (chartData.length === 0) {
     return null;
   }
 
-  const maxDays = Math.max(...displayData.map((i) => i.daysSinceLastRefill || 0), 1);
   const avgDays = Math.round(
-    displayData.reduce((acc, curr) => acc + (curr.daysSinceLastRefill || 0), 0) / displayData.length
+    chartData.reduce((acc, curr) => acc + curr.days, 0) / chartData.length
   );
 
   return (
@@ -31,7 +86,31 @@ export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JS
         <CardDescription className="text-[10px]">Days between recent purchases</CardDescription>
       </CardHeader>
       <CardContent>
-        <RefillChartBars displayData={displayData} maxDays={maxDays} />
+        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+          <BarChart data={chartData} margin={CHART_MARGIN}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: AXIS_TICK_FONT_SIZE }}
+              tickLine={false}
+              axisLine={false}
+              angle={XAXIS_ANGLE}
+              textAnchor="end"
+              height={XAXIS_HEIGHT}
+            />
+            <YAxis tick={{ fontSize: AXIS_TICK_FONT_SIZE }} tickLine={false} axisLine={false} />
+            <Tooltip
+              contentStyle={{ fontSize: TOOLTIP_FONT_SIZE, borderRadius: TOOLTIP_BORDER_RADIUS }}
+              formatter={(value) => [value, "Days"]}
+            />
+            <Bar
+              dataKey="days"
+              fill="hsl(var(--primary))"
+              radius={BAR_RADIUS}
+              maxBarSize={BAR_MAX_SIZE}
+            />
+          </BarChart>
+        </ResponsiveContainer>
         <div className="mt-6 flex items-center justify-between border-t pt-2 text-[9px] text-muted-foreground">
           <span>Older</span>
           <span>Average: {avgDays} days</span>
@@ -39,59 +118,5 @@ export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JS
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function RefillChartBars({
-  displayData,
-  maxDays,
-}: {
-  displayData: { daysSinceLastRefill: number | null; units: number; date: string }[];
-  maxDays: number;
-}) {
-  return (
-    <div className="flex h-20 items-end justify-between gap-1">
-      {displayData.map((interval, idx) => {
-        const rawHeight = ((interval.daysSinceLastRefill || 0) / maxDays) * 100;
-        const height =
-          interval.daysSinceLastRefill === 0
-            ? MIN_CHART_BAR_PERCENT
-            : Math.max(rawHeight, MIN_CHART_VALUE);
-
-        const date = new Date(interval.date).toLocaleDateString("en-ZA", {
-          day: "2-digit",
-          month: "short",
-        });
-
-        return (
-          <button
-            key={idx}
-            className="group relative flex h-full flex-1 appearance-none flex-col items-center justify-end gap-1 border-none bg-transparent p-0 outline-none"
-            aria-label={`Refill on ${date}: ${interval.daysSinceLastRefill} days after previous, ${interval.units} kWh`}
-          >
-            <div
-              className="flex w-full max-w-[20px] cursor-help items-end justify-center rounded-t bg-primary/40 transition-colors group-hover:bg-primary group-focus:bg-primary"
-              style={{ height: `${height}%` }}
-            >
-              <span className="mb-1 text-[8px] font-bold text-primary group-hover:text-primary-foreground group-focus:text-primary-foreground">
-                {interval.daysSinceLastRefill}
-              </span>
-
-              <div
-                role="tooltip"
-                className="absolute -top-10 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded border bg-popover px-1.5 py-0.5 text-center text-[10px] text-popover-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus:opacity-100"
-              >
-                {interval.daysSinceLastRefill} days
-                <br />
-                {interval.units} kWh
-              </div>
-            </div>
-            <span className="mt-1 origin-left rotate-45 text-[8px] text-muted-foreground">
-              {date}
-            </span>
-          </button>
-        );
-      })}
-    </div>
   );
 }

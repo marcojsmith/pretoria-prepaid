@@ -22,6 +22,7 @@ describe("AverageDailyUsageChart", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    localStorage.clear();
   });
 
   it("renders correctly with rolling 12 months", () => {
@@ -32,10 +33,8 @@ describe("AverageDailyUsageChart", () => {
     render(<AverageDailyUsageChart />);
 
     expect(screen.getByText("Average Daily Consumption (kWh/d)")).toBeInTheDocument();
-
-    // 10.0 kWh/d should appear for Mar and Feb
-    // Each appears 3 times: tooltip, bar value, and desktop label
-    expect(screen.getAllByText(/10\.0/)).toHaveLength(6);
+    expect(screen.getByText(/\d+ years? — Jan to Dec/i)).toBeInTheDocument();
+    expect(document.querySelector(".recharts-responsive-container")).toBeInTheDocument();
   });
 
   it("handles zero data correctly", () => {
@@ -45,7 +44,36 @@ describe("AverageDailyUsageChart", () => {
 
     render(<AverageDailyUsageChart />);
 
-    // All bars should show 0 or be empty (ignoring "0.0" in tooltips)
-    expect(screen.queryByText(/[1-9]/)).not.toBeInTheDocument();
+    expect(screen.getByText("Average Daily Consumption (kWh/d)")).toBeInTheDocument();
+    expect(screen.getByText("Last 1 year — Jan to Dec")).toBeInTheDocument();
+  });
+
+  it("persists chart type selection to localStorage", () => {
+    vi.mocked(usePurchases).mockReturnValue({
+      getMonthlyStats: () => mockMonthlyStats,
+    } as unknown as ReturnType<typeof usePurchases>);
+
+    render(<AverageDailyUsageChart />);
+
+    const lineBtn = screen.getByRole("button", { name: /line chart/i });
+    lineBtn.click();
+
+    expect(localStorage.getItem("avg_daily_chart_type")).toBe("line");
+  });
+
+  it("restores chart type from localStorage on mount", () => {
+    localStorage.setItem("avg_daily_chart_type", "line");
+
+    vi.mocked(usePurchases).mockReturnValue({
+      getMonthlyStats: () => mockMonthlyStats,
+    } as unknown as ReturnType<typeof usePurchases>);
+
+    render(<AverageDailyUsageChart />);
+
+    const lineBtn = screen.getByRole("button", { name: /line chart/i });
+    expect(lineBtn).toBeInTheDocument();
+    const barBtn = screen.getByRole("button", { name: /bar chart/i });
+    expect(barBtn).toBeInTheDocument();
+    expect(screen.getByText("All years — Jan to Dec")).toBeInTheDocument();
   });
 });
