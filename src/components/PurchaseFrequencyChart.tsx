@@ -55,7 +55,7 @@ export function PurchaseFrequencyChart({ stats }: PurchaseFrequencyChartProps): 
             <YAxis allowDecimals={false} tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
             <Tooltip
               contentStyle={{ fontSize: 11, borderRadius: 6 }}
-              cursor={{ fill: "hsl(var(--accent))" }}
+              cursor={{ fill: "hsl(var(--accent-foreground) / 0.15)" }}
               formatter={(value) => [value, "Purchases"]}
             />
             <Bar

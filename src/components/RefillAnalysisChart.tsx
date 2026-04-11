@@ -101,7 +101,7 @@ export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JS
             <YAxis tick={{ fontSize: AXIS_TICK_FONT_SIZE }} tickLine={false} axisLine={false} />
             <Tooltip
               contentStyle={{ fontSize: TOOLTIP_FONT_SIZE, borderRadius: TOOLTIP_BORDER_RADIUS }}
-              cursor={{ fill: "hsl(var(--accent))" }}
+              cursor={{ fill: "hsl(var(--accent-foreground) / 0.15)" }}
               formatter={(value) => [value, "Days"]}
             />
             <Bar

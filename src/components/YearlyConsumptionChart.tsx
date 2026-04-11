@@ -135,7 +135,7 @@ export function YearlyConsumptionChart(): JSX.Element {
                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{ fontSize: 11, borderRadius: 6 }}
-                  cursor={{ fill: "hsl(var(--accent))" }}
+                  cursor={{ fill: "hsl(var(--accent-foreground) / 0.15)" }}
                   formatter={(value: unknown) => [`${(value as number).toFixed(1)} kWh`, "Usage"]}
                 />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
@@ -163,7 +163,7 @@ export function YearlyConsumptionChart(): JSX.Element {
                 <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{ fontSize: 11, borderRadius: 6 }}
-                  cursor={{ fill: "hsl(var(--accent))" }}
+                  cursor={{ fill: "hsl(var(--accent-foreground) / 0.15)" }}
                   formatter={(value: unknown) => [`${(value as number).toFixed(1)} kWh`, ""]}
                 />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
