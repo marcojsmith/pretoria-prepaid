@@ -1,15 +1,8 @@
 /* eslint-disable llm-core/no-magic-numbers */
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { usePurchases } from "@/hooks/usePurchase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { BarChart2, TrendingUp } from "lucide-react";
 import {
   BarChart,
@@ -34,6 +27,8 @@ const YEAR_COLORS = [
   "hsl(var(--chart-5))",
 ];
 
+const BAR_CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+
 function getYearsWithData(allMonthlyStats: { month: string }[]): number[] {
   if (!allMonthlyStats || allMonthlyStats.length === 0) return [];
   const years = new Set(allMonthlyStats.map((s) => Number(s.month.split("-")[0])));
@@ -42,13 +37,17 @@ function getYearsWithData(allMonthlyStats: { month: string }[]): number[] {
 
 function prepareBarData(
   allMonthlyStats: { month: string; units: number }[],
-  year: number
-): { month: string; avgDaily: number }[] {
+  compareYears: number[]
+): Record<string, string | number>[] {
   return MONTHS.map((label, i) => {
-    const monthKey = `${year}-${(i + 1).toString().padStart(2, "0")}`;
-    const stats = allMonthlyStats.find((s) => s.month === monthKey);
-    const daysInMonth = new Date(year, i + 1, 0).getDate();
-    return { month: label, avgDaily: stats ? stats.units / daysInMonth : 0 };
+    const row: Record<string, string | number> = { month: label };
+    compareYears.forEach((year) => {
+      const monthKey = `${year}-${(i + 1).toString().padStart(2, "0")}`;
+      const stats = allMonthlyStats.find((s) => s.month === monthKey);
+      const daysInMonth = new Date(year, i + 1, 0).getDate();
+      row[String(year)] = stats ? stats.units / daysInMonth : 0;
+    });
+    return row;
   });
 }
 
@@ -78,24 +77,17 @@ export function AverageDailyUsageChart(): JSX.Element {
     () => (localStorage.getItem("avg_daily_chart_type") as "bar" | "line") ?? "bar"
   );
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState<number>(
-    () => getYearsWithData(allMonthlyStats)[0] ?? currentYear
-  );
 
   const years = useMemo(() => {
     const y = getYearsWithData(allMonthlyStats);
     return y.length > 0 ? y : [currentYear];
   }, [allMonthlyStats, currentYear]);
 
-  useEffect(() => {
-    if (!years.includes(selectedYear)) {
-      setSelectedYear(years[0] ?? currentYear);
-    }
-  }, [years, selectedYear, currentYear]);
+  const compareYears = useMemo(() => years.slice(0, 3), [years]);
 
   const barData = useMemo(
-    () => prepareBarData(allMonthlyStats, selectedYear),
-    [allMonthlyStats, selectedYear]
+    () => prepareBarData(allMonthlyStats, compareYears),
+    [allMonthlyStats, compareYears]
   );
 
   const lineData = useMemo(() => prepareLineData(allMonthlyStats, years), [allMonthlyStats, years]);
@@ -107,20 +99,6 @@ export function AverageDailyUsageChart(): JSX.Element {
           Average Daily Consumption (kWh/d)
         </CardTitle>
         <div className="flex items-center gap-2">
-          {chartType === "bar" && (
-            <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-              <SelectTrigger className="h-7 w-[90px] text-xs" aria-label="Select year">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((y) => (
-                  <SelectItem key={y} value={String(y)} className="text-xs">
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
           <div className="flex rounded-md border">
             <Button
               variant={chartType === "bar" ? "secondary" : "ghost"}
@@ -166,16 +144,20 @@ export function AverageDailyUsageChart(): JSX.Element {
                     "Avg Daily",
                   ]}
                 />
-                <Bar
-                  dataKey="avgDaily"
-                  fill="hsl(var(--chart-1))"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={40}
-                />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                {compareYears.map((year, i) => (
+                  <Bar
+                    key={year}
+                    dataKey={String(year)}
+                    fill={BAR_CHART_COLORS[i % BAR_CHART_COLORS.length]}
+                    radius={[3, 3, 0, 0]}
+                    maxBarSize={20}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
             <p className="mt-4 text-center text-[10px] text-muted-foreground">
-              {selectedYear} — Jan to Dec
+              Last {compareYears.length} year{compareYears.length !== 1 ? "s" : ""} — Jan to Dec
             </p>
           </>
         ) : (
