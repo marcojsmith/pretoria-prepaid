@@ -69,7 +69,7 @@ describe("HouseholdMembersList", () => {
     );
 
     const memberTexts = screen.getAllByText(/User/);
-    expect(memberTexts[1].textContent).not.toContain("(you)");
+    expect(memberTexts[1]?.textContent ?? "").not.toContain("(you)");
   });
 
   it("shows email when preferredName exists", () => {

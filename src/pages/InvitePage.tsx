@@ -8,15 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SEO } from "@/components/SEO";
 import { useHousehold } from "@/hooks/useHousehold";
-
-interface InviteData {
-  valid: boolean;
-  expired: boolean;
-  used: boolean;
-  revoked: boolean;
-  householdName: string | null;
-  adminName: string | null;
-}
+import type { InviteData } from "@/types/household";
 
 function InvalidInviteView({ onNavigateHome }: { onNavigateHome: () => void }): JSX.Element {
   return (
@@ -84,7 +76,7 @@ function JoinInviteView({
   invite: InviteData;
   isAuthenticated: boolean;
   onSignUp: () => void;
-  onJoin: () => void;
+  onJoin: () => Promise<void>;
 }): JSX.Element {
   return (
     <div className="space-y-4">
@@ -103,7 +95,7 @@ function JoinInviteView({
           Sign up to Join
         </Button>
       ) : (
-        <Button onClick={onJoin} className="w-full">
+        <Button onClick={() => void onJoin()} className="w-full">
           <Users className="mr-2 h-4 w-4" />
           Join {invite.householdName}
         </Button>
@@ -118,12 +110,8 @@ export default function InvitePage(): JSX.Element {
   const location = useLocation();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  const rawInvite = useQuery(api.household.getInviteByCode, code ? { code } : "skip") as unknown;
-  const isValidInvite = (value: unknown): value is InviteData => {
-    return typeof value === "object" && value !== null && "valid" in value;
-  };
-  const invite = isValidInvite(rawInvite) ? rawInvite : null;
+  const rawInvite = useQuery(api.household.getInviteByCode, code ? { code } : "skip");
+  const invite = rawInvite === undefined ? null : (rawInvite as InviteData | null);
   const { joinHousehold, inHousehold, loading: householdLoading } = useHousehold();
 
   const handleJoin = async () => {
@@ -140,10 +128,6 @@ export default function InvitePage(): JSX.Element {
 
   const handleSignUp = () => {
     navigate(`/auth?redirect=${encodeURIComponent(location.pathname)}`);
-  };
-
-  const handleJoinClick = () => {
-    void handleJoin();
   };
 
   const isLoading = authLoading || invite === undefined || (isAuthenticated && householdLoading);
@@ -177,7 +161,7 @@ export default function InvitePage(): JSX.Element {
         invite={invite}
         isAuthenticated={isAuthenticated}
         onSignUp={handleSignUp}
-        onJoin={handleJoinClick}
+        onJoin={handleJoin}
       />
     );
   };
