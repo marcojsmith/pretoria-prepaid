@@ -108,14 +108,17 @@ export const updateProfile = mutation({
     lowBalanceThreshold: v.optional(v.number()),
     pushNotificationsEnabled: v.optional(v.boolean()),
     pushSubscription: v.optional(
-      v.object({
-        endpoint: v.string(),
-        expirationTime: v.union(v.number(), v.null()),
-        keys: v.object({
-          p256dh: v.string(),
-          auth: v.string(),
+      v.union(
+        v.object({
+          endpoint: v.string(),
+          expirationTime: v.union(v.number(), v.null()),
+          keys: v.object({
+            p256dh: v.string(),
+            auth: v.string(),
+          }),
         }),
-      })
+        v.null()
+      )
     ),
   },
   handler: async (ctx, args) => {
@@ -156,10 +159,10 @@ export const updateProfile = mutation({
     if (args.pushNotificationsEnabled !== undefined)
       updates.pushNotificationsEnabled = args.pushNotificationsEnabled;
 
-    if (args.pushSubscription !== undefined) {
+    if (args.pushSubscription !== null && args.pushSubscription !== undefined) {
       updates.pushSubscription = args.pushSubscription;
-    } else if (args.pushNotificationsEnabled !== undefined && !args.pushNotificationsEnabled) {
-      updates.pushSubscription = undefined;
+    } else if (args.pushSubscription === null) {
+      updates.pushSubscription = undefined; // clears the field
     }
 
     if (Object.keys(updates).length > 0) {

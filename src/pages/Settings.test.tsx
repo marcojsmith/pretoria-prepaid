@@ -98,7 +98,6 @@ describe("Settings Page", () => {
         meterNumber: "0987654321",
         lowBalanceThreshold: 20,
         pushNotificationsEnabled: false,
-        pushSubscription: undefined,
       });
     });
 
@@ -164,6 +163,7 @@ describe("Settings Page", () => {
       expect(mockUpdateProfile).toHaveBeenCalledWith(
         expect.objectContaining({
           pushNotificationsEnabled: false,
+          pushSubscription: null,
         })
       );
     });

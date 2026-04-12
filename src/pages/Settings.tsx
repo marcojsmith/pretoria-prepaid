@@ -55,14 +55,22 @@ export default function Settings(): JSX.Element | null {
       setIsSaving(true);
 
       try {
-        let pushSubscription: PushSubscriptionJSON | undefined =
-          profile?.pushSubscription as unknown as PushSubscriptionJSON | undefined;
+        const updates: {
+          preferredName?: string;
+          meterNumber?: string;
+          pushNotificationsEnabled?: boolean;
+          pushSubscription?: PushSubscriptionJSON | null;
+          lowBalanceThreshold?: number;
+        } = {
+          preferredName: formData.preferredName,
+          meterNumber: formData.meterNumber,
+          pushNotificationsEnabled: formData.pushNotificationsEnabled,
+        };
 
         if (formData.pushNotificationsEnabled && !profile?.pushNotificationsEnabled) {
           // User is enabling push notifications
           try {
-            const subscription = await subscribeUserToPush();
-            pushSubscription = subscription;
+            updates.pushSubscription = await subscribeUserToPush();
           } catch (error: unknown) {
             const errorMessage =
               error instanceof Error ? error.message : "Failed to enable push notifications.";
@@ -72,25 +80,9 @@ export default function Settings(): JSX.Element | null {
             return; // Stop submission if subscription failed
           }
         } else if (!formData.pushNotificationsEnabled && profile?.pushNotificationsEnabled) {
-          // User is disabling push notifications
+          // User is disabling push notifications — explicitly clear subscription
           await unsubscribeUserFromPush();
-          pushSubscription = undefined;
-        }
-
-        const updates: {
-          preferredName?: string;
-          meterNumber?: string;
-          pushNotificationsEnabled?: boolean;
-          pushSubscription?: PushSubscriptionJSON;
-          lowBalanceThreshold?: number;
-        } = {
-          preferredName: formData.preferredName,
-          meterNumber: formData.meterNumber,
-          pushNotificationsEnabled: formData.pushNotificationsEnabled,
-        };
-
-        if (pushSubscription) {
-          updates.pushSubscription = pushSubscription;
+          updates.pushSubscription = null;
         }
 
         if (formData.lowBalanceThreshold) {
