@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { calculateTierBreakdown } from "./electricity_logic";
 import { DATE_MONTH_LENGTH } from "./constants";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimiter";
+import { resolveEffectiveUserId } from "./lib/household";
 
 /**
  * Recalculates all purchases for a specific user and month.
@@ -64,9 +65,11 @@ export const getPurchases = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+
     return await ctx.db
       .query("purchases")
-      .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId_date", (q) => q.eq("userId", effectiveUserId))
       .order("desc")
       .collect();
   },
@@ -95,6 +98,8 @@ export const addPurchase = mutation({
       windowMs: RATE_LIMITS.addPurchase.windowMs,
     });
 
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+
     if (args.units < 0 || args.cost < 0 || args.amountPaid < 0) {
       throw new Error("Values cannot be negative");
     }
@@ -108,7 +113,7 @@ export const addPurchase = mutation({
     const monthPurchases = await ctx.db
       .query("purchases")
       .withIndex("by_userId_date", (q) =>
-        q.eq("userId", identity.subject).gte("date", monthKey).lte("date", args.date)
+        q.eq("userId", effectiveUserId).gte("date", monthKey).lte("date", args.date)
       )
       .collect();
 
@@ -122,7 +127,7 @@ export const addPurchase = mutation({
     });
 
     const purchaseId = await ctx.db.insert("purchases", {
-      userId: identity.subject,
+      userId: effectiveUserId,
       date: args.date,
       units: args.units,
       cost: total, // Use calculated theoretical cost
@@ -132,7 +137,7 @@ export const addPurchase = mutation({
 
     // Create ONE reading per purchase with pre/post values
     await ctx.db.insert("meter_readings", {
-      userId: identity.subject,
+      userId: effectiveUserId,
       date: args.date,
       readingPre: args.meterReading,
       readingPost: args.meterReading + args.units,
@@ -141,7 +146,7 @@ export const addPurchase = mutation({
 
     // Trigger sequential recalculation for the entire month to be safe
     await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {
-      userId: identity.subject,
+      userId: effectiveUserId,
       monthKey,
     });
 
@@ -163,9 +168,11 @@ export const deletePurchase = mutation({
       windowMs: RATE_LIMITS.deletePurchase.windowMs,
     });
 
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+
     const purchase = await ctx.db.get(args.id);
     if (!purchase) return;
-    if (purchase.userId !== identity.subject) {
+    if (purchase.userId !== effectiveUserId) {
       throw new Error("Unauthorized");
     }
 
@@ -186,7 +193,7 @@ export const deletePurchase = mutation({
 
     // Trigger recalculation for the month
     await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {
-      userId: identity.subject,
+      userId: effectiveUserId,
       monthKey,
     });
   },

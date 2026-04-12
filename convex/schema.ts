@@ -68,4 +68,29 @@ export default defineSchema({
     windowStart: v.number(),
     count: v.number(),
   }).index("by_userId_action", ["userId", "action"]),
+  households: defineTable({
+    adminUserId: v.string(),
+    name: v.string(),
+    createdAt: v.number(),
+  }).index("by_adminUserId", ["adminUserId"]),
+  household_members: defineTable({
+    householdId: v.id("households"),
+    userId: v.string(),
+    role: v.union(v.literal("admin"), v.literal("member")),
+    joinedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_householdId", ["householdId"]),
+  household_invites: defineTable({
+    householdId: v.id("households"),
+    code: v.string(),
+    createdBy: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    usedBy: v.optional(v.string()),
+    usedAt: v.optional(v.number()),
+    revoked: v.optional(v.boolean()),
+  })
+    .index("by_code", ["code"])
+    .index("by_householdId", ["householdId"]),
 });

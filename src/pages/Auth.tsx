@@ -5,6 +5,9 @@ import { Zap } from "lucide-react";
 import { SEO } from "@/components/SEO";
 
 const Auth = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const redirectUrl = searchParams.get("redirect") ?? "/dashboard";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <SEO
@@ -29,11 +32,11 @@ const Auth = () => {
             </TabsList>
 
             <TabsContent value="signin" className="mt-4 flex justify-center">
-              <SignIn routing="path" path="/auth" forceRedirectUrl="/dashboard" />
+              <SignIn routing="path" path="/auth" forceRedirectUrl={redirectUrl} />
             </TabsContent>
 
             <TabsContent value="signup" className="mt-4 flex justify-center">
-              <SignUp routing="path" path="/auth" forceRedirectUrl="/dashboard" />
+              <SignUp routing="path" path="/auth" forceRedirectUrl={redirectUrl} />
             </TabsContent>
           </Tabs>
         </CardContent>

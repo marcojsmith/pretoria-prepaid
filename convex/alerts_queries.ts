@@ -1,6 +1,7 @@
 import { internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { MAX_ALERT_PURCHASES } from "./constants";
+import { resolveEffectiveUserId } from "./lib/household";
 
 /**
  * Internal query to fetch all profiles with push enabled.
@@ -21,15 +22,17 @@ export const getProfilesForAlerts = internalQuery({
 export const getUserDataForAlert = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    const effectiveUserId = await resolveEffectiveUserId(ctx, args.userId);
+
     const readings = await ctx.db
       .query("meter_readings")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
       .order("desc")
       .take(2);
 
     const purchases = await ctx.db
       .query("purchases")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
       .order("desc")
       .take(MAX_ALERT_PURCHASES);
 

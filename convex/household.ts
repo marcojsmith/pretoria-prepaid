@@ -1,0 +1,295 @@
+import { query, mutation } from "./_generated/server";
+import { v } from "convex/values";
+
+const ERR_NOT_AUTH = "Not authenticated";
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const INVITE_CODE_LENGTH = 8;
+
+export const getMyHousehold = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const membership = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!membership) return null;
+
+    const household = await ctx.db.get(membership.householdId);
+    if (!household) return null;
+
+    const members = await ctx.db
+      .query("household_members")
+      .withIndex("by_householdId", (q) => q.eq("householdId", household._id))
+      .collect();
+
+    const memberProfiles = await Promise.all(
+      members.map(async (m) => {
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", m.userId))
+          .unique();
+        return {
+          userId: m.userId,
+          role: m.role,
+          joinedAt: m.joinedAt,
+          preferredName: profile?.preferredName ?? null,
+          email: profile?.email ?? null,
+        };
+      })
+    );
+
+    return {
+      householdId: household._id,
+      name: household.name,
+      adminUserId: household.adminUserId,
+      myRole: membership.role,
+      members: memberProfiles,
+    };
+  },
+});
+
+export const getInviteByCode = query({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    const invite = await ctx.db
+      .query("household_invites")
+      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .unique();
+    if (!invite) return null;
+
+    const household = await ctx.db.get(invite.householdId);
+    const adminProfile = household
+      ? await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", household.adminUserId))
+          .unique()
+      : null;
+
+    return {
+      valid: !invite.revoked && !invite.usedBy && invite.expiresAt > Date.now(),
+      expired: invite.expiresAt <= Date.now(),
+      used: !!invite.usedBy,
+      revoked: !!invite.revoked,
+      householdName: household?.name ?? null,
+      adminName: adminProfile?.preferredName ?? adminProfile?.email ?? null,
+    };
+  },
+});
+
+export const getMyInvites = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const membership = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!membership || membership.role !== "admin") return [];
+
+    return await ctx.db
+      .query("household_invites")
+      .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
+      .collect();
+  },
+});
+
+export const createHousehold = mutation({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error(ERR_NOT_AUTH);
+
+    const existing = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (existing) throw new Error("Already in a household");
+
+    const trimmedName = args.name.trim();
+    if (!trimmedName) throw new Error("Household name cannot be empty");
+
+    const householdId = await ctx.db.insert("households", {
+      adminUserId: identity.subject,
+      name: trimmedName,
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.insert("household_members", {
+      householdId,
+      userId: identity.subject,
+      role: "admin",
+      joinedAt: Date.now(),
+    });
+
+    return householdId;
+  },
+});
+
+export const createInvite = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error(ERR_NOT_AUTH);
+
+    const membership = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!membership || membership.role !== "admin") throw new Error("Not a household admin");
+
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+
+    await ctx.db.insert("household_invites", {
+      householdId: membership.householdId,
+      code,
+      createdBy: identity.subject,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + SEVEN_DAYS_MS,
+    });
+
+    return code;
+  },
+});
+
+export const revokeInvite = mutation({
+  args: { inviteId: v.id("household_invites") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error(ERR_NOT_AUTH);
+
+    const invite = await ctx.db.get(args.inviteId);
+    if (!invite) throw new Error("Invite not found");
+
+    const membership = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (
+      !membership ||
+      membership.role !== "admin" ||
+      membership.householdId !== invite.householdId
+    ) {
+      throw new Error("Unauthorized");
+    }
+
+    await ctx.db.patch(args.inviteId, { revoked: true });
+  },
+});
+
+export const joinHousehold = mutation({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error(ERR_NOT_AUTH);
+
+    const existingMembership = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (existingMembership) throw new Error("Already in a household");
+
+    const invite = await ctx.db
+      .query("household_invites")
+      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .unique();
+    if (!invite) throw new Error("Invalid invite code");
+    if (invite.revoked) throw new Error("Invite has been revoked");
+    if (invite.usedBy) throw new Error("Invite has already been used");
+    if (invite.expiresAt <= Date.now()) throw new Error("Invite has expired");
+
+    await ctx.db.patch(invite._id, {
+      usedBy: identity.subject,
+      usedAt: Date.now(),
+    });
+
+    await ctx.db.insert("household_members", {
+      householdId: invite.householdId,
+      userId: identity.subject,
+      role: "member",
+      joinedAt: Date.now(),
+    });
+
+    return invite.householdId;
+  },
+});
+
+export const removeMember = mutation({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error(ERR_NOT_AUTH);
+
+    if (args.userId === identity.subject) throw new Error("Cannot remove yourself");
+
+    const adminMembership = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!adminMembership || adminMembership.role !== "admin") throw new Error("Not admin");
+
+    const targetMembership = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+    if (!targetMembership || targetMembership.householdId !== adminMembership.householdId) {
+      throw new Error("User not in your household");
+    }
+
+    await ctx.db.delete(targetMembership._id);
+  },
+});
+
+export const leaveHousehold = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error(ERR_NOT_AUTH);
+
+    const membership = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!membership) throw new Error("Not in a household");
+    if (membership.role === "admin")
+      throw new Error("Admin cannot leave. Disband the household instead.");
+
+    await ctx.db.delete(membership._id);
+  },
+});
+
+export const disbandHousehold = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error(ERR_NOT_AUTH);
+
+    const membership = await ctx.db
+      .query("household_members")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+    if (!membership || membership.role !== "admin") throw new Error("Not admin");
+
+    const allMembers = await ctx.db
+      .query("household_members")
+      .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
+      .collect();
+    for (const m of allMembers) await ctx.db.delete(m._id);
+
+    const allInvites = await ctx.db
+      .query("household_invites")
+      .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
+      .collect();
+    for (const inv of allInvites) await ctx.db.delete(inv._id);
+
+    await ctx.db.delete(membership.householdId);
+  },
+});

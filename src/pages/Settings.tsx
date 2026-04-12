@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useHousehold } from "@/hooks/useHousehold";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ export default function Settings(): JSX.Element | null {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, updateProfile, loading: profileLoading } = useProfile();
+  const { isMember } = useHousehold();
 
   const [formData, setFormData] = useState({
     preferredName: "",
@@ -153,7 +155,13 @@ export default function Settings(): JSX.Element | null {
                   placeholder="e.g. 1234567890"
                   value={formData.meterNumber}
                   onChange={(e) => setFormData({ ...formData, meterNumber: e.target.value })}
+                  disabled={isMember}
                 />
+                {isMember && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Managed by your household admin.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -174,11 +182,18 @@ export default function Settings(): JSX.Element | null {
                   onChange={(e) =>
                     setFormData({ ...formData, lowBalanceThreshold: e.target.value })
                   }
+                  disabled={isMember}
                 />
-                <p className="text-[10px] text-muted-foreground">
-                  When your estimated balance falls below this, we'll show an alert (simulating your
-                  meter's beep).
-                </p>
+                {isMember ? (
+                  <p className="text-[10px] text-muted-foreground">
+                    Managed by your household admin.
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">
+                    When your estimated balance falls below this, we'll show an alert (simulating
+                    your meter's beep).
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between space-x-2 rounded-lg border p-3">
@@ -206,7 +221,7 @@ export default function Settings(): JSX.Element | null {
             </CardContent>
           </Card>
 
-          <Button type="submit" className="w-full" disabled={isSaving}>
+          <Button type="submit" className="w-full" disabled={isSaving || isMember}>
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
