@@ -169,16 +169,20 @@ export const getGlobalStats = query({
     // use denormalized counters updated in mutations.
     const MAX_GLOBAL_PROFILES = 10000;
     const MAX_GLOBAL_PURCHASES = 100000;
-    const profiles = await ctx.db.query("profiles").take(MAX_GLOBAL_PROFILES);
-    const purchases = await ctx.db.query("purchases").take(MAX_GLOBAL_PURCHASES);
-
-    const totalUsers = profiles.length;
-    const totalUnits = purchases.reduce((sum, p) => sum + p.units, 0);
-    const totalCost = purchases.reduce((sum, p) => sum + (p.cost || 0), 0);
-    const totalRevenue = purchases.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+    // Fetch one extra row so we can distinguish "exactly at cap" from "truncated".
+    const profiles = await ctx.db.query("profiles").take(MAX_GLOBAL_PROFILES + 1);
+    const purchases = await ctx.db.query("purchases").take(MAX_GLOBAL_PURCHASES + 1);
 
     const isPartial =
-      profiles.length === MAX_GLOBAL_PROFILES || purchases.length === MAX_GLOBAL_PURCHASES;
+      profiles.length > MAX_GLOBAL_PROFILES || purchases.length > MAX_GLOBAL_PURCHASES;
+
+    const limitedProfiles = profiles.slice(0, MAX_GLOBAL_PROFILES);
+    const limitedPurchases = purchases.slice(0, MAX_GLOBAL_PURCHASES);
+
+    const totalUsers = limitedProfiles.length;
+    const totalUnits = limitedPurchases.reduce((sum, p) => sum + p.units, 0);
+    const totalCost = limitedPurchases.reduce((sum, p) => sum + (p.cost || 0), 0);
+    const totalRevenue = limitedPurchases.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
 
     return {
       totalUsers,
@@ -187,8 +191,8 @@ export const getGlobalStats = query({
       totalRevenue,
       avgUnitsPerUser: !isPartial && totalUsers > 0 ? totalUnits / totalUsers : null,
       isPartial,
-      sampledProfilesCount: isPartial ? profiles.length : undefined,
-      sampledPurchasesCount: isPartial ? purchases.length : undefined,
+      sampledProfilesCount: isPartial ? MAX_GLOBAL_PROFILES : undefined,
+      sampledPurchasesCount: isPartial ? MAX_GLOBAL_PURCHASES : undefined,
     };
   },
 });

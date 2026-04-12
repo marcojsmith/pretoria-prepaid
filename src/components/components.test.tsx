@@ -64,7 +64,7 @@ describe("Application Components", () => {
     expect(screen.getByText("Home")).toBeInTheDocument();
   });
 
-  it("applies pendingClassName when link is pending", () => {
+  it("does not apply pendingClassName in the initial non-pending state", () => {
     render(
       <BrowserRouter>
         <NavLink

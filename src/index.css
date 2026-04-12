@@ -4,8 +4,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Hide static loading shell once React has mounted and replaced #root content */
-#root:not(:only-child) #app-shell {
+/* Hide static loading shell once React has mounted and added siblings inside #root */
+#root > #app-shell:not(:only-child) {
   display: none !important;
 }
 

@@ -1,4 +1,5 @@
 import { useAdmin } from "@/hooks/useAdmin";
+import { InfoTip } from "@/components/InfoTip";
 import { Header } from "@/components/Header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -560,10 +561,19 @@ export default function AdminDashboard(): JSX.Element {
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
-                    {globalStats.avgUnitsPerUser !== null
-                      ? `${globalStats.avgUnitsPerUser.toFixed(1)} kWh`
-                      : "—"}
+                  <div className="flex items-center gap-1 text-2xl font-bold">
+                    {globalStats.avgUnitsPerUser !== null ? (
+                      `${globalStats.avgUnitsPerUser.toFixed(1)} kWh`
+                    ) : (
+                      <>
+                        <span aria-label="Unavailable — sampled data">— (sampled)</span>
+                        {globalStats.isPartial && (
+                          <InfoTip
+                            text={`Calculated from a sample of ${globalStats.sampledProfilesCount?.toLocaleString() ?? "?"} users and ${globalStats.sampledPurchasesCount?.toLocaleString() ?? "?"} purchases. Exact average not available.`}
+                          />
+                        )}
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>

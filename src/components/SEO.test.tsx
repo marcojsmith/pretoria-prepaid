@@ -3,6 +3,11 @@ import { render } from "@testing-library/react";
 import { HelmetProvider } from "react-helmet-async";
 import { SEO } from "./SEO";
 
+/**
+ * Renders the SEO component wrapped in a HelmetProvider for testing.
+ * @param props - Props forwarded to {@link SEO}. Defaults to an empty object.
+ * @returns The result of React Testing Library's render.
+ */
 function renderSEO(props: Parameters<typeof SEO>[0] = {}) {
   return render(
     <HelmetProvider>

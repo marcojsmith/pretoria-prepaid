@@ -124,6 +124,7 @@ describe("Settings Page", () => {
       expect(mockUpdateProfile).toHaveBeenCalledWith(
         expect.objectContaining({
           pushNotificationsEnabled: true,
+          pushSubscription: expect.objectContaining({ endpoint: expect.any(String) }),
         })
       );
     });
@@ -170,7 +171,7 @@ describe("Settings Page", () => {
 
   it("handles push subscription failure gracefully", async () => {
     const mockSubscribe = vi.mocked(pushNotifications.subscribeUserToPush);
-    mockSubscribe.mockRejectedValue(new Error("Notification permission denied"));
+    mockSubscribe.mockRejectedValueOnce(new Error("Notification permission denied"));
 
     render(
       <BrowserRouter>
