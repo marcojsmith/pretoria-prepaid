@@ -1,9 +1,25 @@
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
 
-export interface UseHouseholdReturn {
-  household: ReturnType<typeof api.household.getMyHousehold> extends () => infer R ? R : never;
-  invites: ReturnType<typeof api.household.getMyInvites> extends () => infer R ? R : never;
+interface HouseholdMember {
+  userId: string;
+  role: "admin" | "member";
+  joinedAt?: number;
+  preferredName: string | null;
+  email: string | null;
+}
+
+interface MyHousehold {
+  householdId: string;
+  name: string;
+  adminUserId: string;
+  myRole: "admin" | "member";
+  members: HouseholdMember[];
+}
+
+interface UseHouseholdReturn {
+  household: MyHousehold | null;
+  invites: unknown;
   loading: boolean;
   isAdmin: boolean;
   isMember: boolean;
@@ -18,7 +34,7 @@ export interface UseHouseholdReturn {
 }
 
 export function useHousehold(): UseHouseholdReturn {
-  const household = useQuery(api.household.getMyHousehold);
+  const household = useQuery(api.household.getMyHousehold) as MyHousehold | null;
   const invites = useQuery(api.household.getMyInvites);
   const createHouseholdMutation = useMutation(api.household.createHousehold);
   const createInviteMutation = useMutation(api.household.createInvite);
