@@ -1,15 +1,15 @@
 /* eslint-disable llm-core/no-magic-numbers */
+import { useMemo, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart2 } from "lucide-react";
 import { MAX_PURCHASE_FREQUENCY_ITEMS } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import type { MonthlyStat } from "@/hooks/usePurchaseStats";
 
-interface MonthlyStat {
-  month: string;
-  units: number;
-  cost: number;
-  purchases: number;
-}
+const prefersReducedMotion =
+  typeof window !== "undefined"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    : false;
 
 interface PurchaseFrequencyChartProps {
   stats: MonthlyStat[];
@@ -33,8 +33,17 @@ export function prepareChartData(
     });
 }
 
-export function PurchaseFrequencyChart({ stats }: PurchaseFrequencyChartProps): JSX.Element | null {
-  const chartData = prepareChartData(stats);
+/**
+ * Memoized bar chart showing number of electricity purchases per month.
+ *
+ * @param props - {@link PurchaseFrequencyChartProps}
+ * @param props.stats - Array of monthly statistics used to derive chart data via {@link prepareChartData}.
+ * @returns A chart card, or null if there is no data.
+ */
+export const PurchaseFrequencyChart = memo(function PurchaseFrequencyChart({
+  stats,
+}: PurchaseFrequencyChartProps): JSX.Element | null {
+  const chartData = useMemo(() => prepareChartData(stats), [stats]);
 
   if (chartData.length === 0) return null;
 
@@ -63,6 +72,7 @@ export function PurchaseFrequencyChart({ stats }: PurchaseFrequencyChartProps): 
               fill="hsl(var(--primary))"
               radius={[3, 3, 0, 0]}
               maxBarSize={32}
+              isAnimationActive={!prefersReducedMotion}
             />
           </BarChart>
         </ResponsiveContainer>
@@ -77,4 +87,4 @@ export function PurchaseFrequencyChart({ stats }: PurchaseFrequencyChartProps): 
       </CardContent>
     </Card>
   );
-}
+});

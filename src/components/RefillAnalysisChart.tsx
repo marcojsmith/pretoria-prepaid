@@ -1,8 +1,14 @@
+import { useMemo, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { RefillInterval } from "@/lib/electricity";
 import { History } from "lucide-react";
 import { MAX_REFILL_ANALYSIS_ITEMS } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+
+const prefersReducedMotion =
+  typeof window !== "undefined"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    : false;
 
 const CHART_HEIGHT = 140;
 const MARGIN_TOP = 8;
@@ -65,16 +71,21 @@ function prepareChartData(intervals: RefillInterval[]): ChartDatum[] {
  *
  * @param props.intervals - Refill interval data derived from purchase history
  */
-export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JSX.Element | null {
-  const chartData = prepareChartData(intervals);
+export const RefillAnalysisChart = memo(function RefillAnalysisChart({
+  intervals,
+}: RefillAnalysisChartProps): JSX.Element | null {
+  const chartData = useMemo(() => prepareChartData(intervals), [intervals]);
+  const avgDays = useMemo(
+    () =>
+      chartData.length > 0
+        ? Math.round(chartData.reduce((acc, curr) => acc + curr.days, 0) / chartData.length)
+        : 0,
+    [chartData]
+  );
 
   if (chartData.length === 0) {
     return null;
   }
-
-  const avgDays = Math.round(
-    chartData.reduce((acc, curr) => acc + curr.days, 0) / chartData.length
-  );
 
   return (
     <Card>
@@ -109,6 +120,7 @@ export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JS
               fill="hsl(var(--primary))"
               radius={BAR_RADIUS}
               maxBarSize={BAR_MAX_SIZE}
+              isAnimationActive={!prefersReducedMotion}
             />
           </BarChart>
         </ResponsiveContainer>
@@ -120,4 +132,4 @@ export function RefillAnalysisChart({ intervals }: RefillAnalysisChartProps): JS
       </CardContent>
     </Card>
   );
-}
+});

@@ -36,6 +36,7 @@ export interface UsePurchasesReturn {
   getAverageMonthlyCost: () => number;
   getRefillAnalysis: () => RefillInterval[];
   offlineCount: number;
+  monthlyStats: MonthlyStat[];
 }
 
 /**
@@ -339,10 +340,25 @@ export function usePurchases(): UsePurchasesReturn {
     [deletePurchaseMutation, offlineQueue, saveOfflineQueue]
   );
 
-  const getCurrentMonthPurchases = useCallback(() => {
+  const currentMonthPurchases = useMemo(() => {
     const currentMonth = getCurrentMonth();
     return purchases.filter((p) => p.date && p.date.startsWith(currentMonth));
   }, [purchases]);
+
+  const unitsThisMonth = useMemo(
+    () => currentMonthPurchases.reduce((sum, p) => sum + p.units, 0),
+    [currentMonthPurchases]
+  );
+
+  const costThisMonth = useMemo(
+    () => currentMonthPurchases.reduce((sum, p) => sum + p.amountPaid, 0),
+    [currentMonthPurchases]
+  );
+
+  const getCurrentMonthPurchases = useCallback(
+    () => currentMonthPurchases,
+    [currentMonthPurchases]
+  );
 
   const { getMonthlyStats, getAverageMonthlyUsage, getDailyAverageUsage, getAverageMonthlyCost } =
     usePurchaseStats(purchases);
@@ -353,9 +369,7 @@ export function usePurchases(): UsePurchasesReturn {
     saveOfflineQueue,
   });
 
-  const currentMonthPurchases = getCurrentMonthPurchases();
-  const unitsThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.units, 0);
-  const costThisMonth = currentMonthPurchases.reduce((sum, p) => sum + p.amountPaid, 0);
+  const monthlyStats = useMemo(() => getMonthlyStats(), [getMonthlyStats]);
 
   return {
     purchases,
@@ -372,5 +386,6 @@ export function usePurchases(): UsePurchasesReturn {
     getAverageMonthlyCost,
     getRefillAnalysis,
     offlineCount: offlineQueue.length,
+    monthlyStats,
   };
 }

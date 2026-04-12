@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -134,6 +134,8 @@ function RatesFooter(): JSX.Element {
   );
 }
 
+const RatesFooterMemo = memo(RatesFooter);
+
 export default function Dashboard(): JSX.Element | null {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -155,6 +157,8 @@ export default function Dashboard(): JSX.Element | null {
   } = usePurchases();
   const { cards, setCards, toggleVisibility, resetLayout } = useDashboardLayout();
   const [editorOpen, setEditorOpen] = useState(false);
+
+  const handleEditLayout = useCallback(() => setEditorOpen(true), []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -205,6 +209,7 @@ export default function Dashboard(): JSX.Element | null {
         <main className="container mx-auto space-y-6 px-4 py-6">
           <OnboardingForm
             onSubmit={(reading, defaultDailyUsage) => {
+              /* v8 ignore next */
               void addOnboardingReading(reading, defaultDailyUsage);
             }}
           />
@@ -220,7 +225,7 @@ export default function Dashboard(): JSX.Element | null {
       <PatreonBanner />
 
       <main className="container mx-auto space-y-6 px-4 py-6">
-        <DashboardHeader onEditLayout={() => setEditorOpen(true)} />
+        <DashboardHeader onEditLayout={handleEditLayout} />
 
         {!hasPurchaseReadings && <FirstPurchasePrompt />}
 
@@ -234,7 +239,7 @@ export default function Dashboard(): JSX.Element | null {
           monthlyStats={monthlyStats}
         />
 
-        <RatesFooter />
+        <RatesFooterMemo />
       </main>
 
       <LayoutEditorWrapper

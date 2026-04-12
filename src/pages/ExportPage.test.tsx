@@ -371,4 +371,41 @@ invalid data`;
       expect(screen.getByText(/Preview \(1 records?\)/i)).toBeInTheDocument();
     });
   });
+
+  it("returns null when user is not authenticated", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      loading: false,
+      signOut: mockSignOut,
+    });
+
+    const { container } = render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows '+ X more rows' when import has more than 10 rows", async () => {
+    render(
+      <BrowserRouter>
+        <ExportPage />
+      </BrowserRouter>
+    );
+
+    const fileInput = screen.getByLabelText(/Select CSV File/i);
+    const rows = ["Date,Amount,kWh"];
+    for (let i = 1; i <= 12; i++) {
+      rows.push(`2026-03-${String(i).padStart(2, "0")},100,30`);
+    }
+    const file = new File([rows.join("\n")], "large.csv", { type: "text/csv" });
+
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/\+ 2 more rows/i)).toBeInTheDocument();
+    });
+  });
 });

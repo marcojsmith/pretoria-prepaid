@@ -57,6 +57,7 @@ describe("AverageDailyUsageChart", () => {
 
     const lineBtn = screen.getByRole("button", { name: /line chart/i });
     lineBtn.click();
+    vi.runAllTimers();
 
     expect(localStorage.getItem("avg_daily_chart_type")).toBe("line");
   });

@@ -1,7 +1,7 @@
 {
   "name": "pretoria-prepaid",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "bun x vite",
@@ -13,6 +13,7 @@
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "preview": "bun x vite preview",
+    "analyze": "ANALYZE=true vite build",
     "convex:dev": "bun x convex dev",
     "postinstall": "husky"
   },
@@ -97,6 +98,7 @@
     "postcss": "^8.4.35",
     "prettier": "^3.2.5",
     "prettier-plugin-tailwindcss": "^0.5.11",
+    "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
     "typescript-eslint": "^7.0.2",

@@ -59,6 +59,7 @@ describe("YearlyConsumptionChart", () => {
 
     const lineBtn = screen.getByRole("button", { name: /line chart/i });
     lineBtn.click();
+    vi.runAllTimers();
 
     expect(localStorage.getItem("yearly_consumption_chart_type")).toBe("line");
   });

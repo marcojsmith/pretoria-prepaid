@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { calculateConsumptionStats } from "./electricity_logic";
@@ -27,6 +28,8 @@ type IntervalEntry = {
 };
 
 type PurchaseReading = { date: string; readingPre: number; readingPost: number; source: string };
+
+type ReadingRecord = { readingPre: number; readingPost: number; date: string };
 
 function computeIntervals(purchaseReadings: PurchaseReading[]): IntervalEntry[] {
   const intervals: IntervalEntry[] = [];
@@ -68,6 +71,29 @@ function computeIntervals(purchaseReadings: PurchaseReading[]): IntervalEntry[] 
   return intervals;
 }
 
+type ReadingByDate = { readingPre: number; readingPost: number; date: string };
+
+async function buildPurchaseReadingsMap(
+  ctx: QueryCtx,
+  userId: string
+): Promise<Map<string, ReadingByDate[]>> {
+  const allReadings = await ctx.db
+    .query("meter_readings")
+    .withIndex("by_userId_source", (q) => q.eq("userId", userId).eq("source", "purchase"))
+    .order("desc")
+    .take(DEFAULT_READINGS_TAKE);
+  const map = new Map<string, ReadingByDate[]>();
+  for (const reading of allReadings) {
+    const existing = map.get(reading.date);
+    if (existing) {
+      existing.push(reading);
+    } else {
+      map.set(reading.date, [reading]);
+    }
+  }
+  return map;
+}
+
 async function fetchRecentPurchasesWithReadings(
   ctx: QueryCtx,
   userId: string
@@ -88,20 +114,12 @@ async function fetchRecentPurchasesWithReadings(
     .order("desc")
     .take(DEFAULT_PURCHASES_TAKE);
 
-  const readingsMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
-  const allReadings = await ctx.db
-    .query("meter_readings")
-    .withIndex("by_userId_source", (q) => q.eq("userId", userId).eq("source", "purchase"))
-    .order("desc")
-    .take(DEFAULT_READINGS_TAKE);
-  for (const reading of allReadings) {
-    readingsMap.set(reading.date, reading);
-  }
+  const readingsMap = await buildPurchaseReadingsMap(ctx, userId);
 
-  const result = [];
-  for (const purchase of docs) {
-    const reading = readingsMap.get(purchase.date);
-    result.push({
+  return docs.map((purchase) => {
+    const readings = readingsMap.get(purchase.date);
+    const reading = readings?.[readings.length - 1];
+    return {
       date: purchase.date,
       units: purchase.units,
       amountPaid: purchase.amountPaid,
@@ -109,9 +127,8 @@ async function fetchRecentPurchasesWithReadings(
       readingPre: reading?.readingPre ?? null,
       readingPost: reading?.readingPost ?? null,
       effectiveRate: purchase.units > 0 ? purchase.amountPaid / purchase.units : null,
-    });
-  }
-  return result;
+    };
+  });
 }
 
 /**
@@ -162,23 +179,99 @@ export const getGlobalStats = query({
   handler: async (ctx) => {
     await checkAdmin(ctx);
 
-    const profiles = await ctx.db.query("profiles").collect();
-    const purchases = await ctx.db.query("purchases").collect();
+    // NOTE: These are bounded to prevent timeouts. For true unlimited aggregates,
+    // use denormalized counters updated in mutations.
+    const MAX_GLOBAL_PROFILES = 10000;
+    const MAX_GLOBAL_PURCHASES = 100000;
+    // Fetch one extra row so we can distinguish "exactly at cap" from "truncated".
+    const profiles = await ctx.db.query("profiles").take(MAX_GLOBAL_PROFILES + 1);
+    const purchases = await ctx.db.query("purchases").take(MAX_GLOBAL_PURCHASES + 1);
 
-    const totalUsers = profiles.length;
-    const totalUnits = purchases.reduce((sum, p) => sum + p.units, 0);
-    const totalCost = purchases.reduce((sum, p) => sum + (p.cost || 0), 0);
-    const totalRevenue = purchases.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+    const isPartial =
+      profiles.length > MAX_GLOBAL_PROFILES || purchases.length > MAX_GLOBAL_PURCHASES;
+
+    const limitedProfiles = profiles.slice(0, MAX_GLOBAL_PROFILES);
+    const limitedPurchases = purchases.slice(0, MAX_GLOBAL_PURCHASES);
+
+    const totalUsers = limitedProfiles.length;
+    const totalUnits = limitedPurchases.reduce((sum, p) => sum + p.units, 0);
+    const totalCost = limitedPurchases.reduce((sum, p) => sum + (p.cost || 0), 0);
+    const totalRevenue = limitedPurchases.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
 
     return {
       totalUsers,
       totalUnits,
       totalCost,
       totalRevenue,
-      avgUnitsPerUser: totalUsers > 0 ? totalUnits / totalUsers : 0,
+      avgUnitsPerUser: !isPartial && totalUsers > 0 ? totalUnits / totalUsers : null,
+      isPartial,
+      sampledProfilesCount: isPartial ? limitedProfiles.length : undefined,
+      sampledPurchasesCount: isPartial ? limitedPurchases.length : undefined,
     };
   },
 });
+
+/**
+ * Fetches profile documents for the given user IDs and returns a Map of userId → profile.
+ * Users without a profile are excluded from the result.
+ * @param ctx - Query context.
+ * @param userIds - Array of user IDs to fetch profiles for.
+ * @returns Map of userId to profile document, excluding users without profiles.
+ */
+async function fetchProfileMap(
+  ctx: QueryCtx,
+  userIds: string[]
+): Promise<Map<string, Doc<"profiles">>> {
+  const entries = await Promise.all(
+    userIds.map(async (uid) => {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", uid))
+        .unique();
+      return [uid, profile] as const;
+    })
+  );
+  return new Map(
+    entries
+      .filter((e): e is [string, NonNullable<(typeof e)[1]>] => e[1] !== null)
+      .map(([uid, p]) => [uid, p])
+  );
+}
+
+/**
+ * Fetches purchase-source meter readings for the given user IDs.
+ * Returns a Map of userId → (date → ReadingRecord[]).
+ * Multiple readings on the same date are preserved in descending order.
+ * @param ctx - Query context.
+ * @param userIds - Array of user IDs to fetch readings for.
+ * @returns Map of userId to date-indexed reading record arrays.
+ */
+async function fetchUserReadingsMap(
+  ctx: QueryCtx,
+  userIds: string[]
+): Promise<Map<string, Map<string, ReadingRecord[]>>> {
+  const userReadingsMap = new Map<string, Map<string, ReadingRecord[]>>();
+  await Promise.all(
+    userIds.map(async (uid) => {
+      const userReadings = await ctx.db
+        .query("meter_readings")
+        .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
+        .order("desc")
+        .take(DEFAULT_READINGS_TAKE);
+      const dateMap = new Map<string, ReadingRecord[]>();
+      for (const reading of userReadings) {
+        const existing = dateMap.get(reading.date);
+        if (existing) {
+          existing.push(reading);
+        } else {
+          dateMap.set(reading.date, [reading]);
+        }
+      }
+      userReadingsMap.set(uid, dateMap);
+    })
+  );
+  return userReadingsMap;
+}
 
 export const getRecentPurchases = query({
   args: {},
@@ -186,39 +279,18 @@ export const getRecentPurchases = query({
     await checkAdmin(ctx);
 
     const purchases = await ctx.db.query("purchases").order("desc").take(MAX_RECENT_PURCHASES);
-
-    const profiles = await ctx.db.query("profiles").collect();
-    const profileMap = new Map(profiles.map((p) => [p.userId, p]));
-
     const userIds = [...new Set(purchases.map((p) => p.userId))];
-    const userReadingsMap = new Map<
-      string,
-      Map<string, { readingPre: number; readingPost: number; date: string }>
-    >();
 
-    await Promise.all(
-      userIds.map(async (uid) => {
-        const userReadings = await ctx.db
-          .query("meter_readings")
-          .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
-          .order("desc")
-          .take(DEFAULT_READINGS_TAKE);
-
-        const dateMap = new Map<
-          string,
-          { readingPre: number; readingPost: number; date: string }
-        >();
-        for (const reading of userReadings) {
-          dateMap.set(reading.date, reading);
-        }
-        userReadingsMap.set(uid, dateMap);
-      })
-    );
+    const [profileMap, userReadingsMap] = await Promise.all([
+      fetchProfileMap(ctx, userIds),
+      fetchUserReadingsMap(ctx, userIds),
+    ]);
 
     const result = [];
     for (const purchase of purchases) {
       const readingsMap = userReadingsMap.get(purchase.userId);
-      const reading = readingsMap?.get(purchase.date);
+      const dateReadings = readingsMap?.get(purchase.date);
+      const reading = dateReadings?.[dateReadings.length - 1];
       const profile = profileMap.get(purchase.userId);
 
       result.push({

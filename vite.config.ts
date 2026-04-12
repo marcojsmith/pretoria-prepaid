@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import basicSsl from "@vitejs/plugin-basic-ssl";
+import { visualizer } from "rollup-plugin-visualizer";
 import { version } from "./package.json";
 
 // https://vitejs.dev/config/
@@ -59,6 +60,9 @@ export default defineConfig({
         ],
       },
     }),
+    ...(process.env["ANALYZE"] === "true"
+      ? [visualizer({ open: true, filename: "dist/bundle-stats.html", gzipSize: true, brotliSize: true }) as PluginOption]
+      : []),
   ],
   resolve: {
     alias: {
@@ -69,6 +73,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id: string) => {
+          if (id.includes("/node_modules/recharts/") || id.includes("/node_modules/victory-vendor/")) {
+            return "vendor-recharts";
+          }
           if (["react", "react-dom", "react-router-dom"].some((pkg) => id.includes(`/node_modules/${pkg}/`))) {
             return "vendor-react";
           }

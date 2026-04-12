@@ -131,6 +131,7 @@ describe("Dashboard Page", () => {
       getAverageMonthlyCost: () => 1000,
       getRefillAnalysis: () => [],
       offlineCount: 0,
+      monthlyStats: [],
       ...overrides,
     } as ReturnType<typeof usePurchases>);
   };
