@@ -89,6 +89,13 @@ function UserMenu({ user, onSignOut }: { user: UserMenuUser; onSignOut: () => vo
   );
 }
 
+/**
+ * Sticky top navigation header with branding, back navigation, theme toggle, and user menu.
+ *
+ * @param props - {@link HeaderProps}
+ * @param props.offlineCount - Number of queued offline actions to surface in the nav menu (default 0).
+ * @returns The rendered header element.
+ */
 export const Header = memo(function Header({ offlineCount = 0 }: HeaderProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();

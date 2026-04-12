@@ -10,7 +10,10 @@ interface GlobalStats {
   totalUnits: number;
   totalCost: number;
   totalRevenue: number;
-  avgUnitsPerUser: number;
+  avgUnitsPerUser: number | null;
+  isPartial?: boolean;
+  sampledProfilesCount?: number | undefined;
+  sampledPurchasesCount?: number | undefined;
 }
 
 type UserWithRole = PaginatedQueryItem<typeof api.admin.getUsersList>;

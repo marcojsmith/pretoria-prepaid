@@ -29,6 +29,8 @@ type IntervalEntry = {
 
 type PurchaseReading = { date: string; readingPre: number; readingPost: number; source: string };
 
+type ReadingRecord = { readingPre: number; readingPost: number; date: string };
+
 function computeIntervals(purchaseReadings: PurchaseReading[]): IntervalEntry[] {
   const intervals: IntervalEntry[] = [];
   for (let i = 0; i < purchaseReadings.length - 1; i++) {
@@ -175,16 +177,29 @@ export const getGlobalStats = query({
     const totalCost = purchases.reduce((sum, p) => sum + (p.cost || 0), 0);
     const totalRevenue = purchases.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
 
+    const isPartial =
+      profiles.length === MAX_GLOBAL_PROFILES || purchases.length === MAX_GLOBAL_PURCHASES;
+
     return {
       totalUsers,
       totalUnits,
       totalCost,
       totalRevenue,
-      avgUnitsPerUser: totalUsers > 0 ? totalUnits / totalUsers : 0,
+      avgUnitsPerUser: !isPartial && totalUsers > 0 ? totalUnits / totalUsers : null,
+      isPartial,
+      sampledProfilesCount: isPartial ? profiles.length : undefined,
+      sampledPurchasesCount: isPartial ? purchases.length : undefined,
     };
   },
 });
 
+/**
+ * Fetches profile documents for the given user IDs and returns a Map of userId → profile.
+ * Users without a profile are excluded from the result.
+ * @param ctx - Query context.
+ * @param userIds - Array of user IDs to fetch profiles for.
+ * @returns Map of userId to profile document, excluding users without profiles.
+ */
 async function fetchProfileMap(
   ctx: QueryCtx,
   userIds: string[]
@@ -205,14 +220,18 @@ async function fetchProfileMap(
   );
 }
 
+/**
+ * Fetches purchase-source meter readings for the given user IDs.
+ * Returns a Map of userId → (date → ReadingRecord).
+ * @param ctx - Query context.
+ * @param userIds - Array of user IDs to fetch readings for.
+ * @returns Map of userId to date-indexed reading records.
+ */
 async function fetchUserReadingsMap(
   ctx: QueryCtx,
   userIds: string[]
-): Promise<Map<string, Map<string, { readingPre: number; readingPost: number; date: string }>>> {
-  const userReadingsMap = new Map<
-    string,
-    Map<string, { readingPre: number; readingPost: number; date: string }>
-  >();
+): Promise<Map<string, Map<string, ReadingRecord>>> {
+  const userReadingsMap = new Map<string, Map<string, ReadingRecord>>();
   await Promise.all(
     userIds.map(async (uid) => {
       const userReadings = await ctx.db
@@ -220,7 +239,7 @@ async function fetchUserReadingsMap(
         .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
         .order("desc")
         .take(DEFAULT_READINGS_TAKE);
-      const dateMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
+      const dateMap = new Map<string, ReadingRecord>();
       for (const reading of userReadings) {
         dateMap.set(reading.date, reading);
       }

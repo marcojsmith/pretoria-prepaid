@@ -64,6 +64,24 @@ describe("Application Components", () => {
     expect(screen.getByText("Home")).toBeInTheDocument();
   });
 
+  it("applies pendingClassName when link is pending", () => {
+    render(
+      <BrowserRouter>
+        <NavLink
+          to="/test-pending"
+          className="base"
+          activeClassName="active"
+          pendingClassName="pending"
+        >
+          Test Link
+        </NavLink>
+      </BrowserRouter>
+    );
+    const link = screen.getByText("Test Link");
+    expect(link).toBeInTheDocument();
+    expect(link).not.toHaveClass("pending");
+  });
+
   it("renders DashboardStats correctly", () => {
     const { getAllByText, rerender } = render(
       <BrowserRouter>

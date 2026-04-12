@@ -561,7 +561,9 @@ export default function AdminDashboard(): JSX.Element {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {globalStats.avgUnitsPerUser.toFixed(1)} kWh
+                    {globalStats.avgUnitsPerUser !== null
+                      ? `${globalStats.avgUnitsPerUser.toFixed(1)} kWh`
+                      : "—"}
                   </div>
                 </CardContent>
               </Card>

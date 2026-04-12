@@ -1,5 +1,5 @@
 /* eslint-disable llm-core/no-magic-numbers */
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart2, TrendingUp } from "lucide-react";
@@ -16,22 +16,29 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { debounce } from "@/lib/debounce";
+import type { MonthlyStat } from "@/hooks/usePurchaseStats";
 
-const prefersReducedMotion =
-  typeof window !== "undefined"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    : false;
+function usePrefersReducedMotion(): boolean {
+  const [prefersReduced, setPrefersReduced] = useState(
+    /* v8 ignore next */
+    typeof window !== "undefined"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false
+  );
+  useEffect(() => {
+    /* v8 ignore next */
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = (e: MediaQueryListEvent) => setPrefersReduced(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return prefersReduced;
+}
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const BAR_CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
-
-interface MonthlyStat {
-  month: string;
-  units: number;
-  cost: number;
-  purchases: number;
-}
 
 interface MultiYearChartProps {
   title: string;
@@ -42,12 +49,22 @@ interface MultiYearChartProps {
   tooltipLabel: string;
 }
 
+/**
+ * Extracts unique years from monthly stats data.
+ * @param allMonthlyStats - Array of monthly stats with month strings (YYYY-MM format).
+ * @returns Sorted array of years in descending order.
+ */
 function getYearsWithData(allMonthlyStats: { month: string }[]): number[] {
   if (!allMonthlyStats || allMonthlyStats.length === 0) return [];
   const years = new Set(allMonthlyStats.map((s) => Number(s.month.split("-")[0])));
   return Array.from(years).sort((a, b) => b - a);
 }
 
+/**
+ * Prepares bar chart data from monthly stats.
+ * @param options - Configuration for preparing bar data.
+ * @returns Array of data records for the bar chart.
+ */
 function prepareBarData(options: {
   allMonthlyStats: { month: string; units: number }[];
   compareYears: number[];
@@ -74,6 +91,11 @@ function prepareBarData(options: {
   });
 }
 
+/**
+ * Prepares line chart data from monthly stats.
+ * @param options - Configuration for preparing line data.
+ * @returns Array of data records for the line chart.
+ */
 function prepareLineData(options: {
   allMonthlyStats: { month: string; units: number }[];
   years: number[];
@@ -98,18 +120,28 @@ function prepareLineData(options: {
   });
 }
 
-const debouncedSetStorage = debounce((key: string, value: string) => {
-  localStorage.setItem(key, value);
-}, 300);
-
+/**
+ * Memoized multi-year comparison chart with bar and line chart modes.
+ * @param props - {@link MultiYearChartProps}
+ * @returns A card containing the chart, or null if there is no data.
+ */
 export const MultiYearChart = React.memo(function MultiYearChart(
   props: MultiYearChartProps
 ): JSX.Element {
   const { title, localStorageKey, monthlyStats, mode, tooltipUnit, tooltipLabel } = props;
 
-  const [chartType, setChartType] = useState<"bar" | "line">(
-    () => (localStorage.getItem(localStorageKey) as "bar" | "line") ?? "bar"
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  const debouncedSetStorageRef = useRef(
+    debounce((key: string, value: string) => {
+      localStorage.setItem(key, value);
+    }, 300)
   );
+
+  const [chartType, setChartType] = useState<"bar" | "line">(() => {
+    const stored = localStorage.getItem(localStorageKey);
+    return stored === "bar" || stored === "line" ? stored : "bar";
+  });
   const currentYear = new Date().getFullYear();
 
   const years = useMemo(() => {
@@ -131,12 +163,12 @@ export const MultiYearChart = React.memo(function MultiYearChart(
 
   const handleBarClick = () => {
     setChartType("bar");
-    debouncedSetStorage(localStorageKey, "bar");
+    debouncedSetStorageRef.current(localStorageKey, "bar");
   };
 
   const handleLineClick = () => {
     setChartType("line");
-    debouncedSetStorage(localStorageKey, "line");
+    debouncedSetStorageRef.current(localStorageKey, "line");
   };
 
   return (
@@ -179,10 +211,12 @@ export const MultiYearChart = React.memo(function MultiYearChart(
                 <Tooltip
                   contentStyle={{ fontSize: 11, borderRadius: 6 }}
                   cursor={{ fill: "hsl(var(--accent-foreground) / 0.15)" }}
-                  formatter={(value: unknown) => [
-                    `${(value as number).toFixed(1)} ${tooltipUnit}`,
-                    tooltipLabel,
-                  ]}
+                  formatter={(value: unknown) => {
+                    /* v8 ignore next 2 */
+                    const num =
+                      typeof value === "number" && isFinite(value) ? value.toFixed(1) : "-";
+                    return [`${num} ${tooltipUnit}`, tooltipLabel];
+                  }}
                 />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                 {compareYears.map((year, i) => (
@@ -211,10 +245,12 @@ export const MultiYearChart = React.memo(function MultiYearChart(
                 <Tooltip
                   contentStyle={{ fontSize: 11, borderRadius: 6 }}
                   cursor={{ fill: "hsl(var(--accent-foreground) / 0.15)" }}
-                  formatter={(value: unknown) => [
-                    `${(value as number).toFixed(1)} ${tooltipUnit}`,
-                    "",
-                  ]}
+                  formatter={(value: unknown) => {
+                    /* v8 ignore next 2 */
+                    const num =
+                      typeof value === "number" && isFinite(value) ? value.toFixed(1) : "-";
+                    return [`${num} ${tooltipUnit}`, ""];
+                  }}
                 />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                 {years.map((year, i) => (
@@ -222,7 +258,7 @@ export const MultiYearChart = React.memo(function MultiYearChart(
                     key={year}
                     type="monotone"
                     dataKey={String(year)}
-                    stroke={BAR_CHART_COLORS[i % BAR_CHART_COLORS.length]!}
+                    stroke={BAR_CHART_COLORS[i % BAR_CHART_COLORS.length] ?? "hsl(var(--chart-1))"}
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     activeDot={{ r: 5 }}

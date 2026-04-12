@@ -20,6 +20,13 @@ import {
   CHART_SCALE_0_2,
 } from "@/lib/constants";
 
+interface PurchasePayload {
+  units: number;
+  amountPaid: number;
+  date: string;
+  meterReading: number;
+}
+
 // eslint-disable-next-line llm-core/max-function-length
 export default function HistoryPage(): JSX.Element | null {
   const navigate = useNavigate();
@@ -126,8 +133,13 @@ export default function HistoryPage(): JSX.Element | null {
 
   const isFiltered = selectedMonth !== "All" || selectedYear !== "All";
 
+  /**
+   * Submits a new purchase via {@link addPurchase} and clears navigation prefill state when applicable.
+   *
+   * @param options - The purchase details to record.
+   */
   const handleAddPurchase = useCallback(
-    (options: { units: number; amountPaid: number; date: string; meterReading: number }) => {
+    (options: PurchasePayload) => {
       const { units, amountPaid, date, meterReading } = options;
       void (async () => {
         await addPurchase({ units, amountPaid, date, meterReading });

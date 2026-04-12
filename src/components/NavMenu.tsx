@@ -35,6 +35,12 @@ export function NavMenu({ offlineCount }: NavMenuProps): JSX.Element {
   const location = useLocation();
   const { isAdmin } = useUserRole();
 
+  /**
+   * Navigates to the given path and closes the nav menu sheet.
+   *
+   * @param path - The route path to navigate to.
+   * @returns void
+   */
   const handleNavigate = useCallback(
     (path: string) => {
       navigate(path);

@@ -4,18 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BarChart2 } from "lucide-react";
 import { MAX_PURCHASE_FREQUENCY_ITEMS } from "@/lib/constants";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import type { MonthlyStat } from "@/hooks/usePurchaseStats";
 
 const prefersReducedMotion =
   typeof window !== "undefined"
     ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
     : false;
-
-interface MonthlyStat {
-  month: string;
-  units: number;
-  cost: number;
-  purchases: number;
-}
 
 interface PurchaseFrequencyChartProps {
   stats: MonthlyStat[];
@@ -39,6 +33,13 @@ export function prepareChartData(
     });
 }
 
+/**
+ * Memoized bar chart showing number of electricity purchases per month.
+ *
+ * @param props - {@link PurchaseFrequencyChartProps}
+ * @param props.stats - Array of monthly statistics used to derive chart data via {@link prepareChartData}.
+ * @returns A chart card, or null if there is no data.
+ */
 export const PurchaseFrequencyChart = memo(function PurchaseFrequencyChart({
   stats,
 }: PurchaseFrequencyChartProps): JSX.Element | null {
