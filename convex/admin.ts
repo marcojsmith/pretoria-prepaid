@@ -117,7 +117,8 @@ async function fetchRecentPurchasesWithReadings(
   const readingsMap = await buildPurchaseReadingsMap(ctx, userId);
 
   return docs.map((purchase) => {
-    const reading = readingsMap.get(purchase.date)?.at(-1);
+    const readings = readingsMap.get(purchase.date);
+    const reading = readings?.[readings.length - 1];
     return {
       date: purchase.date,
       units: purchase.units,
@@ -288,7 +289,8 @@ export const getRecentPurchases = query({
     const result = [];
     for (const purchase of purchases) {
       const readingsMap = userReadingsMap.get(purchase.userId);
-      const reading = readingsMap?.get(purchase.date)?.at(-1);
+      const dateReadings = readingsMap?.get(purchase.date);
+      const reading = dateReadings?.[dateReadings.length - 1];
       const profile = profileMap.get(purchase.userId);
 
       result.push({
