@@ -71,6 +71,29 @@ function computeIntervals(purchaseReadings: PurchaseReading[]): IntervalEntry[] 
   return intervals;
 }
 
+type ReadingByDate = { readingPre: number; readingPost: number; date: string };
+
+async function buildPurchaseReadingsMap(
+  ctx: QueryCtx,
+  userId: string
+): Promise<Map<string, ReadingByDate[]>> {
+  const allReadings = await ctx.db
+    .query("meter_readings")
+    .withIndex("by_userId_source", (q) => q.eq("userId", userId).eq("source", "purchase"))
+    .order("desc")
+    .take(DEFAULT_READINGS_TAKE);
+  const map = new Map<string, ReadingByDate[]>();
+  for (const reading of allReadings) {
+    const existing = map.get(reading.date);
+    if (existing) {
+      existing.push(reading);
+    } else {
+      map.set(reading.date, [reading]);
+    }
+  }
+  return map;
+}
+
 async function fetchRecentPurchasesWithReadings(
   ctx: QueryCtx,
   userId: string
@@ -91,20 +114,11 @@ async function fetchRecentPurchasesWithReadings(
     .order("desc")
     .take(DEFAULT_PURCHASES_TAKE);
 
-  const readingsMap = new Map<string, { readingPre: number; readingPost: number; date: string }>();
-  const allReadings = await ctx.db
-    .query("meter_readings")
-    .withIndex("by_userId_source", (q) => q.eq("userId", userId).eq("source", "purchase"))
-    .order("desc")
-    .take(DEFAULT_READINGS_TAKE);
-  for (const reading of allReadings) {
-    readingsMap.set(reading.date, reading);
-  }
+  const readingsMap = await buildPurchaseReadingsMap(ctx, userId);
 
-  const result = [];
-  for (const purchase of docs) {
-    const reading = readingsMap.get(purchase.date);
-    result.push({
+  return docs.map((purchase) => {
+    const reading = readingsMap.get(purchase.date)?.at(-1);
+    return {
       date: purchase.date,
       units: purchase.units,
       amountPaid: purchase.amountPaid,
@@ -112,9 +126,8 @@ async function fetchRecentPurchasesWithReadings(
       readingPre: reading?.readingPre ?? null,
       readingPost: reading?.readingPost ?? null,
       effectiveRate: purchase.units > 0 ? purchase.amountPaid / purchase.units : null,
-    });
-  }
-  return result;
+    };
+  });
 }
 
 /**
@@ -191,8 +204,8 @@ export const getGlobalStats = query({
       totalRevenue,
       avgUnitsPerUser: !isPartial && totalUsers > 0 ? totalUnits / totalUsers : null,
       isPartial,
-      sampledProfilesCount: isPartial ? MAX_GLOBAL_PROFILES : undefined,
-      sampledPurchasesCount: isPartial ? MAX_GLOBAL_PURCHASES : undefined,
+      sampledProfilesCount: isPartial ? limitedProfiles.length : undefined,
+      sampledPurchasesCount: isPartial ? limitedPurchases.length : undefined,
     };
   },
 });
@@ -226,16 +239,17 @@ async function fetchProfileMap(
 
 /**
  * Fetches purchase-source meter readings for the given user IDs.
- * Returns a Map of userId → (date → ReadingRecord).
+ * Returns a Map of userId → (date → ReadingRecord[]).
+ * Multiple readings on the same date are preserved in descending order.
  * @param ctx - Query context.
  * @param userIds - Array of user IDs to fetch readings for.
- * @returns Map of userId to date-indexed reading records.
+ * @returns Map of userId to date-indexed reading record arrays.
  */
 async function fetchUserReadingsMap(
   ctx: QueryCtx,
   userIds: string[]
-): Promise<Map<string, Map<string, ReadingRecord>>> {
-  const userReadingsMap = new Map<string, Map<string, ReadingRecord>>();
+): Promise<Map<string, Map<string, ReadingRecord[]>>> {
+  const userReadingsMap = new Map<string, Map<string, ReadingRecord[]>>();
   await Promise.all(
     userIds.map(async (uid) => {
       const userReadings = await ctx.db
@@ -243,9 +257,14 @@ async function fetchUserReadingsMap(
         .withIndex("by_userId_source", (q) => q.eq("userId", uid).eq("source", "purchase"))
         .order("desc")
         .take(DEFAULT_READINGS_TAKE);
-      const dateMap = new Map<string, ReadingRecord>();
+      const dateMap = new Map<string, ReadingRecord[]>();
       for (const reading of userReadings) {
-        dateMap.set(reading.date, reading);
+        const existing = dateMap.get(reading.date);
+        if (existing) {
+          existing.push(reading);
+        } else {
+          dateMap.set(reading.date, [reading]);
+        }
       }
       userReadingsMap.set(uid, dateMap);
     })
@@ -269,7 +288,7 @@ export const getRecentPurchases = query({
     const result = [];
     for (const purchase of purchases) {
       const readingsMap = userReadingsMap.get(purchase.userId);
-      const reading = readingsMap?.get(purchase.date);
+      const reading = readingsMap?.get(purchase.date)?.at(-1);
       const profile = profileMap.get(purchase.userId);
 
       result.push({

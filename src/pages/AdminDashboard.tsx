@@ -564,15 +564,15 @@ export default function AdminDashboard(): JSX.Element {
                   <div className="flex items-center gap-1 text-2xl font-bold">
                     {globalStats.avgUnitsPerUser !== null ? (
                       `${globalStats.avgUnitsPerUser.toFixed(1)} kWh`
-                    ) : (
+                    ) : globalStats.isPartial ? (
                       <>
                         <span aria-label="Unavailable — sampled data">— (sampled)</span>
-                        {globalStats.isPartial && (
-                          <InfoTip
-                            text={`Calculated from a sample of ${globalStats.sampledProfilesCount?.toLocaleString() ?? "?"} users and ${globalStats.sampledPurchasesCount?.toLocaleString() ?? "?"} purchases. Exact average not available.`}
-                          />
-                        )}
+                        <InfoTip
+                          text={`Calculated from a sample of ${globalStats.sampledProfilesCount?.toLocaleString() ?? "?"} users and ${globalStats.sampledPurchasesCount?.toLocaleString() ?? "?"} purchases. Exact average not available.`}
+                        />
                       </>
+                    ) : (
+                      <span>—</span>
                     )}
                   </div>
                 </CardContent>
