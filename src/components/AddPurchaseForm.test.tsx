@@ -194,8 +194,9 @@ describe("AddPurchaseForm", () => {
     const { container } = render(<AddPurchaseForm unitsAlreadyBought={0} onAdd={onAdd} />);
 
     fireEvent.change(screen.getByLabelText(/Amount Paid/i), { target: { value: "100" } });
+    // Manually clear units (overrides auto-calc)
+    fireEvent.change(screen.getByLabelText(/kWh Received/i), { target: { value: "" } });
     fireEvent.change(screen.getByLabelText(/Current Meter/i), { target: { value: "1000" } });
-    // Leave kWh at 0
 
     const form = container.querySelector("form");
     if (!form) throw new Error("form not found");
