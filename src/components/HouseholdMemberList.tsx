@@ -51,7 +51,7 @@ export function HouseholdMembersList({
                 Admin
               </Badge>
             )}
-            {isAdmin && member.userId !== currentUserId && (
+            {isAdmin && member.role !== "admin" && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button

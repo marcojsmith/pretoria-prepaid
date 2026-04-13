@@ -11,17 +11,10 @@ export const getMyHousehold = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    let membership = await ctx.db
+    const membership = await ctx.db
       .query("household_members")
       .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
-    // LEGACY: remove after full migration
-    if (!membership && identity.tokenIdentifier !== identity.subject) {
-      membership = await ctx.db
-        .query("household_members")
-        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
-        .unique();
-    }
     if (!membership) return null;
 
     const household = await ctx.db.get(membership.householdId);
@@ -92,17 +85,10 @@ export const getMyInvites = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    let membership = await ctx.db
+    const membership = await ctx.db
       .query("household_members")
       .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
-    // LEGACY: remove after full migration
-    if (!membership && identity.tokenIdentifier !== identity.subject) {
-      membership = await ctx.db
-        .query("household_members")
-        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
-        .unique();
-    }
     if (!membership || membership.role !== "admin") return [];
 
     return await ctx.db

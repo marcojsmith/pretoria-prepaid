@@ -56,7 +56,7 @@ describe("admin", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getRecentPurchases, {});
 
       const user1 = result.find((r) => r.userId === "user-1" && r.date === "2024-01-15");
@@ -88,7 +88,7 @@ describe("admin", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getRecentPurchases, {});
 
       expect(result).toHaveLength(1);
@@ -120,7 +120,7 @@ describe("admin", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getRecentPurchases, {});
 
       expect(result).toHaveLength(1);
@@ -159,7 +159,7 @@ describe("admin", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getRecentPurchases, {});
 
       expect(result).toHaveLength(1);
@@ -187,14 +187,14 @@ describe("admin", () => {
       });
 
       const page1 = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getUsersList, { paginationOpts: { numItems: 2, cursor: null } });
 
       expect(page1.page).toHaveLength(2);
       expect(page1.isDone).toBe(false);
 
       const page2 = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getUsersList, {
           paginationOpts: { numItems: 2, cursor: page1.continueCursor },
         });
@@ -221,7 +221,7 @@ describe("admin", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getUsersList, { paginationOpts: { numItems: 10, cursor: null } });
 
       const user = result.page.find((u) => u.userId === "no-role-user");
@@ -273,7 +273,7 @@ describe("admin", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getUserKPIData, { userId: "test-user" });
 
       expect(result.recentPurchases).toHaveLength(2);
@@ -313,7 +313,7 @@ describe("admin", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getUserKPIData, { userId: "test-user" });
 
       expect(result.recentPurchases).toHaveLength(1);
@@ -356,7 +356,7 @@ describe("admin", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: "admin-user-id" })
+        .withIdentity({ subject: "admin-user-id", tokenIdentifier: "admin-user-id" })
         .query(api.admin.getUserKPIData, { userId: "test-user" });
 
       expect(result.recentPurchases).toHaveLength(1);

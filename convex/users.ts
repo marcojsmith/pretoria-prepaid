@@ -1,7 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimiter";
-import { migrateUserIdentity } from "./lib/migrateUserIdentity";
 
 const ERR_NOT_AUTHENTICATED = "Not authenticated";
 const ERR_PROFILE_NOT_FOUND = "Profile not found";
@@ -12,19 +11,10 @@ export const getProfile = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    // Try tokenIdentifier first, fall back to subject for legacy records
-    let profile = await ctx.db
+    return await ctx.db
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
-    // LEGACY: remove after full migration
-    if (!profile && identity.tokenIdentifier !== identity.subject) {
-      profile = await ctx.db
-        .query("profiles")
-        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
-        .unique();
-    }
-    return profile;
   },
 });
 
@@ -34,18 +24,10 @@ export const getRole = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    // Try tokenIdentifier first, fall back to subject for legacy records
-    let userRole = await ctx.db
+    const userRole = await ctx.db
       .query("user_roles")
       .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
-    // LEGACY: remove after full migration
-    if (!userRole && identity.tokenIdentifier !== identity.subject) {
-      userRole = await ctx.db
-        .query("user_roles")
-        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
-        .unique();
-    }
 
     return userRole?.role ?? "user";
   },
@@ -56,7 +38,7 @@ export const syncUser = mutation({
     email: v.union(v.string(), v.null()),
     preferredName: v.optional(v.string()),
   },
-  // eslint-disable-next-line llm-core/max-function-length, sonarjs/cognitive-complexity
+  // eslint-disable-next-line llm-core/max-function-length
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -64,7 +46,6 @@ export const syncUser = mutation({
     }
 
     const tokenId = identity.tokenIdentifier;
-    const subjectId = identity.subject;
 
     await checkRateLimit({
       ctx,
@@ -73,17 +54,6 @@ export const syncUser = mutation({
       limit: RATE_LIMITS.syncUser.limit,
       windowMs: RATE_LIMITS.syncUser.windowMs,
     });
-
-    // LEGACY: migrate subject-keyed records to tokenIdentifier — remove after full migration
-    if (tokenId !== subjectId) {
-      const legacyProfile = await ctx.db
-        .query("profiles")
-        .withIndex("by_userId", (q) => q.eq("userId", subjectId))
-        .unique();
-      if (legacyProfile) {
-        await migrateUserIdentity({ ctx, subjectId, tokenId });
-      }
-    }
 
     const existingProfile = await ctx.db
       .query("profiles")
