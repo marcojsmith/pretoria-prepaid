@@ -38,7 +38,6 @@ A production-grade Progressive Web App (PWA) designed to help residents of Preto
 - [Bun](https://bun.sh/) (Recommended) or Node.js.
 - A [Convex](https://www.convex.dev/) account.
 - A [Clerk](https://clerk.com/) account.
-- An invite code (required for account creation).
 
 ### Installation
 
