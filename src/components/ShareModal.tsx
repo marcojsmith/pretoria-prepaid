@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Copy, Check, Link } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,16 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps): JSX.Element
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const COPY_FEEDBACK_DURATION_MS = 2000;
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -43,7 +52,10 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps): JSX.Element
       await navigator.clipboard.writeText(inviteUrl);
       setCopied(true);
       toast.success("Link copied to clipboard");
-      setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION_MS);
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION_MS);
     } catch {
       toast.error("Failed to copy link");
     }
@@ -53,20 +65,24 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps): JSX.Element
     if (!isOpen) {
       setInviteUrl(null);
       setCopied(false);
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = null;
+      }
     }
     onOpenChange(isOpen);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-md overflow-hidden">
         <DialogHeader>
           <DialogTitle>Invite Someone</DialogTitle>
           <DialogDescription>
             Generate a link and share it. Valid for 7 days, single use.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {!inviteUrl ? (
             <Button onClick={() => void handleGenerate()} disabled={loading} className="w-full">
               <Link className="mr-2 h-4 w-4" />
@@ -74,9 +90,15 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps): JSX.Element
             </Button>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 rounded-md border bg-muted/50 p-3">
-                <p className="flex-1 truncate font-mono text-sm">{inviteUrl}</p>
-                <Button size="sm" variant="outline" onClick={() => void handleCopy()}>
+              <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-md border bg-muted/50 p-2 sm:p-3">
+                <p className="min-w-0 flex-1 truncate font-mono text-xs sm:text-sm">{inviteUrl}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleCopy()}
+                  className="shrink-0"
+                  aria-label="Copy invite link"
+                >
                   {copied ? (
                     <Check className="h-4 w-4 text-green-600" />
                   ) : (

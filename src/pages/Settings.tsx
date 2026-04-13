@@ -221,7 +221,7 @@ export default function Settings(): JSX.Element | null {
             </CardContent>
           </Card>
 
-          <Button type="submit" className="w-full" disabled={isSaving || isMember}>
+          <Button type="submit" className="w-full" disabled={isSaving}>
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

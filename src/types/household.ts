@@ -22,3 +22,16 @@ export interface InviteData {
   householdName: string | null;
   adminName: string | null;
 }
+
+/** Invitation record for household invites */
+export interface HouseholdInvite {
+  _id: string;
+  householdId: string;
+  code: string;
+  createdBy: string;
+  createdAt: number;
+  expiresAt: number;
+  usedBy?: string;
+  usedAt?: number;
+  revoked?: boolean;
+}

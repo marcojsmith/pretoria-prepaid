@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { HouseholdMembersList, HouseholdActions } from "./HouseholdMemberList";
 
 describe("HouseholdMembersList", () => {
@@ -161,6 +161,23 @@ describe("HouseholdMembersList", () => {
 
     const removeButtons = screen.getAllByRole("button", { name: /Remove/i });
     expect(removeButtons).toHaveLength(1);
+  });
+
+  it("admin cannot remove themselves", () => {
+    render(
+      <HouseholdMembersList
+        members={members}
+        currentUserId="user1"
+        isAdmin={true}
+        onRemove={vi.fn()}
+      />
+    );
+
+    const adminRow = screen.getByText("Admin User").closest("div.flex") as HTMLElement | null;
+    const member1RemoveButton = adminRow
+      ? within(adminRow).queryByRole("button", { name: /Remove/i })
+      : null;
+    expect(member1RemoveButton).not.toBeInTheDocument();
   });
 
   it("calls onRemove when remove is clicked", () => {

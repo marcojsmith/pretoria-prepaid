@@ -12,14 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { LogOut, Trash2 } from "lucide-react";
-
-interface HouseholdMember {
-  userId: string;
-  role: "admin" | "member";
-  joinedAt?: number;
-  preferredName: string | null;
-  email: string | null;
-}
+import type { HouseholdMember } from "@/types/household";
 
 interface HouseholdMembersListProps {
   members: HouseholdMember[];
@@ -41,55 +34,56 @@ export function HouseholdMembersList({
           key={member.userId}
           className="flex items-center justify-between rounded-md border p-3"
         >
-          <div className="flex items-center gap-2">
-            <div>
-              <p className="text-sm font-medium">
-                {member.preferredName ?? member.email ?? "Unknown"}
-                {member.userId === currentUserId && (
-                  <span className="ml-1 text-xs text-muted-foreground">(you)</span>
-                )}
-              </p>
-              {member.preferredName && member.email && (
-                <p className="text-xs text-muted-foreground">{member.email}</p>
+          <div>
+            <p className="text-sm font-medium">
+              {member.preferredName ?? member.email ?? "Unknown"}
+              {member.userId === currentUserId && (
+                <span className="ml-1 text-xs text-muted-foreground">(you)</span>
               )}
-            </div>
+            </p>
+            {member.preferredName && member.email && (
+              <p className="text-xs text-muted-foreground">{member.email}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             {member.role === "admin" && (
               <Badge variant="secondary" className="text-xs">
                 Admin
               </Badge>
             )}
-          </div>
-          {isAdmin && member.userId !== currentUserId && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
-                >
-                  Remove
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Remove member?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {member.preferredName ?? member.email} will lose access to the household data.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => {
-                      void onRemove(member.userId);
-                    }}
+            {isAdmin && member.userId !== currentUserId && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive"
                   >
                     Remove
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove member?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {member.preferredName ?? member.email ?? "Unknown"}
+                      will lose access to the household data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        void onRemove(member.userId);
+                      }}
+                    >
+                      Remove
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </div>
       ))}
     </div>

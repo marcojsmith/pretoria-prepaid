@@ -4,9 +4,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Zap } from "lucide-react";
 import { SEO } from "@/components/SEO";
 
+const DEFAULT_REDIRECT = "/dashboard";
+
 const Auth = () => {
   const searchParams = new URLSearchParams(window.location.search);
-  const redirectUrl = searchParams.get("redirect") ?? "/dashboard";
+  let redirectUrl = searchParams.get("redirect") ?? DEFAULT_REDIRECT;
+
+  try {
+    const url = new URL(redirectUrl, window.location.origin);
+    if (
+      url.pathname.startsWith("//") ||
+      redirectUrl.startsWith("//") ||
+      redirectUrl.includes(":")
+    ) {
+      redirectUrl = DEFAULT_REDIRECT;
+    } else {
+      redirectUrl = url.pathname;
+    }
+  } catch {
+    if (!redirectUrl.startsWith("/") || redirectUrl.startsWith("//")) {
+      redirectUrl = DEFAULT_REDIRECT;
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">

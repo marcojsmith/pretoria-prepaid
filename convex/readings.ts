@@ -76,7 +76,7 @@ export const addOnboardingReading = mutation({
     if (args.defaultDailyUsage !== undefined) {
       const profile = await ctx.db
         .query("profiles")
-        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+        .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
         .unique();
 
       if (profile) {

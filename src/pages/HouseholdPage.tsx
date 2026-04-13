@@ -57,7 +57,16 @@ export default function HouseholdPage(): JSX.Element {
     }
     setActionLoading(true);
     try {
-      const code = inviteCode.trim().split("/").pop() ?? inviteCode.trim();
+      const trimmed = inviteCode.trim();
+      let code = trimmed;
+      try {
+        const url = new URL(trimmed);
+        const segments = url.pathname.split("/").filter((s) => s);
+        code = segments.pop() ?? trimmed;
+      } catch {
+        code = trimmed;
+      }
+      if (!code) code = trimmed;
       await joinHousehold({ code });
       toast.success("Joined household");
       setInviteCode("");

@@ -74,7 +74,7 @@ export const getInviteByCode = query({
       used: !!invite.usedBy,
       revoked: !!invite.revoked,
       householdName: household?.name ?? null,
-      adminName: adminProfile?.preferredName ?? adminProfile?.email ?? null,
+      adminName: adminProfile?.preferredName ?? "Household admin",
     };
   },
 });
@@ -142,10 +142,31 @@ export const createInvite = mutation({
       .unique();
     if (!membership || membership.role !== "admin") throw new Error("Not a household admin");
 
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const codeBytes = new Uint8Array(INVITE_CODE_LENGTH);
     let code = "";
-    for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)];
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+      crypto.getRandomValues(codeBytes);
+      const randomChars: string[] = [];
+      for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
+        const char = CHARSET[(codeBytes[i] ?? 0) % CHARSET.length];
+        if (char) randomChars.push(char);
+      }
+      code = randomChars.join("");
+
+      const existing = await ctx.db
+        .query("household_invites")
+        .withIndex("by_code", (q) => q.eq("code", code))
+        .unique();
+      if (!existing) break;
+      attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+      throw new Error("Failed to generate unique invite code. Please try again.");
     }
 
     await ctx.db.insert("household_invites", {
