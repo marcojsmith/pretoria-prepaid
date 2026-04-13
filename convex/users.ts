@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimiter";
+import { migrateUserIdentity } from "./lib/migrateUserIdentity";
 
 const ERR_NOT_AUTHENTICATED = "Not authenticated";
 const ERR_PROFILE_NOT_FOUND = "Profile not found";
@@ -11,10 +12,19 @@ export const getProfile = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    return await ctx.db
+    // Try tokenIdentifier first, fall back to subject for legacy records
+    let profile = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
+    // LEGACY: remove after full migration
+    if (!profile && identity.tokenIdentifier !== identity.subject) {
+      profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+        .unique();
+    }
+    return profile;
   },
 });
 
@@ -24,10 +34,18 @@ export const getRole = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const userRole = await ctx.db
+    // Try tokenIdentifier first, fall back to subject for legacy records
+    let userRole = await ctx.db
       .query("user_roles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
+    // LEGACY: remove after full migration
+    if (!userRole && identity.tokenIdentifier !== identity.subject) {
+      userRole = await ctx.db
+        .query("user_roles")
+        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+        .unique();
+    }
 
     return userRole?.role ?? "user";
   },
@@ -38,24 +56,38 @@ export const syncUser = mutation({
     email: v.union(v.string(), v.null()),
     preferredName: v.optional(v.string()),
   },
-  // eslint-disable-next-line llm-core/max-function-length
+  // eslint-disable-next-line llm-core/max-function-length, sonarjs/cognitive-complexity
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error(ERR_NOT_AUTHENTICATED);
     }
 
+    const tokenId = identity.tokenIdentifier;
+    const subjectId = identity.subject;
+
     await checkRateLimit({
       ctx,
-      userId: identity.subject,
+      userId: tokenId,
       action: "syncUser",
       limit: RATE_LIMITS.syncUser.limit,
       windowMs: RATE_LIMITS.syncUser.windowMs,
     });
 
+    // LEGACY: migrate subject-keyed records to tokenIdentifier — remove after full migration
+    if (tokenId !== subjectId) {
+      const legacyProfile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", subjectId))
+        .unique();
+      if (legacyProfile) {
+        await migrateUserIdentity({ ctx, subjectId, tokenId });
+      }
+    }
+
     const existingProfile = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", tokenId))
       .unique();
 
     if (!existingProfile) {
@@ -64,7 +96,7 @@ export const syncUser = mutation({
         email: string | null;
         preferredName?: string;
       } = {
-        userId: identity.subject,
+        userId: tokenId,
         email: args.email,
       };
       if (args.preferredName !== undefined) {
@@ -89,12 +121,12 @@ export const syncUser = mutation({
     // Ensure they have a base role
     const existingRole = await ctx.db
       .query("user_roles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", tokenId))
       .unique();
 
     if (!existingRole) {
       await ctx.db.insert("user_roles", {
-        userId: identity.subject,
+        userId: tokenId,
         role: "user",
       });
     }
@@ -127,9 +159,11 @@ export const updateProfile = mutation({
       throw new Error(ERR_NOT_AUTHENTICATED);
     }
 
+    const tokenId = identity.tokenIdentifier;
+
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", tokenId))
       .unique();
 
     if (!profile) {
@@ -202,9 +236,10 @@ export const updateDashboardLayout = mutation({
     if (!identity) {
       throw new Error(ERR_NOT_AUTHENTICATED);
     }
+    const tokenId = identity.tokenIdentifier;
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", tokenId))
       .unique();
     if (!profile) {
       throw new Error(ERR_PROFILE_NOT_FOUND);
@@ -241,9 +276,10 @@ export const updatePushSubscription = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error(ERR_NOT_AUTHENTICATED);
 
+    const tokenId = identity.tokenIdentifier;
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", tokenId))
       .unique();
 
     if (!profile) throw new Error(ERR_PROFILE_NOT_FOUND);

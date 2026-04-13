@@ -11,7 +11,7 @@ export const getReadings = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
 
     return await ctx.db
       .query("meter_readings")
@@ -33,13 +33,13 @@ export const addOnboardingReading = mutation({
 
     await checkRateLimit({
       ctx,
-      userId: identity.subject,
+      userId: identity.tokenIdentifier,
       action: "addOnboardingReading",
       limit: RATE_LIMITS.addOnboardingReading.limit,
       windowMs: RATE_LIMITS.addOnboardingReading.windowMs,
     });
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
 
     // Check if user already has any readings
     const existingReadings = await ctx.db
@@ -96,7 +96,7 @@ export const hasAnyReadings = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return false;
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
 
     const readings = await ctx.db
       .query("meter_readings")
@@ -113,7 +113,7 @@ export const hasPurchaseReadings = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return false;
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
 
     const readings = await ctx.db
       .query("meter_readings")
@@ -132,7 +132,7 @@ export const getConsumptionStats = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
 
     const profile = await ctx.db
       .query("profiles")

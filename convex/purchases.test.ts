@@ -79,7 +79,7 @@ describe("purchases", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: userId })
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
         .query(api.purchases.getPurchases, {});
 
       expect(result).toHaveLength(3);
@@ -113,7 +113,7 @@ describe("purchases", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: userId })
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
         .query(api.purchases.getPurchases, {});
 
       expect(result).toHaveLength(1);
@@ -128,18 +128,20 @@ describe("purchases", () => {
 
       await seedRates(t);
 
-      const result = await t.withIdentity({ subject: userId }).mutation(api.purchases.addPurchase, {
-        date: "2024-01-15",
-        units: 50,
-        cost: 171.29,
-        amountPaid: 175,
-        meterReading: 1000,
-      });
+      const result = await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .mutation(api.purchases.addPurchase, {
+          date: "2024-01-15",
+          units: 50,
+          cost: 171.29,
+          amountPaid: 175,
+          meterReading: 1000,
+        });
 
       expect(result).toBeDefined();
 
       const purchases = await t
-        .withIdentity({ subject: userId })
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
         .query(api.purchases.getPurchases, {});
       expect(purchases).toHaveLength(1);
       expect(purchases[0]?.units).toBe(50);
@@ -175,13 +177,15 @@ describe("purchases", () => {
       const t = convexTest(schema, modules);
 
       await expect(
-        t.withIdentity({ subject: "user-1" }).mutation(api.purchases.addPurchase, {
-          date: "2024-01-15",
-          units: -10,
-          cost: 100,
-          amountPaid: 100,
-          meterReading: 1000,
-        })
+        t
+          .withIdentity({ subject: "user-1", tokenIdentifier: "user-1" })
+          .mutation(api.purchases.addPurchase, {
+            date: "2024-01-15",
+            units: -10,
+            cost: 100,
+            amountPaid: 100,
+            meterReading: 1000,
+          })
       ).rejects.toThrow("Values cannot be negative");
     });
 
@@ -189,13 +193,15 @@ describe("purchases", () => {
       const t = convexTest(schema, modules);
 
       await expect(
-        t.withIdentity({ subject: "user-1" }).mutation(api.purchases.addPurchase, {
-          date: "2024-01-15",
-          units: 10,
-          cost: -100,
-          amountPaid: 100,
-          meterReading: 1000,
-        })
+        t
+          .withIdentity({ subject: "user-1", tokenIdentifier: "user-1" })
+          .mutation(api.purchases.addPurchase, {
+            date: "2024-01-15",
+            units: 10,
+            cost: -100,
+            amountPaid: 100,
+            meterReading: 1000,
+          })
       ).rejects.toThrow("Values cannot be negative");
     });
 
@@ -203,13 +209,15 @@ describe("purchases", () => {
       const t = convexTest(schema, modules);
 
       await expect(
-        t.withIdentity({ subject: "user-1" }).mutation(api.purchases.addPurchase, {
-          date: "2024-01-15",
-          units: 10,
-          cost: 100,
-          amountPaid: -50,
-          meterReading: 1000,
-        })
+        t
+          .withIdentity({ subject: "user-1", tokenIdentifier: "user-1" })
+          .mutation(api.purchases.addPurchase, {
+            date: "2024-01-15",
+            units: 10,
+            cost: 100,
+            amountPaid: -50,
+            meterReading: 1000,
+          })
       ).rejects.toThrow("Values cannot be negative");
     });
 
@@ -219,13 +227,15 @@ describe("purchases", () => {
 
       await seedRates(t);
 
-      await t.withIdentity({ subject: userId }).mutation(api.purchases.addPurchase, {
-        date: "2024-01-20",
-        units: 75,
-        cost: 256.94,
-        amountPaid: 260,
-        meterReading: 5000,
-      });
+      await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .mutation(api.purchases.addPurchase, {
+          date: "2024-01-20",
+          units: 75,
+          cost: 256.94,
+          amountPaid: 260,
+          meterReading: 5000,
+        });
 
       const readings = await t.mutation(async (ctx) => {
         return await ctx.db
@@ -245,13 +255,15 @@ describe("purchases", () => {
 
       await seedRates(t);
 
-      const result = await t.withIdentity({ subject: userId }).mutation(api.purchases.addPurchase, {
-        date: "2024-02-01",
-        units: 20,
-        cost: 68.52,
-        amountPaid: 70,
-        meterReading: 2000,
-      });
+      const result = await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .mutation(api.purchases.addPurchase, {
+          date: "2024-02-01",
+          units: 20,
+          cost: 68.52,
+          amountPaid: 70,
+          meterReading: 2000,
+        });
 
       expect(result).toBeDefined();
     });
@@ -294,7 +306,7 @@ describe("purchases", () => {
 
       await expect(
         t
-          .withIdentity({ subject: userId })
+          .withIdentity({ subject: userId, tokenIdentifier: userId })
           .mutation(api.purchases.deletePurchase, { id: purchaseId })
       ).rejects.toThrow("Unauthorized");
     });
@@ -315,7 +327,7 @@ describe("purchases", () => {
       });
 
       await t
-        .withIdentity({ subject: userId })
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
         .mutation(api.purchases.deletePurchase, { id: purchaseId });
 
       const purchases = await t.mutation(async (ctx) => {
@@ -351,7 +363,7 @@ describe("purchases", () => {
       });
 
       await t
-        .withIdentity({ subject: userId })
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
         .mutation(api.purchases.deletePurchase, { id: purchaseId });
 
       const readings = await t.mutation(async (ctx) => {

@@ -65,7 +65,7 @@ export const getPurchases = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
 
     return await ctx.db
       .query("purchases")
@@ -92,13 +92,13 @@ export const addPurchase = mutation({
 
     await checkRateLimit({
       ctx,
-      userId: identity.subject,
+      userId: identity.tokenIdentifier,
       action: "addPurchase",
       limit: RATE_LIMITS.addPurchase.limit,
       windowMs: RATE_LIMITS.addPurchase.windowMs,
     });
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
 
     if (args.units < 0 || args.cost < 0 || args.amountPaid < 0) {
       throw new Error("Values cannot be negative");
@@ -162,13 +162,13 @@ export const deletePurchase = mutation({
 
     await checkRateLimit({
       ctx,
-      userId: identity.subject,
+      userId: identity.tokenIdentifier,
       action: "deletePurchase",
       limit: RATE_LIMITS.deletePurchase.limit,
       windowMs: RATE_LIMITS.deletePurchase.windowMs,
     });
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
 
     const purchase = await ctx.db.get(args.id);
     if (!purchase) return;

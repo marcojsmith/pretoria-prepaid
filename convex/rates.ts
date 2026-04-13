@@ -30,10 +30,18 @@ async function checkAdmin(ctx: QueryCtx) {
     throw new Error("Not authenticated");
   }
 
-  const userRole = await ctx.db
+  // Try tokenIdentifier first, fall back to subject for legacy records
+  let userRole = await ctx.db
     .query("user_roles")
-    .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+    .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
     .unique();
+  // LEGACY: remove after full migration
+  if (!userRole && identity.tokenIdentifier !== identity.subject) {
+    userRole = await ctx.db
+      .query("user_roles")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+  }
 
   if (userRole?.role !== "admin") {
     throw new Error("Not authorized");
@@ -78,7 +86,7 @@ export const updateRate = mutation({
 
     // Audit logging
     console.warn("[AUDIT] Rate updated", {
-      updatedBy: identity.email ?? identity.subject,
+      updatedBy: identity.email ?? identity.tokenIdentifier,
       rateId: id,
       old: oldRate,
       updates,
@@ -132,6 +140,6 @@ export const seedRates = mutation({
       await ctx.db.insert("electricity_rates", tier);
     }
 
-    console.warn("[AUDIT] Rates seeded", { seededBy: identity.email ?? identity.subject });
+    console.warn("[AUDIT] Rates seeded", { seededBy: identity.email ?? identity.tokenIdentifier });
   },
 });

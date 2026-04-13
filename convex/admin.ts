@@ -141,10 +141,18 @@ async function checkAdmin(ctx: QueryCtx) {
     throw new Error("Not authenticated");
   }
 
-  const userRole = await ctx.db
+  // Try tokenIdentifier first, fall back to subject for legacy records
+  let userRole = await ctx.db
     .query("user_roles")
-    .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+    .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
     .unique();
+  // LEGACY: remove after full migration
+  if (!userRole && identity.tokenIdentifier !== identity.subject) {
+    userRole = await ctx.db
+      .query("user_roles")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+  }
 
   if (userRole?.role !== "admin") {
     throw new Error("Not authorized: Admin only");

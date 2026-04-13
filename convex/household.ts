@@ -11,10 +11,17 @@ export const getMyHousehold = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const membership = await ctx.db
+    let membership = await ctx.db
       .query("household_members")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
+    // LEGACY: remove after full migration
+    if (!membership && identity.tokenIdentifier !== identity.subject) {
+      membership = await ctx.db
+        .query("household_members")
+        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+        .unique();
+    }
     if (!membership) return null;
 
     const household = await ctx.db.get(membership.householdId);
@@ -85,10 +92,17 @@ export const getMyInvites = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const membership = await ctx.db
+    let membership = await ctx.db
       .query("household_members")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
+    // LEGACY: remove after full migration
+    if (!membership && identity.tokenIdentifier !== identity.subject) {
+      membership = await ctx.db
+        .query("household_members")
+        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+        .unique();
+    }
     if (!membership || membership.role !== "admin") return [];
 
     return await ctx.db
@@ -106,7 +120,7 @@ export const createHousehold = mutation({
 
     const existing = await ctx.db
       .query("household_members")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
     if (existing) throw new Error("Already in a household");
 
@@ -114,14 +128,14 @@ export const createHousehold = mutation({
     if (!trimmedName) throw new Error("Household name cannot be empty");
 
     const householdId = await ctx.db.insert("households", {
-      adminUserId: identity.subject,
+      adminUserId: identity.tokenIdentifier,
       name: trimmedName,
       createdAt: Date.now(),
     });
 
     await ctx.db.insert("household_members", {
       householdId,
-      userId: identity.subject,
+      userId: identity.tokenIdentifier,
       role: "admin",
       joinedAt: Date.now(),
     });
@@ -138,7 +152,7 @@ export const createInvite = mutation({
 
     const membership = await ctx.db
       .query("household_members")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
     if (!membership || membership.role !== "admin") throw new Error("Not a household admin");
 
@@ -172,7 +186,7 @@ export const createInvite = mutation({
     await ctx.db.insert("household_invites", {
       householdId: membership.householdId,
       code,
-      createdBy: identity.subject,
+      createdBy: identity.tokenIdentifier,
       createdAt: Date.now(),
       expiresAt: Date.now() + SEVEN_DAYS_MS,
     });
@@ -192,7 +206,7 @@ export const revokeInvite = mutation({
 
     const membership = await ctx.db
       .query("household_members")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
     if (
       !membership ||
@@ -214,7 +228,7 @@ export const joinHousehold = mutation({
 
     const existingMembership = await ctx.db
       .query("household_members")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
     if (existingMembership) throw new Error("Already in a household");
 
@@ -228,13 +242,13 @@ export const joinHousehold = mutation({
     if (invite.expiresAt <= Date.now()) throw new Error("Invite has expired");
 
     await ctx.db.patch(invite._id, {
-      usedBy: identity.subject,
+      usedBy: identity.tokenIdentifier,
       usedAt: Date.now(),
     });
 
     await ctx.db.insert("household_members", {
       householdId: invite.householdId,
-      userId: identity.subject,
+      userId: identity.tokenIdentifier,
       role: "member",
       joinedAt: Date.now(),
     });
@@ -249,11 +263,11 @@ export const removeMember = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error(ERR_NOT_AUTH);
 
-    if (args.userId === identity.subject) throw new Error("Cannot remove yourself");
+    if (args.userId === identity.tokenIdentifier) throw new Error("Cannot remove yourself");
 
     const adminMembership = await ctx.db
       .query("household_members")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
     if (!adminMembership || adminMembership.role !== "admin") throw new Error("Not admin");
 
@@ -277,7 +291,7 @@ export const leaveHousehold = mutation({
 
     const membership = await ctx.db
       .query("household_members")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
     if (!membership) throw new Error("Not in a household");
     if (membership.role === "admin")
@@ -295,7 +309,7 @@ export const disbandHousehold = mutation({
 
     const membership = await ctx.db
       .query("household_members")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .unique();
     if (!membership || membership.role !== "admin") throw new Error("Not admin");
 
