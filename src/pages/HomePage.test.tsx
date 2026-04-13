@@ -57,9 +57,9 @@ describe("HomePage", () => {
     );
 
     expect(screen.getAllByText(/PowerTracker/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Track Your Prepaid Electricity/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Track Your Prepaid/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Login/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Get Started/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Start tracking for free/i).length).toBeGreaterThan(0);
   });
 
   it("handles login click", () => {
