@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { calculateConsumptionStats } from "./electricity_logic";
 import { DEFAULT_READINGS_TAKE, DEFAULT_LOW_BALANCE_THRESHOLD } from "./constants";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimiter";
+import { resolveEffectiveUserId } from "./lib/household";
 
 export const getReadings = query({
   args: {},
@@ -10,9 +11,11 @@ export const getReadings = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+
     return await ctx.db
       .query("meter_readings")
-      .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId_date", (q) => q.eq("userId", effectiveUserId))
       .order("desc")
       .take(DEFAULT_READINGS_TAKE);
   },
@@ -36,10 +39,12 @@ export const addOnboardingReading = mutation({
       windowMs: RATE_LIMITS.addOnboardingReading.windowMs,
     });
 
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+
     // Check if user already has any readings
     const existingReadings = await ctx.db
       .query("meter_readings")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
       .take(1);
 
     const todayStr = new Date().toISOString().split("T")[0] ?? "";
@@ -59,7 +64,7 @@ export const addOnboardingReading = mutation({
     } else {
       // No readings exist — create new onboarding reading
       await ctx.db.insert("meter_readings", {
-        userId: identity.subject,
+        userId: effectiveUserId,
         date: todayStr,
         readingPre: args.reading,
         readingPost: args.reading,
@@ -71,7 +76,7 @@ export const addOnboardingReading = mutation({
     if (args.defaultDailyUsage !== undefined) {
       const profile = await ctx.db
         .query("profiles")
-        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+        .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
         .unique();
 
       if (profile) {
@@ -91,9 +96,11 @@ export const hasAnyReadings = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return false;
 
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+
     const readings = await ctx.db
       .query("meter_readings")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
       .take(1);
 
     return readings.length > 0;
@@ -106,10 +113,12 @@ export const hasPurchaseReadings = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return false;
 
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+
     const readings = await ctx.db
       .query("meter_readings")
       .withIndex("by_userId_source", (q) =>
-        q.eq("userId", identity.subject).eq("source", "purchase")
+        q.eq("userId", effectiveUserId).eq("source", "purchase")
       )
       .take(1);
 
@@ -123,9 +132,11 @@ export const getConsumptionStats = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.subject);
+
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
       .unique();
 
     const lowBalanceThreshold = profile?.lowBalanceThreshold ?? DEFAULT_LOW_BALANCE_THRESHOLD;
@@ -133,7 +144,7 @@ export const getConsumptionStats = query({
     // Fetch all readings, sorted by date desc
     const readings = await ctx.db
       .query("meter_readings")
-      .withIndex("by_userId_date", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId_date", (q) => q.eq("userId", effectiveUserId))
       .order("desc")
       .take(DEFAULT_READINGS_TAKE);
 

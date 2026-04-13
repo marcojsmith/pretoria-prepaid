@@ -22,6 +22,8 @@ const CalculatorPage = lazy(() => import("./pages/CalculatorPage"));
 const ExportPage = lazy(() => import("./pages/ExportPage"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const HouseholdPage = lazy(() => import("./pages/HouseholdPage"));
+const InvitePage = lazy(() => import("./pages/InvitePage"));
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,7 @@ function renderPublicRoutes() {
     <>
       <Route path="/" element={<HomePage />} />
       <Route path="/auth/*" element={<Auth />} />
+      <Route path="/invite/:code" element={<InvitePage />} />
       <Route path="*" element={<NotFound />} />
     </>
   );
@@ -104,6 +107,14 @@ function renderProtectedData() {
         element={
           <ProtectedRoute>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/household"
+        element={
+          <ProtectedRoute>
+            <HouseholdPage />
           </ProtectedRoute>
         }
       />

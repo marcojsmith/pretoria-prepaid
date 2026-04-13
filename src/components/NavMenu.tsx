@@ -10,6 +10,7 @@ import {
   Download,
   Settings,
   ShieldAlert,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -23,6 +24,7 @@ const navItems = [
   { title: "Rates", path: "/rates", icon: DollarSign },
   { title: "Import and Export Data", path: "/export", icon: Download },
   { title: "Settings", path: "/settings", icon: Settings },
+  { title: "Household", path: "/household", icon: Users },
 ];
 
 interface NavMenuProps {

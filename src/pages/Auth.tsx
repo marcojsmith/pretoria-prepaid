@@ -4,7 +4,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Zap } from "lucide-react";
 import { SEO } from "@/components/SEO";
 
+const DEFAULT_REDIRECT = "/dashboard";
+
 const Auth = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  let redirectUrl = searchParams.get("redirect") ?? DEFAULT_REDIRECT;
+
+  try {
+    const url = new URL(redirectUrl, window.location.origin);
+    if (
+      url.pathname.startsWith("//") ||
+      redirectUrl.startsWith("//") ||
+      redirectUrl.includes(":")
+    ) {
+      redirectUrl = DEFAULT_REDIRECT;
+    } else {
+      redirectUrl = url.pathname;
+    }
+  } catch {
+    if (!redirectUrl.startsWith("/") || redirectUrl.startsWith("//")) {
+      redirectUrl = DEFAULT_REDIRECT;
+    }
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <SEO
@@ -29,11 +51,11 @@ const Auth = () => {
             </TabsList>
 
             <TabsContent value="signin" className="mt-4 flex justify-center">
-              <SignIn routing="path" path="/auth" forceRedirectUrl="/dashboard" />
+              <SignIn routing="path" path="/auth" forceRedirectUrl={redirectUrl} />
             </TabsContent>
 
             <TabsContent value="signup" className="mt-4 flex justify-center">
-              <SignUp routing="path" path="/auth" forceRedirectUrl="/dashboard" />
+              <SignUp routing="path" path="/auth" forceRedirectUrl={redirectUrl} />
             </TabsContent>
           </Tabs>
         </CardContent>
