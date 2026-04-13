@@ -90,7 +90,7 @@ describe("rates", () => {
 
       await expect(
         t
-          .withIdentity({ subject: userId })
+          .withIdentity({ subject: userId, tokenIdentifier: userId })
           .mutation(api.rates.updateRate, { id: rateId, rate: 4.0 })
       ).rejects.toThrow("Not authorized");
     });
@@ -114,7 +114,7 @@ describe("rates", () => {
       });
 
       await t
-        .withIdentity({ subject: adminId })
+        .withIdentity({ subject: adminId, tokenIdentifier: adminId })
         .mutation(api.rates.updateRate, { id: rateId, rate: 4.5 });
 
       const rate = await t.mutation(async (ctx) => {
@@ -144,7 +144,7 @@ describe("rates", () => {
 
       await expect(
         t
-          .withIdentity({ subject: adminId })
+          .withIdentity({ subject: adminId, tokenIdentifier: adminId })
           .mutation(api.rates.updateRate, { id: rateId, rate: 0.001 })
       ).rejects.toThrow("Rate must be between R0.01 and R100 per kWh");
     });
@@ -169,7 +169,7 @@ describe("rates", () => {
 
       await expect(
         t
-          .withIdentity({ subject: adminId })
+          .withIdentity({ subject: adminId, tokenIdentifier: adminId })
           .mutation(api.rates.updateRate, { id: rateId, rate: 150 })
       ).rejects.toThrow("Rate must be between R0.01 and R100 per kWh");
     });
@@ -186,7 +186,7 @@ describe("rates", () => {
 
       await expect(
         t
-          .withIdentity({ subject: adminId })
+          .withIdentity({ subject: adminId, tokenIdentifier: adminId })
           .mutation(api.rates.updateRate, { id: fakeId, rate: 4.0 })
       ).rejects.toThrow("Rate not found");
     });
@@ -208,7 +208,9 @@ describe("rates", () => {
       });
 
       await expect(
-        t.withIdentity({ subject: userId }).mutation(api.rates.seedRates, {})
+        t
+          .withIdentity({ subject: userId, tokenIdentifier: userId })
+          .mutation(api.rates.seedRates, {})
       ).rejects.toThrow("Not authorized");
     });
 
@@ -220,7 +222,9 @@ describe("rates", () => {
         await ctx.db.insert("user_roles", { userId: adminId, role: "admin" });
       });
 
-      await t.withIdentity({ subject: adminId }).mutation(api.rates.seedRates, {});
+      await t
+        .withIdentity({ subject: adminId, tokenIdentifier: adminId })
+        .mutation(api.rates.seedRates, {});
 
       const rates = await t.query(api.rates.getRates, {});
 
@@ -246,7 +250,9 @@ describe("rates", () => {
         });
       });
 
-      await t.withIdentity({ subject: adminId }).mutation(api.rates.seedRates, {});
+      await t
+        .withIdentity({ subject: adminId, tokenIdentifier: adminId })
+        .mutation(api.rates.seedRates, {});
 
       const rates = await t.query(api.rates.getRates, {});
 
