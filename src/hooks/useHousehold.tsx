@@ -9,7 +9,7 @@ interface UseHouseholdReturn {
   /** The current user's household or null if not in one */
   household: MyHousehold | null;
   /** Pending invites for this household (only visible to admins) */
-  invites: HouseholdInvite[] | null | undefined;
+  invites: HouseholdInvite[] | undefined;
   /** Whether household data is loading */
   loading: boolean;
   /** Whether current user is the household admin */

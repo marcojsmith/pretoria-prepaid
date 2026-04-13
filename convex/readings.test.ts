@@ -313,7 +313,7 @@ describe("readings", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: memberId, effectiveUserId: adminId })
+        .withIdentity({ subject: memberId })
         .query(api.readings.getReadings, {});
 
       expect(result).toHaveLength(1);
@@ -357,7 +357,7 @@ describe("readings", () => {
 
       await expect(
         t
-          .withIdentity({ subject: memberId, effectiveUserId: adminId })
+          .withIdentity({ subject: memberId })
           .mutation(api.readings.addOnboardingReading, { reading: 5000 })
       ).rejects.toThrow("User already has purchase readings");
     });
@@ -398,7 +398,7 @@ describe("readings", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: memberId, effectiveUserId: adminId })
+        .withIdentity({ subject: memberId })
         .query(api.readings.hasAnyReadings, {});
 
       expect(result).toBe(true);
@@ -440,7 +440,7 @@ describe("readings", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: memberId, effectiveUserId: adminId })
+        .withIdentity({ subject: memberId })
         .query(api.readings.hasPurchaseReadings, {});
 
       expect(result).toBe(true);
@@ -494,7 +494,7 @@ describe("readings", () => {
       });
 
       const result = await t
-        .withIdentity({ subject: memberId, effectiveUserId: adminId })
+        .withIdentity({ subject: memberId })
         .query(api.readings.getConsumptionStats, {});
 
       expect(result).not.toBeNull();
@@ -533,7 +533,7 @@ describe("readings", () => {
       });
 
       await t
-        .withIdentity({ subject: memberId, effectiveUserId: adminId })
+        .withIdentity({ subject: memberId })
         .mutation(api.readings.addOnboardingReading, { reading: 5000, defaultDailyUsage: 20 });
 
       const profile = await t.mutation(async (ctx) => {

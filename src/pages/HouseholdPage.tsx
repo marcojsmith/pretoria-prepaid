@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { HouseholdMember } from "@/types/household";
 import { useHousehold } from "@/hooks/useHousehold";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -78,30 +79,42 @@ export default function HouseholdPage(): JSX.Element {
   };
 
   const handleRemove = async (userId: string) => {
+    if (actionLoading) return;
+    setActionLoading(true);
     try {
       await removeMember({ userId });
       toast.success("Member removed");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to remove member");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleLeave = async () => {
+    if (actionLoading) return;
+    setActionLoading(true);
     try {
       await leaveHousehold();
       toast.success("You have left the household");
       navigate("/dashboard");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to leave household");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleDisband = async () => {
+    if (actionLoading) return;
+    setActionLoading(true);
     try {
       await disbandHousehold();
       toast.success("Household disbanded");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to disband household");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -242,12 +255,7 @@ function NoHouseholdView({
 interface HasHouseholdViewProps {
   household: {
     name: string;
-    members: Array<{
-      userId: string;
-      role: "admin" | "member";
-      preferredName: string | null;
-      email: string | null;
-    }>;
+    members: HouseholdMember[];
   } | null;
   currentUserId: string | undefined;
   isAdmin: boolean;

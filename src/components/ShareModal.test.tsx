@@ -153,13 +153,7 @@ describe("ShareModal", () => {
       expect(screen.getByText(/copy-code-456/)).toBeInTheDocument();
     });
 
-    // Find the copy button (small button next to the URL)
-    const buttons = screen.getAllByRole("button");
-    const copyBtn = buttons.find(
-      (b) =>
-        b !== screen.queryByText("Generate Another Link") && !b.textContent?.includes("Generate")
-    );
-    if (copyBtn) fireEvent.click(copyBtn);
+    fireEvent.click(screen.getByRole("button", { name: /copy/i }));
 
     await waitFor(() => {
       expect(mockWriteText).toHaveBeenCalledWith(expect.stringContaining("copy-code-456"));
@@ -192,9 +186,7 @@ describe("ShareModal", () => {
       expect(screen.getByText(/err-code-789/)).toBeInTheDocument();
     });
 
-    const buttons = screen.getAllByRole("button");
-    const copyBtn = buttons.find((b) => !b.textContent?.includes("Generate"));
-    if (copyBtn) fireEvent.click(copyBtn);
+    fireEvent.click(screen.getByRole("button", { name: /copy/i }));
 
     await waitFor(() => {
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith("Failed to copy link");

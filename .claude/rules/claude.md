@@ -29,7 +29,7 @@ Opencode is an AI coding agent installed on this machine. It can be invoked via 
 3. **Run opencode** via Bash:
 
    ```bash
-   opencode run "Read conductor/opencode_tasks/<task-name>.md and execute the plan exactly. Update the ## Results section when done."
+   opencode run "Read conductor/opencode_tasks/<task-name>.md and execute the plan exactly. Update the ## Results section when done." -m opencode/minimax-m2.5-free
    ```
 
    You will be notified when opencode completes the task, do nothing until then.
