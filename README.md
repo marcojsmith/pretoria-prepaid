@@ -2,14 +2,19 @@
 
 # Pretoria Prepaid Electricity Tracker
 
+**Version:** 0.7.0
+
 A production-grade Progressive Web App (PWA) designed to help residents of Pretoria, South Africa, calculate, track, and optimize their prepaid electricity costs.
 
 ## Key Features
 
 - **Proactive Tier Guidance:** Get warned before you accidentally buy units at a higher price tier. The app calculates how many kWh remain in your current cheaper tier and exactly how much to spend to stay within it.
 - **Smart Consumption Estimation:** Real-time balance estimation based on your personalized burn rate and manual meter readings.
+- **Household Management:** Support for multiple meters/households with easy switching.
+- **Invite-Only Access:** Secure registration system with invite codes.
 - **Data Portability:** Export your entire purchase and reading history to CSV or print-to-PDF for your records.
 - **Visual Analytics:** Interactive charts for yearly consumption, daily usage trends, and purchase frequency.
+- **Admin Dashboard:** Administrative interface for rate management and user oversight.
 - **Advanced PWA Excellence:**
   - **App Badge Support:** See your estimated balance directly on the app icon.
   - **InstallPrompt:** Custom in-app installation experience.
@@ -20,9 +25,9 @@ A production-grade Progressive Web App (PWA) designed to help residents of Preto
 
 ## Tech Stack
 
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui.
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, Recharts.
 - **Backend & Database:** Convex (Real-time synchronization).
-- **Authentication:** Clerk.
+- **Authentication:** Clerk (Multi-tenant with invite codes).
 - **PWA & Notifications:** Vite-PWA (InjectManifest), Web Push API.
 - **Testing:** Vitest, React Testing Library.
 
@@ -33,6 +38,7 @@ A production-grade Progressive Web App (PWA) designed to help residents of Preto
 - [Bun](https://bun.sh/) (Recommended) or Node.js.
 - A [Convex](https://www.convex.dev/) account.
 - A [Clerk](https://clerk.com/) account.
+- An invite code (required for account creation).
 
 ### Installation
 
@@ -59,15 +65,36 @@ A production-grade Progressive Web App (PWA) designed to help residents of Preto
     ```
 
 5.  In a separate terminal, start the Convex dev server:
+
     ```bash
-    npx convex dev
+    bunx convex dev
     ```
+
+### Deployment
+
+Deploy to Vercel:
+
+```bash
+bunx vercel
+```
+
+For production deployment:
+
+```bash
+bunx vercel --prod
+```
 
 ## Development
 
-- **Run Tests:** `bun run test`
-- **Linting:** `bun run lint`
-- **Build for Production:** `bun run build`
+| Command                 | Description                    |
+| ----------------------- | ------------------------------ |
+| `bun run dev`           | Start development server       |
+| `bun run test --run`    | Run tests                      |
+| `bun run test:coverage` | Run tests with coverage report |
+| `bun run lint`          | Check code for errors          |
+| `bun run typecheck`     | TypeScript type checking       |
+| `bun run build`         | Production build               |
+| `bunx convex dev`       | Convex dev server              |
 
 ## License
 
