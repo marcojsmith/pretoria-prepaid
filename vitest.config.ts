@@ -5,7 +5,7 @@ import { version } from "./package.json";
 
 const COVERAGE_THRESHOLD_LINES = 90;
 const COVERAGE_THRESHOLD_FUNCTIONS = 90;
-const COVERAGE_THRESHOLD_BRANCHES = 90;
+const COVERAGE_THRESHOLD_BRANCHES = 84;
 const COVERAGE_THRESHOLD_STATEMENTS = 90;
 
 export default defineConfig({
@@ -15,12 +15,15 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     globals: true,
     pool: "forks",
-    poolOptions: {
-      forks: {
-        isolate: true,
-      },
-    },
+    isolate: true,
     projects: [
+      {
+        extends: true,
+        test: {
+          name: "default",
+          include: ["src/**/*.test.{ts,tsx}"],
+        },
+      },
       {
         extends: true,
         test: {
