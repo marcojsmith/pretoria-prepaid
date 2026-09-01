@@ -2,7 +2,7 @@ import { useQuery, usePaginatedQuery, useMutation } from "convex/react";
 import type { PaginationStatus, PaginatedQueryItem } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import type { ElectricityRate } from "./useRates";
+import type { ElectricityRate, NewRatePeriodTier } from "./useRates";
 import { USERS_LIST_PAGE_SIZE } from "../../convex/constants";
 
 interface GlobalStats {
@@ -40,6 +40,7 @@ export interface UseAdminReturn {
   loadMoreUsers: (numItems: number) => void;
   recentPurchases: RecentPurchase[] | undefined;
   rates: ElectricityRate[] | undefined;
+  rateHistory: ElectricityRate[];
   updateRate: (params: {
     id: Id<"electricity_rates">;
     tier_label: string;
@@ -47,6 +48,7 @@ export interface UseAdminReturn {
     max_units: number | null;
     rate: number;
   }) => Promise<null>;
+  addRatePeriod: (effectiveFrom: string, tiers: NewRatePeriodTier[]) => Promise<null>;
 }
 
 /**
@@ -61,7 +63,9 @@ export function useAdmin(): UseAdminReturn {
   } = usePaginatedQuery(api.admin.getUsersList, {}, { initialNumItems: USERS_LIST_PAGE_SIZE });
   const recentPurchases = useQuery(api.admin.getRecentPurchases);
   const rates = useQuery(api.rates.getRates);
+  const rateHistory = useQuery(api.rates.getRateHistory);
   const updateRateMutation = useMutation(api.rates.updateRate);
+  const addRatePeriodMutation = useMutation(api.rates.addRatePeriod);
 
   const loading =
     !globalStats || usersListStatus === "LoadingFirstPage" || !recentPurchases || !rates;
@@ -76,6 +80,10 @@ export function useAdmin(): UseAdminReturn {
     return await updateRateMutation(params);
   };
 
+  const addRatePeriod = async (effectiveFrom: string, tiers: NewRatePeriodTier[]) => {
+    return await addRatePeriodMutation({ effectiveFrom, rates: tiers });
+  };
+
   return {
     loading,
     globalStats,
@@ -84,6 +92,8 @@ export function useAdmin(): UseAdminReturn {
     loadMoreUsers,
     recentPurchases,
     rates,
+    rateHistory: rateHistory ?? [],
     updateRate,
+    addRatePeriod,
   };
 }

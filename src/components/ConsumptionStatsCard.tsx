@@ -1,13 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, Calendar, TrendingDown, BarChart3 } from "lucide-react";
+import { Calendar, TrendingDown, BarChart3 } from "lucide-react";
 import { roundUnits, formatCurrency } from "@/lib/electricity";
 import type { ConsumptionStats } from "@/hooks/useConsumption";
 import { InfoTip } from "@/components/InfoTip";
+import { EditableBalance } from "@/components/EditableBalance";
 
 interface ConsumptionStatsCardProps {
   stats: ConsumptionStats | null;
   unitsThisMonth: number;
   costThisMonth: number;
+  onUpdateBalance: (value: number) => Promise<void>;
 }
 
 const TEXT_DESTRUCTIVE = "text-destructive";
@@ -45,6 +47,7 @@ export function ConsumptionStatsCard({
   stats,
   unitsThisMonth,
   costThisMonth,
+  onUpdateBalance,
 }: ConsumptionStatsCardProps): JSX.Element | null {
   if (!stats) return null;
 
@@ -74,18 +77,11 @@ export function ConsumptionStatsCard({
             subValue={formatCurrency(costThisMonth)}
           />
 
-          <StatItem
-            icon={<Zap className={`h-3.5 w-3.5 ${isLow ? TEXT_DESTRUCTIVE : "text-primary"}`} />}
-            label="Est. Balance"
-            infoTipText="Meter reading after your last purchase, minus estimated consumption since then (daily usage × days elapsed)."
-            value={
-              <>
-                {roundUnits(stats.estimatedBalance)}{" "}
-                <span className="text-xs font-normal text-muted-foreground">kWh</span>
-              </>
-            }
-            subValue={`Threshold: ${stats.lowBalanceThreshold} kWh`}
-            destructive={isLow}
+          <EditableBalance
+            estimatedBalance={stats.estimatedBalance}
+            isLow={isLow}
+            lowBalanceThreshold={stats.lowBalanceThreshold}
+            onUpdateBalance={onUpdateBalance}
           />
 
           <StatItem

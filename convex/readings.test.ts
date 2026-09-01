@@ -278,6 +278,146 @@ describe("readings", () => {
     });
   });
 
+  describe("correctMeterReading", () => {
+    it("throws 'Not authenticated' if no identity", async () => {
+      const t = convexTest(schema, modules);
+
+      await expect(t.mutation(api.readings.correctMeterReading, { reading: 500 })).rejects.toThrow(
+        "Not authenticated"
+      );
+    });
+
+    it("inserts a new correction reading dated today", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "test-user-1";
+
+      await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .mutation(api.readings.correctMeterReading, { reading: 500 });
+
+      const readings = await t.mutation(async (ctx) => {
+        return await ctx.db
+          .query("meter_readings")
+          .withIndex("by_userId", (q) => q.eq("userId", userId))
+          .collect();
+      });
+
+      expect(readings).toHaveLength(1);
+      expect(readings[0]?.source).toBe("correction");
+      expect(readings[0]?.readingPre).toBe(500);
+      expect(readings[0]?.readingPost).toBe(500);
+      expect(readings[0]?.date).toBe(new Date().toISOString().split("T")[0]);
+    });
+
+    it("rejects a negative reading", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "test-user-1";
+
+      await expect(
+        t
+          .withIdentity({ subject: userId, tokenIdentifier: userId })
+          .mutation(api.readings.correctMeterReading, { reading: -1 })
+      ).rejects.toThrow("Reading must be between");
+    });
+
+    it("wins the same-date tie-break over an earlier purchase reading", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "test-user-1";
+      const todayStr = new Date().toISOString().split("T")[0] ?? "";
+
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: todayStr,
+          readingPre: 1000,
+          readingPost: 1100,
+          source: "purchase",
+        });
+      });
+
+      await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .mutation(api.readings.correctMeterReading, { reading: 900 });
+
+      const result = await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .query(api.readings.getConsumptionStats, {});
+
+      // The correction was recorded after the purchase reading, so as the more
+      // recent action it should anchor the balance even though both share a date.
+      expect(result?.lastReading).toBe(900);
+    });
+
+    it("is superseded by a later same-date purchase reading", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "test-user-1";
+      const todayStr = new Date().toISOString().split("T")[0] ?? "";
+
+      await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .mutation(api.readings.correctMeterReading, { reading: 900 });
+
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: todayStr,
+          readingPre: 900,
+          readingPost: 950,
+          source: "purchase",
+        });
+      });
+
+      const result = await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .query(api.readings.getConsumptionStats, {});
+
+      expect(result?.lastReading).toBe(950);
+    });
+
+    it("becomes the anchor for getConsumptionStats without corrupting the burn rate", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "test-user-1";
+
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("profiles", {
+          userId,
+          email: "test@test.com",
+          lowBalanceThreshold: 10,
+        });
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-10",
+          readingPre: 1000,
+          readingPost: 1050,
+          source: "purchase",
+        });
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-15",
+          readingPre: 1050,
+          readingPost: 1100,
+          source: "purchase",
+        });
+      });
+
+      const withoutCorrection = await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .query(api.readings.getConsumptionStats, {});
+
+      await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .mutation(api.readings.correctMeterReading, { reading: 900 });
+
+      const withCorrection = await t
+        .withIdentity({ subject: userId, tokenIdentifier: userId })
+        .query(api.readings.getConsumptionStats, {});
+
+      expect(withCorrection?.lastReading).toBe(900);
+      // Burn rate is unaffected because correction readings are excluded from the interval calc.
+      expect(withCorrection?.dailyBurnRate).toBe(withoutCorrection?.dailyBurnRate);
+    });
+  });
+
   describe("household-member scenarios with effectiveUserId", () => {
     it("getReadings returns admin's readings when member queries", async () => {
       const t = convexTest(schema, modules);

@@ -11,6 +11,7 @@ export const RATE_LIMITS = {
   deletePurchase: { limit: WRITES_PER_MINUTE, windowMs: ONE_MINUTE_MS },
   syncUser: { limit: SYNC_PER_MINUTE, windowMs: ONE_MINUTE_MS },
   addOnboardingReading: { limit: WRITES_PER_MINUTE, windowMs: ONE_MINUTE_MS },
+  correctMeterReading: { limit: WRITES_PER_MINUTE, windowMs: ONE_MINUTE_MS },
 } as const;
 
 export interface CheckRateLimitOptions {

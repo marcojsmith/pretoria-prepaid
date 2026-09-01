@@ -10,6 +10,15 @@ export interface ElectricityRate {
   min_units: number;
   max_units: number | null;
   rate: number;
+  effectiveFrom?: string;
+}
+
+export interface NewRatePeriodTier {
+  tier_number: number;
+  tier_label: string;
+  min_units: number;
+  max_units: number | null;
+  rate: number;
 }
 
 export interface UseRatesReturn {
@@ -51,6 +60,7 @@ export function useRates(): UseRatesReturn {
       min_units: r.min_units,
       max_units: r.max_units,
       rate: r.rate,
+      ...(r.effectiveFrom !== undefined ? { effectiveFrom: r.effectiveFrom } : {}),
     }));
     setRates(mappedRates);
     localStorage.setItem(RATES_CACHE_KEY, JSON.stringify(mappedRates));
@@ -71,5 +81,20 @@ export function useRates(): UseRatesReturn {
     loading: ratesData === undefined && rates.length === 0,
     updateRate,
     refetch: () => {}, // Convex handles automatic refetching
+  };
+}
+
+export interface UseRateHistoryReturn {
+  history: ElectricityRate[];
+  loading: boolean;
+}
+
+/** Every rate period ever loaded, newest effectiveFrom first. */
+export function useRateHistory(): UseRateHistoryReturn {
+  const historyData = useQuery(api.rates.getRateHistory);
+
+  return {
+    history: historyData ?? [],
+    loading: historyData === undefined,
   };
 }

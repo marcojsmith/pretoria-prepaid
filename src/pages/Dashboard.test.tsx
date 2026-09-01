@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BrowserRouter, useNavigate } from "react-router-dom";
 import Dashboard from "./Dashboard";
@@ -94,6 +94,7 @@ describe("Dashboard Page", () => {
       stats: null,
       readings: [],
       addOnboardingReading: vi.fn(),
+      correctBalance: vi.fn(),
       hasAnyReadings: true,
       hasPurchaseReadings: true,
     });
@@ -329,6 +330,7 @@ describe("Dashboard Page", () => {
       stats: null,
       readings: [],
       addOnboardingReading: vi.fn(),
+      correctBalance: vi.fn(),
       hasAnyReadings: true,
       hasPurchaseReadings: true,
     });
@@ -359,6 +361,7 @@ describe("Dashboard Page", () => {
       stats: null,
       readings: [],
       addOnboardingReading: vi.fn(),
+      correctBalance: vi.fn(),
       hasAnyReadings: false,
       hasPurchaseReadings: false,
     });
@@ -390,6 +393,7 @@ describe("Dashboard Page", () => {
       stats: null,
       readings: [],
       addOnboardingReading: vi.fn(),
+      correctBalance: vi.fn(),
       hasAnyReadings: true,
       hasPurchaseReadings: false,
     });
@@ -420,6 +424,7 @@ describe("Dashboard Page", () => {
       stats: null,
       readings: [],
       addOnboardingReading: vi.fn(),
+      correctBalance: vi.fn(),
       hasAnyReadings: true,
       hasPurchaseReadings: true,
     });

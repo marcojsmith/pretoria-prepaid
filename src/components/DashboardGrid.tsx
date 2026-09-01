@@ -15,6 +15,11 @@ const AverageDailyUsageChart = lazy(() =>
 const PurchaseFrequencyChart = lazy(() =>
   import("@/components/PurchaseFrequencyChart").then((m) => ({ default: m.PurchaseFrequencyChart }))
 );
+const AverageCostPerKwhChart = lazy(() =>
+  import("@/components/AverageCostPerKwhChart").then((m) => ({
+    default: m.AverageCostPerKwhChart,
+  }))
+);
 
 const ChartSkeleton = () => <div className="h-[240px] w-full animate-pulse rounded-lg bg-muted" />;
 
@@ -33,6 +38,7 @@ interface DashboardGridProps {
   averageMonthlyUsage: number;
   averageMonthlyCost: number;
   monthlyStats: MonthlyStat[];
+  onUpdateBalance: (value: number) => Promise<void>;
 }
 
 type CardRenderer = () => JSX.Element | null;
@@ -45,6 +51,7 @@ export const DashboardGrid = memo(function DashboardGrid({
   averageMonthlyUsage,
   averageMonthlyCost,
   monthlyStats,
+  onUpdateBalance,
 }: DashboardGridProps): JSX.Element {
   const hasHistory = monthlyStats.length > 0;
 
@@ -55,6 +62,7 @@ export const DashboardGrid = memo(function DashboardGrid({
           stats={consumptionStats}
           unitsThisMonth={unitsThisMonth}
           costThisMonth={costThisMonth}
+          onUpdateBalance={onUpdateBalance}
         />
       ),
       "dashboard-stats": () => (
@@ -86,6 +94,12 @@ export const DashboardGrid = memo(function DashboardGrid({
             <PurchaseFrequencyChart stats={monthlyStats} />
           </Suspense>
         ) : null,
+      "cost-per-kwh-chart": () =>
+        hasHistory ? (
+          <Suspense fallback={<ChartSkeleton />}>
+            <AverageCostPerKwhChart stats={monthlyStats} />
+          </Suspense>
+        ) : null,
     }),
     [
       consumptionStats,
@@ -95,6 +109,7 @@ export const DashboardGrid = memo(function DashboardGrid({
       averageMonthlyCost,
       monthlyStats,
       hasHistory,
+      onUpdateBalance,
     ]
   );
 

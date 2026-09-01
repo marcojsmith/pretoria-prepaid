@@ -24,6 +24,7 @@ import {
   Check,
   X,
   ArrowRight,
+  CalendarPlus,
 } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { useState, useEffect } from "react";
@@ -38,6 +39,9 @@ import {
   USER_ID_PREVIEW_LENGTH,
 } from "@/lib/constants";
 import { USERS_LIST_PAGE_SIZE } from "../../convex/constants";
+import { RATE_MIN, RATE_MAX, RATE_INVALID_MESSAGE } from "../../convex/rates";
+import type { ElectricityRate, NewRatePeriodTier } from "@/hooks/useRates";
+import { RateHistoryTable, BASELINE_EFFECTIVE_FROM } from "@/components/RateHistoryTable";
 
 const BURN_RATE_TABLE_COLS = 5;
 
@@ -348,6 +352,184 @@ function KPIBreakdown({ userId, userName }: { userId: string; userName: string }
 }
 
 // ---------------------------------------------------------------------------
+// Schedule a new rate period (new tariff effective from a chosen date)
+// ---------------------------------------------------------------------------
+
+function formatEffectiveFrom(date: string): string {
+  if (!date) return "Baseline";
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-ZA", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+// eslint-disable-next-line llm-core/max-function-length
+function ScheduleRatePeriod({
+  rates,
+  rateHistory,
+  addRatePeriod,
+}: {
+  rates: ElectricityRate[];
+  rateHistory: ElectricityRate[];
+  addRatePeriod: (effectiveFrom: string, tiers: NewRatePeriodTier[]) => Promise<null>;
+}) {
+  const { toast } = useToast();
+  const [effectiveFrom, setEffectiveFrom] = useState("");
+  const [newRates, setNewRates] = useState<Record<number, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  const handleSchedule = () => {
+    void (async () => {
+      if (!effectiveFrom) {
+        toast({
+          title: INVALID_INPUT_TITLE,
+          description: "Choose an effective date for the new rate period.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (rateHistory.some((r) => r.effectiveFrom === effectiveFrom)) {
+        toast({
+          title: INVALID_INPUT_TITLE,
+          description: `A rate period already starts on ${effectiveFrom}.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const tiers: NewRatePeriodTier[] = [];
+      for (const rate of rates) {
+        const raw = newRates[rate.tier_number];
+        const value = raw === undefined || raw === "" ? rate.rate : Number(raw);
+        if (isNaN(value) || value < RATE_MIN || value > RATE_MAX) {
+          toast({
+            title: INVALID_INPUT_TITLE,
+            description: `${rate.tier_label}: ${RATE_INVALID_MESSAGE}`,
+            variant: "destructive",
+          });
+          return;
+        }
+        tiers.push({
+          tier_number: rate.tier_number,
+          tier_label: rate.tier_label,
+          min_units: rate.min_units,
+          max_units: rate.max_units,
+          rate: value,
+        });
+      }
+
+      setSaving(true);
+      try {
+        await addRatePeriod(effectiveFrom, tiers);
+        toast({
+          title: "Rate Period Scheduled",
+          description: `New tariff effective ${formatEffectiveFrom(effectiveFrom)}. Purchases on or after this date have been queued for repricing.`,
+        });
+        setEffectiveFrom("");
+        setNewRates({});
+      } catch (error) {
+        toast({
+          title: "Failed to Schedule",
+          description:
+            error instanceof Error
+              ? error.message
+              : "There was an error scheduling the rate period.",
+          variant: "destructive",
+        });
+      } finally {
+        setSaving(false);
+      }
+    })();
+  };
+
+  return (
+    <Card className="rounded-md border-border shadow-none">
+      <CardHeader>
+        <CardTitle className="text-lg font-bold">Schedule New Rate Period</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Load a new tariff effective from a chosen date. Purchases dated before it keep the old
+          rates; purchases on or after it — including ones already recorded — are repriced
+          automatically.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <label
+            htmlFor="rate-period-effective-from"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
+          >
+            Effective from
+          </label>
+          <Input
+            id="rate-period-effective-from"
+            type="date"
+            value={effectiveFrom}
+            onChange={(e) => setEffectiveFrom(e.target.value)}
+            className="h-9 w-full max-w-xs"
+          />
+        </div>
+
+        <div className="space-y-2">
+          {rates.map((rate) => (
+            <div key={rate.tier_number} className="flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium">{rate.tier_label}</p>
+                <p className="text-xs text-muted-foreground">
+                  {rate.min_units} - {rate.max_units ?? "∞"} kWh · currently{" "}
+                  {formatCurrency(rate.rate)}
+                </p>
+              </div>
+              <Input
+                type="number"
+                step="0.00001"
+                placeholder={rate.rate.toString()}
+                value={newRates[rate.tier_number] ?? ""}
+                onChange={(e) =>
+                  setNewRates((prev) => ({ ...prev, [rate.tier_number]: e.target.value }))
+                }
+                className="h-9 w-32"
+                data-testid={`new-rate-tier-${rate.tier_number}`}
+              />
+            </div>
+          ))}
+        </div>
+
+        <Button onClick={handleSchedule} disabled={saving} size="sm">
+          {saving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <CalendarPlus className="mr-2 h-4 w-4" />
+          )}
+          Schedule Rate Period
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Rate history (all periods, newest first)
+// ---------------------------------------------------------------------------
+
+function RateHistoryCard({ rateHistory }: { rateHistory: ElectricityRate[] }) {
+  return (
+    <Card className="rounded-md border-border shadow-none">
+      <CardHeader>
+        <CardTitle className="text-lg font-bold">All Rate Periods</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Read-only history of every tariff period, newest first, with the change from the period
+          before it. This is the same view users see on the Rates page.
+        </p>
+      </CardHeader>
+      <CardContent className="p-0">
+        <RateHistoryTable history={rateHistory} />
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Admin Dashboard
 // ---------------------------------------------------------------------------
 
@@ -363,7 +545,9 @@ export default function AdminDashboard(): JSX.Element {
     loadMoreUsers,
     recentPurchases,
     rates,
+    rateHistory,
     updateRate,
+    addRatePeriod,
   } = useAdmin();
 
   const { toast } = useToast();
@@ -458,7 +642,8 @@ export default function AdminDashboard(): JSX.Element {
         });
         toast({
           title: "Rate Updated",
-          description: "The electricity rate tier has been updated successfully.",
+          description:
+            "The electricity rate tier has been updated. Affected purchases have been queued for repricing.",
         });
         setEditingRateId(null);
         setEditRateValues(null);
@@ -482,6 +667,9 @@ export default function AdminDashboard(): JSX.Element {
 
   const selectedUser = usersList.find((u) => u.userId === selectedUserId);
   const selectedUserName = selectedUser?.preferredName ?? selectedUser?.email ?? selectedUserId;
+
+  // getRates only returns the rows in force today, so they all share one effectiveFrom.
+  const currentEffectiveFrom = rates[0]?.effectiveFrom ?? BASELINE_EFFECTIVE_FROM;
 
   const tabTriggerClass =
     "relative rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted-foreground transition-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
@@ -763,10 +951,18 @@ export default function AdminDashboard(): JSX.Element {
           </TabsContent>
 
           {/* ── Rates ─────────────────────────────────────────────────── */}
-          <TabsContent value="rates">
+          <TabsContent value="rates" className="space-y-6">
             <Card className="rounded-md border-border shadow-none">
               <CardHeader>
-                <CardTitle className="text-lg font-bold">Electricity Rates</CardTitle>
+                <CardTitle className="text-lg font-bold">
+                  Current Rates — effective {formatEffectiveFrom(currentEffectiveFrom)}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Corrects the figures of the tariff period currently in force — for fixing a wrong
+                  number, not for a tariff change. Changing a rate or tier range reprices every
+                  purchase recorded on or after this period started. To load a new tariff from a
+                  future date instead, use Schedule New Rate Period below.
+                </p>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -897,6 +1093,14 @@ export default function AdminDashboard(): JSX.Element {
                 </Table>
               </CardContent>
             </Card>
+
+            <ScheduleRatePeriod
+              rates={rates}
+              rateHistory={rateHistory}
+              addRatePeriod={addRatePeriod}
+            />
+
+            <RateHistoryCard rateHistory={rateHistory} />
           </TabsContent>
         </Tabs>
       </main>

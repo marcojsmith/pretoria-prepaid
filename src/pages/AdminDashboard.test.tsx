@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+﻿import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AdminDashboard from "./AdminDashboard";
 import { useQuery } from "convex/react";
@@ -39,6 +39,7 @@ vi.mock("lucide-react", () => ({
   Check: () => <div data-testid="icon-check">Check</div>,
   X: () => <div data-testid="icon-x">X</div>,
   ArrowRight: () => <span data-testid="icon-arrow-right">→</span>,
+  CalendarPlus: () => <span data-testid="icon-calendar-plus">+</span>,
 }));
 
 // Mock Tabs with actual state
@@ -177,6 +178,8 @@ describe("AdminDashboard", () => {
       recentPurchases: mockRecentPurchases,
       rates: mockRates,
       updateRate: mockUpdateRate,
+      rateHistory: [],
+      addRatePeriod: vi.fn().mockResolvedValue(null),
     });
   });
 
@@ -188,6 +191,8 @@ describe("AdminDashboard", () => {
       recentPurchases: [],
       rates: [],
       updateRate: mockUpdateRate,
+      rateHistory: [],
+      addRatePeriod: vi.fn().mockResolvedValue(null),
     });
     render(
       <BrowserRouter>
@@ -207,6 +212,8 @@ describe("AdminDashboard", () => {
       recentPurchases: [],
       rates: [],
       updateRate: mockUpdateRate,
+      rateHistory: [],
+      addRatePeriod: vi.fn().mockResolvedValue(null),
     });
     render(
       <BrowserRouter>
@@ -224,6 +231,8 @@ describe("AdminDashboard", () => {
       recentPurchases: null, // Trigger loading branch
       rates: [],
       updateRate: mockUpdateRate,
+      rateHistory: [],
+      addRatePeriod: vi.fn().mockResolvedValue(null),
     });
     render(
       <BrowserRouter>
@@ -241,6 +250,8 @@ describe("AdminDashboard", () => {
       recentPurchases: [],
       rates: null, // Trigger loading branch
       updateRate: mockUpdateRate,
+      rateHistory: [],
+      addRatePeriod: vi.fn().mockResolvedValue(null),
     });
     render(
       <BrowserRouter>
@@ -378,7 +389,8 @@ describe("AdminDashboard", () => {
     fireEvent.click(screen.getByTestId("icon-x").parentElement as HTMLElement);
 
     expect(screen.queryByDisplayValue("Tier 1 Label")).not.toBeInTheDocument();
-    expect(screen.getByText("Tier 1 Label")).toBeInTheDocument();
+    // The label also appears in the "schedule new rate period" form below the table.
+    expect(screen.getAllByText("Tier 1 Label").length).toBeGreaterThan(0);
   });
 
   it("handles update failure", async () => {
@@ -408,6 +420,8 @@ describe("AdminDashboard", () => {
       recentPurchases: mockRecentPurchases,
       rates: ratesWithNull,
       updateRate: mockUpdateRate,
+      rateHistory: [],
+      addRatePeriod: vi.fn().mockResolvedValue(null),
     });
 
     render(
@@ -612,6 +626,8 @@ describe("AdminDashboard", () => {
       recentPurchases: purchasesWithNullReadings,
       rates: mockRates,
       updateRate: mockUpdateRate,
+      rateHistory: [],
+      addRatePeriod: vi.fn().mockResolvedValue(null),
     });
 
     render(
@@ -645,6 +661,8 @@ describe("AdminDashboard", () => {
       recentPurchases: purchasesWithNullRate,
       rates: mockRates,
       updateRate: mockUpdateRate,
+      rateHistory: [],
+      addRatePeriod: vi.fn().mockResolvedValue(null),
     });
 
     render(

@@ -8,6 +8,8 @@ export default defineSchema({
     min_units: v.number(),
     max_units: v.union(v.number(), v.null()),
     rate: v.number(),
+    // ISO "YYYY-MM-DD" date this rate row takes effect; missing = always-active baseline
+    effectiveFrom: v.optional(v.string()),
   }),
   profiles: defineTable({
     userId: v.string(), // Clerk's user ID
@@ -53,7 +55,12 @@ export default defineSchema({
     date: v.string(),
     readingPre: v.number(),
     readingPost: v.number(),
-    source: v.union(v.literal("purchase"), v.literal("onboarding"), v.literal("orphaned")),
+    source: v.union(
+      v.literal("purchase"),
+      v.literal("onboarding"),
+      v.literal("orphaned"),
+      v.literal("correction")
+    ),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_date", ["userId", "date"])

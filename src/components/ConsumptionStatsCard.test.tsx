@@ -5,7 +5,12 @@ import { ConsumptionStatsCard } from "./ConsumptionStatsCard";
 describe("ConsumptionStatsCard", () => {
   it("returns null when stats are null", () => {
     const { container } = render(
-      <ConsumptionStatsCard stats={null} unitsThisMonth={0} costThisMonth={0} />
+      <ConsumptionStatsCard
+        stats={null}
+        unitsThisMonth={0}
+        costThisMonth={0}
+        onUpdateBalance={async () => {}}
+      />
     );
     expect(container.firstChild).toBeNull();
   });
@@ -22,7 +27,14 @@ describe("ConsumptionStatsCard", () => {
       isEstimatedBurnRate: false,
     };
 
-    render(<ConsumptionStatsCard stats={mockStats} unitsThisMonth={100} costThisMonth={342} />);
+    render(
+      <ConsumptionStatsCard
+        stats={mockStats}
+        unitsThisMonth={100}
+        costThisMonth={342}
+        onUpdateBalance={async () => {}}
+      />
+    );
 
     expect(screen.getByText(/80.2/)).toBeInTheDocument();
     expect(screen.getByText(/5.5/)).toBeInTheDocument();
@@ -43,7 +55,14 @@ describe("ConsumptionStatsCard", () => {
       isEstimatedBurnRate: true,
     };
 
-    render(<ConsumptionStatsCard stats={mockStats} unitsThisMonth={0} costThisMonth={0} />);
+    render(
+      <ConsumptionStatsCard
+        stats={mockStats}
+        unitsThisMonth={0}
+        costThisMonth={0}
+        onUpdateBalance={async () => {}}
+      />
+    );
     expect(screen.getByText(/Based on estimate/i)).toBeInTheDocument();
   });
 
@@ -59,7 +78,14 @@ describe("ConsumptionStatsCard", () => {
       isEstimatedBurnRate: false,
     };
 
-    render(<ConsumptionStatsCard stats={lowStats} unitsThisMonth={0} costThisMonth={0} />);
+    render(
+      <ConsumptionStatsCard
+        stats={lowStats}
+        unitsThisMonth={0}
+        costThisMonth={0}
+        onUpdateBalance={async () => {}}
+      />
+    );
 
     // The balance paragraph shows "30 kWh" and should have text-destructive class
     const balanceElements = document.querySelectorAll(".text-destructive");

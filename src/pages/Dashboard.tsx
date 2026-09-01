@@ -144,6 +144,7 @@ export default function Dashboard(): JSX.Element | null {
     stats: consumptionStats,
     loading: consumptionLoading,
     addOnboardingReading,
+    correctBalance,
     hasAnyReadings,
     hasPurchaseReadings,
   } = useConsumption();
@@ -159,6 +160,12 @@ export default function Dashboard(): JSX.Element | null {
   const [editorOpen, setEditorOpen] = useState(false);
 
   const handleEditLayout = useCallback(() => setEditorOpen(true), []);
+  const handleUpdateBalance = useCallback(
+    async (value: number) => {
+      await correctBalance(value);
+    },
+    [correctBalance]
+  );
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -237,6 +244,7 @@ export default function Dashboard(): JSX.Element | null {
           averageMonthlyUsage={averageMonthlyUsage}
           averageMonthlyCost={averageMonthlyCost}
           monthlyStats={monthlyStats}
+          onUpdateBalance={handleUpdateBalance}
         />
 
         <RatesFooterMemo />

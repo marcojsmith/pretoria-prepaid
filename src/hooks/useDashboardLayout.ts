@@ -9,7 +9,8 @@ export type CardId =
   | "monthly-stats"
   | "yearly-chart"
   | "daily-chart"
-  | "frequency-chart";
+  | "frequency-chart"
+  | "cost-per-kwh-chart";
 
 export interface CardConfig {
   id: CardId;
@@ -26,6 +27,7 @@ export const DEFAULT_CARDS: CardConfig[] = [
   { id: "yearly-chart", visible: true },
   { id: "daily-chart", visible: true },
   { id: "frequency-chart", visible: true },
+  { id: "cost-per-kwh-chart", visible: true },
 ];
 
 const VALID_IDS = new Set<string>(DEFAULT_CARDS.map((c) => c.id));
@@ -140,5 +142,9 @@ export const CARD_LABELS: Record<CardId, { name: string; description: string }> 
   "frequency-chart": {
     name: "Purchase Frequency",
     description: "How often you buy electricity",
+  },
+  "cost-per-kwh-chart": {
+    name: "Cost per kWh",
+    description: "Your blended rate over time",
   },
 };

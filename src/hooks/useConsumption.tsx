@@ -22,6 +22,7 @@ export interface UseConsumptionReturn {
   stats: ConsumptionStats | null;
   loading: boolean;
   addOnboardingReading: (reading: number, defaultDailyUsage?: number) => Promise<void>;
+  correctBalance: (reading: number) => Promise<{ error: null } | { error: Error }>;
   hasAnyReadings: boolean;
   hasPurchaseReadings: boolean;
 }
@@ -32,6 +33,22 @@ export function useConsumption(): UseConsumptionReturn {
   const hasAnyReadings = useQuery(api.readings.hasAnyReadings) ?? false;
   const hasPurchaseReadings = useQuery(api.readings.hasPurchaseReadings) ?? false;
   const addOnboardingReadingMutation = useMutation(api.readings.addOnboardingReading);
+  const correctMeterReadingMutation = useMutation(api.readings.correctMeterReading);
+
+  const correctBalance = useCallback(
+    async (reading: number) => {
+      try {
+        await correctMeterReadingMutation({ reading });
+        toast.success("Meter reading updated");
+        return { error: null } as const;
+      } catch (error) {
+        console.error("Failed to correct meter reading:", error);
+        toast.error("Failed to update meter reading");
+        return { error: error as Error };
+      }
+    },
+    [correctMeterReadingMutation]
+  );
 
   const addOnboardingReading = useCallback(
     async (reading: number, defaultDailyUsage?: number) => {
@@ -55,6 +72,7 @@ export function useConsumption(): UseConsumptionReturn {
     stats: stats ?? null,
     loading: readings === undefined || stats === undefined,
     addOnboardingReading,
+    correctBalance,
     hasAnyReadings,
     hasPurchaseReadings,
   };
