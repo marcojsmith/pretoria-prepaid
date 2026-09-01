@@ -364,7 +364,6 @@ function formatEffectiveFrom(date: string): string {
   });
 }
 
-// eslint-disable-next-line llm-core/max-function-length
 function ScheduleRatePeriod({
   rates,
   rateHistory,
