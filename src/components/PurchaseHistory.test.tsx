@@ -10,7 +10,7 @@ const mockUnobserve = vi.fn();
 
 function setupIntersectionObserverMock() {
   capturedObserverCallback = null;
-  global.IntersectionObserver = vi.fn((callback: IntersectionObserverCallback) => {
+  global.IntersectionObserver = vi.fn(function (callback: IntersectionObserverCallback) {
     capturedObserverCallback = callback;
     return { observe: mockObserve, unobserve: mockUnobserve, disconnect: vi.fn() };
   }) as unknown as typeof IntersectionObserver;
