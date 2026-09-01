@@ -55,7 +55,12 @@ export default defineSchema({
     date: v.string(),
     readingPre: v.number(),
     readingPost: v.number(),
-    source: v.union(v.literal("purchase"), v.literal("onboarding"), v.literal("orphaned")),
+    source: v.union(
+      v.literal("purchase"),
+      v.literal("onboarding"),
+      v.literal("orphaned"),
+      v.literal("correction")
+    ),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_date", ["userId", "date"])

@@ -185,6 +185,7 @@ const ALLOWED_CARD_IDS = [
   "yearly-chart",
   "daily-chart",
   "frequency-chart",
+  "cost-per-kwh-chart",
 ] as const;
 
 const cardIdValidator = v.union(
@@ -194,7 +195,8 @@ const cardIdValidator = v.union(
   v.literal("monthly-stats"),
   v.literal("yearly-chart"),
   v.literal("daily-chart"),
-  v.literal("frequency-chart")
+  v.literal("frequency-chart"),
+  v.literal("cost-per-kwh-chart")
 );
 
 export const updateDashboardLayout = mutation({

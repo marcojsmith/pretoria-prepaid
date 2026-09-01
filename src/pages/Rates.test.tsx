@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Rates from "./Rates";
-import { useRates } from "../hooks/useRates";
+import { useRateHistory } from "../hooks/useRates";
 import type { ElectricityRate } from "../hooks/useRates";
-import { useUserRole } from "../hooks/useUserRole";
 import { useAuth } from "../hooks/useAuth";
 import { usePurchases } from "../hooks/usePurchase";
-import { useToast } from "../hooks/use-toast";
 import type { Id } from "../../convex/_generated/dataModel";
 
 interface MockDropdownMenuProps {
@@ -15,12 +13,9 @@ interface MockDropdownMenuProps {
   onClick?: () => void;
 }
 
-// Mock the hooks
 vi.mock("../hooks/useRates");
-vi.mock("../hooks/useUserRole");
 vi.mock("../hooks/useAuth");
 vi.mock("../hooks/usePurchase");
-vi.mock("../hooks/use-toast");
 
 // Mock DropdownMenu to render children directly for easier testing
 vi.mock("@/components/ui/dropdown-menu", () => ({
@@ -34,92 +29,28 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuSeparator: () => <hr />,
 }));
 
-// Mock AlertDialog component
-vi.mock("@/components/ui/alert-dialog", () => ({
-  AlertDialog: ({
-    children,
-    open,
-    onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => {
-    // Store onOpenChange globally for test access
-    if (onOpenChange) {
-      (
-        window as unknown as { __alertDialogOnOpenChange?: (open: boolean) => void }
-      ).__alertDialogOnOpenChange = onOpenChange;
-    }
-    return open ? <div data-testid="alert-dialog">{children}</div> : null;
-  },
-  AlertDialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertDialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertDialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertDialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertDialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertDialogAction: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-  }) => (
-    <button onClick={onClick} data-testid="alert-dialog-confirm">
-      {children}
-    </button>
-  ),
-  AlertDialogCancel: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-  }) => (
-    <button
-      onClick={() => {
-        if (onClick) onClick();
-        const globalHandler = (
-          window as unknown as { __alertDialogOnOpenChange?: (open: boolean) => void }
-        ).__alertDialogOnOpenChange;
-        if (globalHandler) globalHandler(false);
-      }}
-      data-testid="alert-dialog-cancel"
-    >
-      {children}
-    </button>
-  ),
-}));
-
-describe("Rates Page", () => {
-  const mockToast = vi.fn();
-
-  const adminRate: ElectricityRate = {
-    _id: "1" as Id<"electricity_rates">,
+function rate(overrides: Omit<Partial<ElectricityRate>, "_id"> & { _id: string }): ElectricityRate {
+  return {
     tier_number: 1,
     tier_label: "Tier 1",
-    min_units: 0,
+    min_units: 1,
     max_units: 100,
-    rate: 3.42,
+    rate: 3.42585,
+    ...overrides,
+    _id: overrides._id as Id<"electricity_rates">,
   };
+}
 
-  const setupAdminWithRate = (updateRate = vi.fn().mockResolvedValue({ error: null })) => {
-    vi.mocked(useRates).mockReturnValue({
-      loading: false,
-      rates: [adminRate],
-      updateRate,
-      refetch: vi.fn(),
-    });
-    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
-  };
+const renderPage = () =>
+  render(
+    <BrowserRouter>
+      <Rates />
+    </BrowserRouter>
+  );
 
+describe("Rates Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useToast).mockReturnValue({
-      toast: mockToast,
-      toasts: [],
-      dismiss: vi.fn(),
-    } as unknown as ReturnType<typeof useToast>);
     vi.mocked(useAuth).mockReturnValue({
       user: { id: "1" } as NonNullable<ReturnType<typeof useAuth>["user"]>,
       loading: false,
@@ -128,205 +59,93 @@ describe("Rates Page", () => {
     vi.mocked(usePurchases).mockReturnValue({
       loading: false,
       purchases: [],
-      addPurchase: vi.fn(),
-      addBatchPurchases: vi.fn(),
-      deletePurchase: vi.fn(),
-      unitsThisMonth: 0,
-      costThisMonth: 0,
-      getMonthlyStats: vi.fn(() => []),
-      getAverageMonthlyUsage: vi.fn(() => 0),
-      getDailyAverageUsage: vi.fn(() => 0),
-      getAverageMonthlyCost: vi.fn(() => 0),
-      getCurrentMonthPurchases: vi.fn(() => []),
-      getRefillAnalysis: vi.fn(() => []),
       offlineCount: 0,
     } as unknown as ReturnType<typeof usePurchases>);
+    vi.mocked(useRateHistory).mockReturnValue({ history: [], loading: false });
   });
 
-  it("renders loading state", () => {
-    vi.mocked(useRates).mockReturnValue({
-      loading: true,
-      rates: [],
-      updateRate: vi.fn(),
-      refetch: vi.fn(),
-    });
-    vi.mocked(useUserRole).mockReturnValue({ loading: true, isAdmin: false });
+  it("renders loading state while history loads", () => {
+    vi.mocked(useRateHistory).mockReturnValue({ history: [], loading: true });
 
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
+    renderPage();
 
     expect(screen.getByTestId("loading-spinner")).toBeInTheDocument();
   });
 
-  it("renders rates table", () => {
-    vi.mocked(useRates).mockReturnValue({
-      loading: false,
-      rates: [
-        {
-          _id: "1",
-          tier_number: 1,
-          tier_label: "Tier 1",
-          min_units: 0,
-          max_units: 100,
-          rate: 3.42,
-        } as ElectricityRate,
+  it("shows an empty message when no rates are configured", () => {
+    renderPage();
+
+    expect(screen.getByText(/No rates have been configured yet/i)).toBeInTheDocument();
+  });
+
+  it("renders a column per tier and a row per period", () => {
+    vi.mocked(useRateHistory).mockReturnValue({
+      history: [
+        rate({ _id: "1", tier_number: 1, rate: 3.42 }),
+        rate({ _id: "2", tier_number: 2, min_units: 101, max_units: 400, rate: 4.01 }),
       ],
-      updateRate: vi.fn(),
-      refetch: vi.fn(),
+      loading: false,
     });
-    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
 
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
+    renderPage();
 
-    expect(screen.getAllByText(/Electricity Rates/i).length).toBeGreaterThan(0);
     expect(screen.getByText("Tier 1")).toBeInTheDocument();
-    expect(screen.getByText(/3.42/)).toBeInTheDocument();
+    expect(screen.getByText("Tier 2")).toBeInTheDocument();
+    expect(screen.getByText(/3\.42/)).toBeInTheDocument();
+    expect(screen.getByText(/4\.01/)).toBeInTheDocument();
   });
 
-  it("shows update buttons for admins", () => {
-    vi.mocked(useRates).mockReturnValue({
+  it("dates undated legacy rows as the 2025-07-01 baseline tariff", () => {
+    vi.mocked(useRateHistory).mockReturnValue({
+      history: [rate({ _id: "1", rate: 3.42585 })],
       loading: false,
-      rates: [
-        {
-          _id: "1",
-          tier_number: 1,
-          tier_label: "Tier 1",
-          min_units: 0,
-          max_units: 100,
-          rate: 3.42,
-        } as ElectricityRate,
-      ],
-      updateRate: vi.fn(),
-      refetch: vi.fn(),
     });
-    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
 
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
+    renderPage();
 
-    // There are multiple buttons
-    expect(screen.getAllByRole("button").length).toBeGreaterThan(0);
+    expect(screen.getByText(/2025/)).toBeInTheDocument();
   });
 
-  it("opens update dialog when pencil is clicked", () => {
-    vi.mocked(useRates).mockReturnValue({
-      loading: false,
-      rates: [
-        {
-          _id: "1",
-          tier_number: 1,
-          tier_label: "Tier 1",
-          min_units: 0,
-          max_units: 100,
-          rate: 3.42,
-        } as ElectricityRate,
+  it("shows the percentage change against the previous period", () => {
+    vi.mocked(useRateHistory).mockReturnValue({
+      history: [
+        rate({ _id: "1", tier_number: 1, rate: 100 }),
+        rate({ _id: "2", tier_number: 1, rate: 110, effectiveFrom: "2026-07-01" }),
       ],
-      updateRate: vi.fn(),
-      refetch: vi.fn(),
+      loading: false,
     });
-    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
 
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
+    renderPage();
 
-    // Find the pencil button using testid
-    const editButton = screen.getByTestId("edit-rate-button");
-    expect(editButton).toBeInTheDocument();
+    expect(screen.getByText("+10.0%")).toBeInTheDocument();
+  });
 
-    // Click edit button
-    fireEvent.click(editButton);
+  it("marks a future period as upcoming and the active one as current", () => {
+    vi.mocked(useRateHistory).mockReturnValue({
+      history: [
+        rate({ _id: "1", rate: 3.42585, effectiveFrom: "2020-01-01" }),
+        rate({ _id: "2", rate: 9.99, effectiveFrom: "2999-01-01" }),
+      ],
+      loading: false,
+    });
 
-    // Should show Input
-    expect(screen.getByRole("spinbutton")).toBeInTheDocument();
-    // Should show Save and Cancel buttons (Check and X icons)
-    const buttons = screen.getAllByRole("button");
-    const saveButton = buttons.find((b) => b.querySelector(".lucide-check"));
-    const cancelButton = buttons.find((b) => b.querySelector(".lucide-x"));
+    renderPage();
 
-    expect(saveButton).toBeInTheDocument();
-    expect(cancelButton).toBeInTheDocument();
+    expect(screen.getByText("Upcoming")).toBeInTheDocument();
+    expect(screen.getByText("Current")).toBeInTheDocument();
+  });
 
-    // Click cancel
-    fireEvent.click(cancelButton as HTMLElement);
+  it("does not offer any editing controls", () => {
+    vi.mocked(useRateHistory).mockReturnValue({
+      history: [rate({ _id: "1" })],
+      loading: false,
+    });
 
-    // Input should be gone
+    renderPage();
+
+    expect(screen.queryByTestId("edit-rate-button")).not.toBeInTheDocument();
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
-  });
-
-  it("handles save rate click", () => {
-    const updateRate = vi.fn().mockResolvedValue({ error: null });
-    vi.mocked(useRates).mockReturnValue({
-      loading: false,
-      rates: [
-        {
-          _id: "1",
-          tier_number: 1,
-          tier_label: "Tier 1",
-          min_units: 0,
-          max_units: 100,
-          rate: 3.42,
-        } as ElectricityRate,
-      ],
-      updateRate,
-      refetch: vi.fn(),
-    });
-    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: true });
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByTestId("edit-rate-button"));
-
-    const input = screen.getByRole("spinbutton");
-    fireEvent.change(input, { target: { value: "3.5" } });
-
-    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
-    fireEvent.click(saveButton as HTMLElement);
-  });
-
-  it("handles logout click", () => {
-    const signOut = vi.fn();
-    vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1" } as NonNullable<ReturnType<typeof useAuth>["user"]>,
-      loading: false,
-      signOut,
-    });
-    vi.mocked(useRates).mockReturnValue({
-      loading: false,
-      rates: [],
-      updateRate: vi.fn(),
-      refetch: vi.fn(),
-    });
-    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    const logoutButton = screen.getByText(/Log out/i);
-    expect(logoutButton).toBeInTheDocument();
-
-    fireEvent.click(logoutButton);
-
-    expect(signOut).toHaveBeenCalled();
+    expect(screen.getByText(/Contact an administrator/i)).toBeInTheDocument();
   });
 
   it("returns null when no user", () => {
@@ -335,199 +154,9 @@ describe("Rates Page", () => {
       loading: false,
       signOut: vi.fn(),
     });
-    vi.mocked(useRates).mockReturnValue({
-      loading: false,
-      rates: [],
-      updateRate: vi.fn(),
-      refetch: vi.fn(),
-    });
-    vi.mocked(useUserRole).mockReturnValue({ loading: false, isAdmin: false });
 
-    const { container } = render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-    expect(container.firstChild).toBeNull();
-  });
+    const { container } = renderPage();
 
-  it("shows error toast when rate value is NaN", () => {
-    setupAdminWithRate();
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByTestId("edit-rate-button"));
-
-    const input = screen.getByRole("spinbutton");
-    fireEvent.change(input, { target: { value: "abc" } });
-
-    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
-    fireEvent.click(saveButton as HTMLElement);
-
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Invalid rate", variant: "destructive" })
-    );
-  });
-
-  it("shows error toast when rate is zero", () => {
-    setupAdminWithRate();
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByTestId("edit-rate-button"));
-
-    const input = screen.getByRole("spinbutton");
-    fireEvent.change(input, { target: { value: "0" } });
-
-    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
-    fireEvent.click(saveButton as HTMLElement);
-
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Invalid rate", variant: "destructive" })
-    );
-  });
-
-  it.skip("shows error toast when updateRate returns error", () => {
-    setupAdminWithRate(vi.fn().mockResolvedValue({ error: "Permission denied" }));
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByTestId("edit-rate-button"));
-
-    const input = screen.getByRole("spinbutton");
-    fireEvent.change(input, { target: { value: "4.5" } });
-
-    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
-    fireEvent.click(saveButton as HTMLElement);
-
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Error", variant: "destructive" })
-    );
-  });
-
-  it.skip("shows success toast when updateRate succeeds", () => {
-    setupAdminWithRate(vi.fn().mockResolvedValue({ error: null }));
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByTestId("edit-rate-button"));
-
-    const input = screen.getByRole("spinbutton");
-    fireEvent.change(input, { target: { value: "4.5" } });
-
-    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
-    fireEvent.click(saveButton as HTMLElement);
-
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Success" }));
-  });
-
-  it("shows confirmation dialog when rate is valid", async () => {
-    const updateRate = vi.fn().mockResolvedValue({ error: null });
-    setupAdminWithRate(updateRate);
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByTestId("edit-rate-button"));
-
-    const input = screen.getByRole("spinbutton");
-    fireEvent.change(input, { target: { value: "4.5" } });
-
-    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
-    fireEvent.click(saveButton as HTMLElement);
-
-    expect(screen.getByTestId("alert-dialog")).toBeInTheDocument();
-    expect(screen.getByText("Confirm Rate Change")).toBeInTheDocument();
-
-    const confirmButton = screen.getByTestId("alert-dialog-confirm");
-    fireEvent.click(confirmButton);
-
-    await vi.waitFor(() => {
-      expect(updateRate).toHaveBeenCalledWith("1", 4.5);
-    });
-  });
-
-  it("shows error toast when rate is below minimum (0.01)", () => {
-    setupAdminWithRate();
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByTestId("edit-rate-button"));
-
-    const input = screen.getByRole("spinbutton");
-    fireEvent.change(input, { target: { value: "0.005" } });
-
-    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
-    fireEvent.click(saveButton as HTMLElement);
-
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Invalid rate" }));
-  });
-
-  it("shows error toast when rate exceeds maximum (100)", () => {
-    setupAdminWithRate();
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByTestId("edit-rate-button"));
-
-    const input = screen.getByRole("spinbutton");
-    fireEvent.change(input, { target: { value: "150" } });
-
-    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
-    fireEvent.click(saveButton as HTMLElement);
-
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Invalid rate" }));
-  });
-
-  it("closes confirmation dialog on cancel", () => {
-    setupAdminWithRate();
-
-    render(
-      <BrowserRouter>
-        <Rates />
-      </BrowserRouter>
-    );
-
-    fireEvent.click(screen.getByTestId("edit-rate-button"));
-
-    const input = screen.getByRole("spinbutton");
-    fireEvent.change(input, { target: { value: "4.5" } });
-
-    const saveButton = screen.getAllByRole("button").find((b) => b.querySelector(".lucide-check"));
-    fireEvent.click(saveButton as HTMLElement);
-
-    expect(screen.getByTestId("alert-dialog")).toBeInTheDocument();
-
-    const cancelButton = screen.getByTestId("alert-dialog-cancel");
-    fireEvent.click(cancelButton);
-
-    expect(screen.queryByTestId("alert-dialog")).not.toBeInTheDocument();
+    expect(container.querySelector("main")).toBeNull();
   });
 });

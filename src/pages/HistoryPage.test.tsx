@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BrowserRouter, useNavigate, MemoryRouter } from "react-router-dom";
 import HistoryPage from "./HistoryPage";
@@ -109,6 +109,7 @@ describe("HistoryPage", () => {
       readings: [],
       stats: null,
       addOnboardingReading: vi.fn(),
+      correctBalance: vi.fn(),
       hasAnyReadings: false,
       hasPurchaseReadings: false,
     });
@@ -172,6 +173,7 @@ describe("HistoryPage", () => {
       ],
       stats: null,
       addOnboardingReading: vi.fn(),
+      correctBalance: vi.fn(),
       hasAnyReadings: true,
       hasPurchaseReadings: true,
     });
@@ -331,6 +333,7 @@ describe("HistoryPage", () => {
       loading: false,
       readings: [oldReading],
       addOnboardingReading: vi.fn(),
+      correctBalance: vi.fn(),
       hasAnyReadings: true,
       hasPurchaseReadings: false,
       stats: null,

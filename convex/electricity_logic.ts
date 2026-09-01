@@ -8,7 +8,7 @@ export interface MeterReading {
   date: string;
   readingPre: number;
   readingPost: number;
-  source: "purchase" | "onboarding";
+  source: "purchase" | "onboarding" | "correction";
 }
 
 export const DEFAULT_BURN_RATE = 10;

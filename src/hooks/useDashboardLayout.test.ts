@@ -53,6 +53,7 @@ describe("useDashboardLayout", () => {
       { id: "yearly-chart", visible: true },
       { id: "daily-chart", visible: true },
       { id: "frequency-chart", visible: true },
+      { id: "cost-per-kwh-chart", visible: true },
     ];
     mockGetItem.mockReturnValue(JSON.stringify(savedLayout));
     vi.mocked(useQuery).mockReturnValue(null);
@@ -71,6 +72,7 @@ describe("useDashboardLayout", () => {
       { id: "yearly-chart", visible: true },
       { id: "daily-chart", visible: true },
       { id: "frequency-chart", visible: true },
+      { id: "cost-per-kwh-chart", visible: true },
     ];
     vi.mocked(useQuery).mockReturnValue({ dashboardLayout: serverLayout });
 
@@ -103,6 +105,7 @@ describe("useDashboardLayout", () => {
       { id: "yearly-chart", visible: true },
       { id: "daily-chart", visible: true },
       { id: "frequency-chart", visible: true },
+      { id: "cost-per-kwh-chart", visible: true },
     ];
 
     act(() => {
@@ -136,6 +139,7 @@ describe("useDashboardLayout", () => {
       { id: "yearly-chart", visible: false },
       { id: "daily-chart", visible: false },
       { id: "frequency-chart", visible: false },
+      { id: "cost-per-kwh-chart", visible: false },
     ];
     mockGetItem.mockReturnValue(JSON.stringify(savedLayout));
     vi.mocked(useQuery).mockReturnValue(null);
@@ -193,6 +197,7 @@ describe("useDashboardLayout", () => {
       { id: "yearly-chart", visible: true },
       { id: "daily-chart", visible: true },
       { id: "frequency-chart", visible: true },
+      { id: "cost-per-kwh-chart", visible: true },
     ];
     vi.mocked(useQuery).mockReturnValue({ dashboardLayout: serverLayout });
 
@@ -214,6 +219,7 @@ describe("useDashboardLayout", () => {
       { id: "yearly-chart", visible: true },
       { id: "daily-chart", visible: true },
       { id: "frequency-chart", visible: true },
+      { id: "cost-per-kwh-chart", visible: true },
     ];
     vi.mocked(useQuery).mockReturnValue({ dashboardLayout: differentServerLayout });
     rerender();
