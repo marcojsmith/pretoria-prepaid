@@ -8,6 +8,8 @@ export default defineSchema({
     min_units: v.number(),
     max_units: v.union(v.number(), v.null()),
     rate: v.number(),
+    // ISO "YYYY-MM-DD" date this rate row takes effect; missing = always-active baseline
+    effectiveFrom: v.optional(v.string()),
   }),
   profiles: defineTable({
     userId: v.string(), // Clerk's user ID

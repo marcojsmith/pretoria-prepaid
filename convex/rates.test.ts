@@ -260,4 +260,91 @@ describe("rates", () => {
       expect(rates[0]?.rate).toBe(99.99);
     });
   });
+
+  describe("addRatePeriod", () => {
+    const newRates = [
+      { tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 3.7274 },
+      { tier_number: 2, tier_label: "Tier 2", min_units: 101, max_units: 400, rate: 4.3622 },
+      { tier_number: 3, tier_label: "Tier 3", min_units: 401, max_units: 650, rate: 4.7525 },
+      { tier_number: 4, tier_label: "Tier 4", min_units: 651, max_units: null, rate: 5.1234 },
+    ];
+
+    async function seedAdmin(t: ReturnType<typeof convexTest>, adminId: string) {
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("user_roles", { userId: adminId, role: "admin" });
+      });
+    }
+
+    it("throws 'Not authenticated' if no identity", async () => {
+      const t = convexTest(schema, modules);
+      await expect(
+        t.mutation(api.rates.addRatePeriod, { effectiveFrom: "2026-07-01", rates: newRates })
+      ).rejects.toThrow("Not authenticated");
+    });
+
+    it("throws 'Not authorized' if user is not admin", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "regular-user";
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("user_roles", { userId, role: "user" });
+      });
+
+      await expect(
+        t
+          .withIdentity({ subject: userId, tokenIdentifier: userId })
+          .mutation(api.rates.addRatePeriod, { effectiveFrom: "2026-07-01", rates: newRates })
+      ).rejects.toThrow("Not authorized");
+    });
+
+    it("inserts one row per tier with the given effectiveFrom", async () => {
+      const t = convexTest(schema, modules);
+      const adminId = "admin-user";
+      await seedAdmin(t, adminId);
+
+      await t
+        .withIdentity({ subject: adminId, tokenIdentifier: adminId })
+        .mutation(api.rates.addRatePeriod, { effectiveFrom: "2026-07-01", rates: newRates });
+
+      const rows = await t.mutation(async (ctx) => {
+        return await ctx.db.query("electricity_rates").collect();
+      });
+
+      expect(rows).toHaveLength(4);
+      expect(rows.every((r) => r.effectiveFrom === "2026-07-01")).toBe(true);
+      expect(rows.find((r) => r.tier_number === 1)?.rate).toBe(3.7274);
+    });
+
+    it("rejects a duplicate effectiveFrom", async () => {
+      const t = convexTest(schema, modules);
+      const adminId = "admin-user";
+      await seedAdmin(t, adminId);
+
+      const asAdmin = t.withIdentity({ subject: adminId, tokenIdentifier: adminId });
+      await asAdmin.mutation(api.rates.addRatePeriod, {
+        effectiveFrom: "2026-07-01",
+        rates: newRates,
+      });
+
+      await expect(
+        asAdmin.mutation(api.rates.addRatePeriod, { effectiveFrom: "2026-07-01", rates: newRates })
+      ).rejects.toThrow("already exists");
+    });
+
+    it("rejects an out-of-range rate", async () => {
+      const t = convexTest(schema, modules);
+      const adminId = "admin-user";
+      await seedAdmin(t, adminId);
+
+      await expect(
+        t
+          .withIdentity({ subject: adminId, tokenIdentifier: adminId })
+          .mutation(api.rates.addRatePeriod, {
+            effectiveFrom: "2026-07-01",
+            rates: [
+              { tier_number: 1, tier_label: "Tier 1", min_units: 1, max_units: 100, rate: 150 },
+            ],
+          })
+      ).rejects.toThrow("Rate must be between");
+    });
+  });
 });

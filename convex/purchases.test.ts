@@ -267,6 +267,50 @@ describe("purchases", () => {
 
       expect(result).toBeDefined();
     });
+
+    it("prices each purchase off the rate period in force on its own date", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "test-user-1";
+
+      // Legacy rates (no effectiveFrom) + a dated 2026/27 period
+      await seedRates(t);
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("electricity_rates", {
+          tier_number: 1,
+          tier_label: "Tier 1",
+          min_units: 1,
+          max_units: 100,
+          rate: 3.7274,
+          effectiveFrom: "2026-07-01",
+        });
+      });
+
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      await asUser.mutation(api.purchases.addPurchase, {
+        date: "2026-06-15",
+        units: 50,
+        cost: 0,
+        amountPaid: 175,
+        meterReading: 1000,
+      });
+      await asUser.mutation(api.purchases.addPurchase, {
+        date: "2026-07-15",
+        units: 50,
+        cost: 0,
+        amountPaid: 190,
+        meterReading: 1050,
+      });
+
+      const purchases = await asUser.query(api.purchases.getPurchases, {});
+      const before = purchases.find((p) => p.date === "2026-06-15");
+      const after = purchases.find((p) => p.date === "2026-07-15");
+
+      expect(before?.tierBreakdown[0]?.rate).toBe(3.42585);
+      expect(before?.cost).toBeCloseTo(50 * 3.42585, 2);
+      expect(after?.tierBreakdown[0]?.rate).toBe(3.7274);
+      expect(after?.cost).toBeCloseTo(50 * 3.7274, 2);
+    });
   });
 
   describe("deletePurchase", () => {

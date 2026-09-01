@@ -1,7 +1,7 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { calculateTierBreakdown } from "./electricity_logic";
+import { calculateTierBreakdown, selectActiveRates } from "./electricity_logic";
 import { DATE_MONTH_LENGTH } from "./constants";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimiter";
 import { resolveEffectiveUserId } from "./lib/household";
@@ -46,7 +46,7 @@ export const recalculateMonthlyPurchases = internalMutation({
       const { breakdown, total } = calculateTierBreakdown({
         units: purchase.units,
         unitsAlreadyBought,
-        rates,
+        rates: selectActiveRates(rates, purchase.date),
       });
 
       await ctx.db.patch(purchase._id, {
@@ -123,7 +123,7 @@ export const addPurchase = mutation({
     const { breakdown, total } = calculateTierBreakdown({
       units: args.units,
       unitsAlreadyBought: unitsBefore,
-      rates,
+      rates: selectActiveRates(rates, args.date),
     });
 
     const purchaseId = await ctx.db.insert("purchases", {

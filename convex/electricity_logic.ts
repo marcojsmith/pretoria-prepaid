@@ -93,6 +93,28 @@ export function calculateTierBreakdown(options: {
   return { total, breakdown };
 }
 
+/**
+ * Selects the rate rows in force on `asOfDate` — one row per tier_number.
+ * For each tier, picks the row with the latest effectiveFrom that is <= asOfDate.
+ * A missing effectiveFrom is treated as "" (always active, lowest priority);
+ * ISO "YYYY-MM-DD" dates compare correctly as strings.
+ */
+export function selectActiveRates<T extends { tier_number: number; effectiveFrom?: string }>(
+  rates: T[],
+  asOfDate: string
+): T[] {
+  const activeByTier = new Map<number, T>();
+  for (const rate of rates) {
+    const effective = rate.effectiveFrom ?? "";
+    if (effective > asOfDate) continue;
+    const current = activeByTier.get(rate.tier_number);
+    if (!current || effective > (current.effectiveFrom ?? "")) {
+      activeByTier.set(rate.tier_number, rate);
+    }
+  }
+  return [...activeByTier.values()];
+}
+
 // How many purchase intervals to include in the weighted average (requires N+1 readings)
 const MAX_INTERVALS = 5;
 
