@@ -100,6 +100,58 @@ export function calculateCost(options: {
   return { total, breakdown };
 }
 
+/**
+ * Calculates how many kWh a given Rand amount buys, starting from unitsAlreadyBought.
+ * Inverse of calculateCost.
+ */
+export function calculateUnitsFromAmount(options: {
+  amount: number;
+  unitsAlreadyBought: number;
+  rates: ElectricityRate[];
+}): { units: number; breakdown: TierBreakdown[] } {
+  const { amount, unitsAlreadyBought, rates } = options;
+  if (amount <= 0 || rates.length === 0) return { units: 0, breakdown: [] };
+
+  const breakdown: TierBreakdown[] = [];
+  let remainingAmount = amount;
+  let currentPosition = unitsAlreadyBought;
+  let totalUnits = 0;
+
+  const sortedRates = [...rates].sort((a, b) => a.tier_number - b.tier_number);
+
+  for (const rate of sortedRates) {
+    if (remainingAmount <= 0) break;
+
+    const tierStart = rate.min_units - 1;
+    const tierEnd = rate.max_units ?? Infinity;
+
+    if (currentPosition >= tierEnd) continue;
+
+    const startInTier = Math.max(currentPosition, tierStart);
+    const availableInTier = tierEnd === Infinity ? Infinity : tierEnd - startInTier;
+    const costForFullTier = availableInTier === Infinity ? Infinity : availableInTier * rate.rate;
+
+    const unitsInThisTier =
+      remainingAmount >= costForFullTier ? availableInTier : remainingAmount / rate.rate;
+
+    const cost = unitsInThisTier * rate.rate;
+
+    breakdown.push({
+      tier: toTier(rate.tier_number),
+      label: rate.tier_label,
+      units: unitsInThisTier,
+      rate: rate.rate,
+      cost,
+    });
+
+    totalUnits += unitsInThisTier;
+    remainingAmount -= cost;
+    currentPosition += unitsInThisTier;
+  }
+
+  return { units: totalUnits, breakdown };
+}
+
 export function formatCurrency(amount: number): string {
   return "R " + roundCurrency(amount).toFixed(2);
 }
