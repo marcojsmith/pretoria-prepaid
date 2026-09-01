@@ -39,3 +39,5 @@ dev-dist/
 
 .gemini/
 gha-creds-*.json
+lint-errors.txt
+trace.json.gz
