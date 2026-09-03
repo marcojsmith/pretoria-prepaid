@@ -346,8 +346,8 @@ async function deletePurchaseOnMeter(options: {
 
   const readings = await ctx.db
     .query("meter_readings")
-    .withIndex("by_meterId_date", (q) => q.eq("meterId", meter._id).eq("date", purchase.date))
-    .filter((q) => q.eq(q.field("source"), "purchase"))
+    .withIndex("by_meterId_source", (q) => q.eq("meterId", meter._id).eq("source", "purchase"))
+    .filter((q) => q.eq(q.field("date"), purchase.date))
     .take(1);
 
   const firstReading = readings[0];
@@ -377,8 +377,8 @@ async function deletePurchaseLegacy(options: {
 
   const reading = await ctx.db
     .query("meter_readings")
-    .withIndex("by_userId_date", (q) => q.eq("userId", purchase.userId).eq("date", purchase.date))
-    .filter((q) => q.eq(q.field("source"), "purchase"))
+    .withIndex("by_userId_source", (q) => q.eq("userId", purchase.userId).eq("source", "purchase"))
+    .filter((q) => q.eq(q.field("date"), purchase.date))
     .take(1);
 
   const firstReading = reading[0];
