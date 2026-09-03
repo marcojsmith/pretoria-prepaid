@@ -17,15 +17,28 @@ export const getReadings = query({
     if (!identity) return [];
 
     const meter = await resolveMeter(ctx, identity.tokenIdentifier, args.meterId);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
+
     if (meter) {
-      return await ctx.db
+      const meterScoped = await ctx.db
         .query("meter_readings")
         .withIndex("by_meterId_date", (q) => q.eq("meterId", meter._id))
         .order("desc")
         .take(DEFAULT_READINGS_TAKE);
+
+      const legacyUnmigrated = (
+        await ctx.db
+          .query("meter_readings")
+          .withIndex("by_userId_date", (q) => q.eq("userId", effectiveUserId))
+          .order("desc")
+          .take(DEFAULT_READINGS_TAKE)
+      ).filter((r) => r.meterId === undefined);
+
+      return [...meterScoped, ...legacyUnmigrated]
+        .sort((a, b) => b.date.localeCompare(a.date) || b._creationTime - a._creationTime)
+        .slice(0, DEFAULT_READINGS_TAKE);
     }
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
     return await ctx.db
       .query("meter_readings")
       .withIndex("by_userId_date", (q) => q.eq("userId", effectiveUserId))
@@ -166,15 +179,24 @@ export const hasAnyReadings = query({
     if (!identity) return false;
 
     const meter = await resolveMeter(ctx, identity.tokenIdentifier, args.meterId);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
+
     if (meter) {
-      const readings = await ctx.db
+      const meterScoped = await ctx.db
         .query("meter_readings")
         .withIndex("by_meterId_date", (q) => q.eq("meterId", meter._id))
         .take(1);
-      return readings.length > 0;
+      if (meterScoped.length > 0) return true;
+
+      const legacyUnmigrated = (
+        await ctx.db
+          .query("meter_readings")
+          .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
+          .collect()
+      ).filter((r) => r.meterId === undefined);
+      return legacyUnmigrated.length > 0;
     }
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
     const readings = await ctx.db
       .query("meter_readings")
       .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
@@ -191,15 +213,26 @@ export const hasPurchaseReadings = query({
     if (!identity) return false;
 
     const meter = await resolveMeter(ctx, identity.tokenIdentifier, args.meterId);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
+
     if (meter) {
-      const readings = await ctx.db
+      const meterScoped = await ctx.db
         .query("meter_readings")
         .withIndex("by_meterId_source", (q) => q.eq("meterId", meter._id).eq("source", "purchase"))
         .take(1);
-      return readings.length > 0;
+      if (meterScoped.length > 0) return true;
+
+      const legacyUnmigrated = (
+        await ctx.db
+          .query("meter_readings")
+          .withIndex("by_userId_source", (q) =>
+            q.eq("userId", effectiveUserId).eq("source", "purchase")
+          )
+          .collect()
+      ).filter((r) => r.meterId === undefined);
+      return legacyUnmigrated.length > 0;
     }
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
     const readings = await ctx.db
       .query("meter_readings")
       .withIndex("by_userId_source", (q) =>
@@ -227,11 +260,26 @@ export const getConsumptionStats = query({
     const meter = await resolveMeter(ctx, identity.tokenIdentifier, args.meterId);
     if (meter) {
       const lowBalanceThreshold = meter.lowBalanceThreshold ?? DEFAULT_LOW_BALANCE_THRESHOLD;
-      const readings = await ctx.db
+      const effectiveUserIdForMeter = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
+
+      const meterScoped = await ctx.db
         .query("meter_readings")
         .withIndex("by_meterId_date", (q) => q.eq("meterId", meter._id))
         .order("desc")
         .take(DEFAULT_READINGS_TAKE);
+
+      const legacyUnmigrated = (
+        await ctx.db
+          .query("meter_readings")
+          .withIndex("by_userId_date", (q) => q.eq("userId", effectiveUserIdForMeter))
+          .order("desc")
+          .take(DEFAULT_READINGS_TAKE)
+      ).filter((r) => r.meterId === undefined);
+
+      const readings = [...meterScoped, ...legacyUnmigrated]
+        .sort((a, b) => b.date.localeCompare(a.date) || b._creationTime - a._creationTime)
+        .slice(0, DEFAULT_READINGS_TAKE);
+
       return calculateConsumptionStats(filterStatsReadings(readings), lowBalanceThreshold);
     }
 

@@ -779,5 +779,131 @@ describe("readings", () => {
         asStranger.query(api.readings.getConsumptionStats, { meterId: meterA })
       ).rejects.toThrow("Unauthorized");
     });
+
+    it("getReadings merges unmigrated legacy readings (meterId undefined) with meter-scoped ones", async () => {
+      const t = convexTest(schema, modules);
+      const { userId, meterA } = await seedHouseholdWithTwoMeters(t);
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      // Legacy row for the same user, never migrated to carry a meterId.
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-05",
+          readingPre: 900,
+          readingPost: 950,
+          source: "purchase",
+        });
+      });
+
+      const result = await asUser.query(api.readings.getReadings, { meterId: meterA });
+
+      expect(result).toHaveLength(2);
+      expect(result[0]?.date).toBe("2024-01-10");
+      expect(result[0]?.meterId).toBe(meterA);
+      expect(result[1]?.date).toBe("2024-01-05");
+      expect(result[1]?.meterId).toBeUndefined();
+    });
+
+    it("hasAnyReadings returns true when only legacy (unmigrated) readings exist", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "meter-reader-legacy-1";
+
+      const meterA = await t.mutation(async (ctx) => {
+        const householdId = await ctx.db.insert("households", {
+          adminUserId: userId,
+          name: "Home",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId,
+          role: "admin",
+          joinedAt: Date.now(),
+        });
+        const meterA = await ctx.db.insert("meters", {
+          householdId,
+          name: "A",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("profiles", { userId, email: null, activeMeterId: meterA });
+        // Legacy reading: no meterId, but belongs to this user.
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-05",
+          readingPre: 900,
+          readingPost: 950,
+          source: "purchase",
+        });
+        return meterA;
+      });
+
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+      const result = await asUser.query(api.readings.hasAnyReadings, { meterId: meterA });
+
+      expect(result).toBe(true);
+    });
+
+    it("hasPurchaseReadings returns true when only legacy (unmigrated) purchase readings exist", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "meter-reader-legacy-2";
+
+      const meterA = await t.mutation(async (ctx) => {
+        const householdId = await ctx.db.insert("households", {
+          adminUserId: userId,
+          name: "Home",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId,
+          role: "admin",
+          joinedAt: Date.now(),
+        });
+        const meterA = await ctx.db.insert("meters", {
+          householdId,
+          name: "A",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("profiles", { userId, email: null, activeMeterId: meterA });
+        // Legacy purchase reading: no meterId, but belongs to this user.
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-05",
+          readingPre: 900,
+          readingPost: 950,
+          source: "purchase",
+        });
+        return meterA;
+      });
+
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+      const result = await asUser.query(api.readings.hasPurchaseReadings, { meterId: meterA });
+
+      expect(result).toBe(true);
+    });
+
+    it("getConsumptionStats computes stats from a mix of meter-scoped and legacy-unmigrated readings", async () => {
+      const t = convexTest(schema, modules);
+      const { userId, meterA } = await seedHouseholdWithTwoMeters(t);
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      // Legacy reading, dated after the meter-scoped seed reading, so it
+      // becomes the most recent anchor for the balance calculation.
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-20",
+          readingPre: 1050,
+          readingPost: 1100,
+          source: "purchase",
+        });
+      });
+
+      const stats = await asUser.query(api.readings.getConsumptionStats, { meterId: meterA });
+
+      expect(stats).not.toBeNull();
+      expect(stats?.lastReading).toBe(1100);
+    });
   });
 });

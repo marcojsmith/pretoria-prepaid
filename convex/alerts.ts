@@ -19,7 +19,7 @@ async function sendLowBalanceNotificationToRecipient(options: {
   ctx: ActionCtx;
   profile: ProfileDoc;
   body: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const { ctx, profile, body } = options;
   console.warn("Threshold met for meter. Attempting to send push notification...", {
     userId: profile.userId,
@@ -36,6 +36,7 @@ async function sendLowBalanceNotificationToRecipient(options: {
   try {
     await webpush.sendNotification(profile.pushSubscription as webpush.PushSubscription, payload);
     console.warn("Successfully sent alert to user", { userId: profile.userId });
+    return true;
   } catch (error) {
     const httpError = error as { statusCode?: number };
     if (
@@ -48,10 +49,12 @@ async function sendLowBalanceNotificationToRecipient(options: {
       await ctx.runMutation(internal.alerts_queries.removeExpiredSubscription, {
         userId: profile.userId,
       });
+      return false;
     } else if (httpError.statusCode === HTTP_STATUS_FORBIDDEN) {
       console.error("Permission denied (403) for user. VAPID keys might not match.", {
         userId: profile.userId,
       });
+      return false;
     } else {
       console.error("Error sending push to user", { userId: profile.userId, error });
       throw error;
@@ -148,17 +151,27 @@ async function sendMeterAlerts(options: {
       ? `${meter.name}'s estimated balance is ${Math.round(estimatedBalance)} kWh. Time to refill!`
       : `Your estimated balance is ${Math.round(estimatedBalance)} kWh. Time to refill!`;
 
+  let deliveredCount = 0;
   for (const profile of recipients) {
     try {
-      await sendLowBalanceNotificationToRecipient({ ctx, profile, body });
+      const delivered = await sendLowBalanceNotificationToRecipient({ ctx, profile, body });
+      if (delivered) {
+        deliveredCount++;
+      }
     } catch (error) {
       console.error("Failed to send alert to recipient", { userId: profile.userId, error });
     }
   }
 
-  await ctx.runMutation(internal.alerts_queries.updateMeterAlertTimestamp, {
-    meterId: meter._id,
-  });
+  if (deliveredCount > 0) {
+    await ctx.runMutation(internal.alerts_queries.updateMeterAlertTimestamp, {
+      meterId: meter._id,
+    });
+  } else {
+    console.warn("No recipients were successfully notified for meter. Skipping cooldown update.", {
+      meterId: meter._id,
+    });
+  }
 }
 
 /**

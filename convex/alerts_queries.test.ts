@@ -34,6 +34,32 @@ describe("alerts_queries", () => {
   });
 
   describe("getMetersForAlerts", () => {
+    it("returns meters beyond the old 500-row take cap, proving the scan loops across pages", async () => {
+      const t = convexTest(schema, modules);
+      const householdId = await t.run(async (ctx) => {
+        return await ctx.db.insert("households", {
+          adminUserId: "admin-1",
+          name: "Big House",
+          createdAt: Date.now(),
+        });
+      });
+
+      const METER_COUNT = 505; // exceeds the old flat MAX_METERS_FOR_ALERTS=500 take() and the 500-row SCAN_BATCH page size
+      await t.run(async (ctx) => {
+        for (let i = 0; i < METER_COUNT; i++) {
+          await ctx.db.insert("meters", {
+            householdId,
+            name: `Meter ${i}`,
+            createdAt: Date.now(),
+          });
+        }
+      });
+
+      const meters = await t.query(internal.alerts_queries.getMetersForAlerts, {});
+
+      expect(meters).toHaveLength(METER_COUNT);
+    });
+
     it("returns only non-archived meters", async () => {
       const t = convexTest(schema, modules);
       const householdId = await t.run(async (ctx) => {
@@ -112,6 +138,52 @@ describe("alerts_queries", () => {
 
       expect(recipients).toHaveLength(1);
       expect(recipients[0]?.userId).toBe("admin-1");
+    });
+
+    it("finds a subscribed member beyond the old 200-row take cap, proving the scan loops across pages", async () => {
+      const t = convexTest(schema, modules);
+      const householdId = await t.run(async (ctx) => {
+        return await ctx.db.insert("households", {
+          adminUserId: "admin-1",
+          name: "Big House",
+          createdAt: Date.now(),
+        });
+      });
+
+      const FILLER_MEMBER_COUNT = 205; // exceeds the old flat MAX_MEMBERS_PER_HOUSEHOLD_FOR_ALERTS=200 take()
+      await t.run(async (ctx) => {
+        for (let i = 0; i < FILLER_MEMBER_COUNT; i++) {
+          await ctx.db.insert("household_members", {
+            householdId,
+            userId: `filler-${i}`,
+            role: "member",
+            joinedAt: Date.now(),
+          });
+        }
+        // Inserted last, so it would previously fall outside a flat take() bound.
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId: "late-member",
+          role: "member",
+          joinedAt: Date.now(),
+        });
+        await ctx.db.insert("profiles", {
+          userId: "late-member",
+          email: "late@test.com",
+          pushNotificationsEnabled: true,
+          pushSubscription: {
+            endpoint: "https://example.com/push",
+            expirationTime: null,
+            keys: { p256dh: "a", auth: "b" },
+          },
+        });
+      });
+
+      const recipients = await t.query(internal.alerts_queries.getMeterAlertRecipients, {
+        householdId,
+      });
+
+      expect(recipients.map((r) => r.userId)).toContain("late-member");
     });
   });
 

@@ -9,6 +9,7 @@ import { usePurchaseStats, type MonthlyStat } from "./usePurchaseStats";
 import { usePurchaseAnalytics } from "./usePurchaseAnalytics";
 import { useBatchImport } from "./useBatchImport";
 import { useMeters } from "./useMeters";
+import { useAuth } from "./useAuth";
 import type { RefillInterval } from "@/lib/electricity";
 import type { QueuedPurchase } from "@/types/purchases";
 
@@ -17,20 +18,31 @@ const QUEUE_CACHE_KEY = "offline_purchases_queue";
 
 /**
  * Builds the localStorage key for the confirmed-purchases cache, scoped to
- * the given active meter id. Falls back to the bare (un-suffixed) key while
- * `activeMeterId` is still loading, so there's no behaviour change for a
- * user whose profile hasn't resolved yet.
+ * the given active meter id. While `activeMeterId` is still loading, falls
+ * back to a key scoped by `userId` (so two different accounts on the same
+ * device/browser don't cross-read each other's cached data during the brief
+ * loading window), and only falls all the way back to the bare
+ * (un-suffixed) key if both are unresolved. This is a deliberate,
+ * documented tradeoff for a single-tenant personal tracker, not a full
+ * migration of legacy bare keys — see usePurchase.tsx findings.
  */
-function getPurchasesCacheKey(activeMeterId: string | undefined): string {
-  return activeMeterId ? `${PURCHASES_CACHE_KEY}:${activeMeterId}` : PURCHASES_CACHE_KEY;
+function getPurchasesCacheKey(
+  activeMeterId: string | undefined,
+  userId: string | undefined
+): string {
+  if (activeMeterId) return `${PURCHASES_CACHE_KEY}:${activeMeterId}`;
+  if (userId) return `${PURCHASES_CACHE_KEY}:${userId}`;
+  return PURCHASES_CACHE_KEY;
 }
 
 /**
  * Builds the localStorage key for the offline purchase queue, scoped to the
  * given active meter id. See {@link getPurchasesCacheKey}.
  */
-function getQueueCacheKey(activeMeterId: string | undefined): string {
-  return activeMeterId ? `${QUEUE_CACHE_KEY}:${activeMeterId}` : QUEUE_CACHE_KEY;
+function getQueueCacheKey(activeMeterId: string | undefined, userId: string | undefined): string {
+  if (activeMeterId) return `${QUEUE_CACHE_KEY}:${activeMeterId}`;
+  if (userId) return `${QUEUE_CACHE_KEY}:${userId}`;
+  return QUEUE_CACHE_KEY;
 }
 
 export interface UsePurchasesReturn {
@@ -123,9 +135,9 @@ function readCachedQueue(cacheKey: string): QueuedPurchase[] {
  * meters swaps in that meter's cached data instead of showing a flash of the
  * previously active meter's purchases.
  */
-function usePurchaseCache(activeMeterId: string | undefined) {
-  const purchasesCacheKey = getPurchasesCacheKey(activeMeterId);
-  const queueCacheKey = getQueueCacheKey(activeMeterId);
+function usePurchaseCache(activeMeterId: string | undefined, userId: string | undefined) {
+  const purchasesCacheKey = getPurchasesCacheKey(activeMeterId, userId);
+  const queueCacheKey = getQueueCacheKey(activeMeterId, userId);
 
   const [confirmedPurchases, setConfirmedPurchases] = useState<Purchase[]>(() =>
     readCachedPurchases(purchasesCacheKey)
@@ -216,23 +228,40 @@ async function replayQueuedItem(
 
 /**
  * Hook to handle offline sync logic.
+ *
+ * `queueCacheKey` identifies which meter's queue this sync run is for. It's
+ * captured at the start of `syncQueue` and compared, via a ref that's kept
+ * fresh on every render (same pattern as `isSyncing`), against the CURRENT
+ * key on each loop iteration. If the active meter changes mid-replay (the
+ * user switches meters while a mutation is in flight), the stale closure
+ * detects the mismatch and stops touching React state/localStorage for the
+ * meter it started with — the un-replayed items are left untouched in that
+ * meter's persisted queue and will be picked up on its next sync.
  */
 function useOfflineSync({
   offlineQueue,
   saveOfflineQueue,
   addPurchaseMutation,
   deletePurchaseMutation,
+  queueCacheKey,
 }: {
   offlineQueue: QueuedPurchase[];
   saveOfflineQueue: (queue: QueuedPurchase[]) => void;
   addPurchaseMutation: AddPurchaseMutationFn;
   deletePurchaseMutation: DeletePurchaseMutationFn;
+  queueCacheKey: string;
 }) {
   const isSyncing = useRef(false);
+  const currentQueueCacheKeyRef = useRef(queueCacheKey);
+
+  useEffect(() => {
+    currentQueueCacheKeyRef.current = queueCacheKey;
+  }, [queueCacheKey]);
 
   const syncQueue = useCallback(async () => {
     if (offlineQueue.length === 0 || isSyncing.current || !navigator.onLine) return;
 
+    const startedForKey = queueCacheKey;
     isSyncing.current = true;
     const currentQueue = [...offlineQueue];
 
@@ -241,24 +270,35 @@ function useOfflineSync({
     });
 
     const remainingItems = [...currentQueue];
+    let abortedDueToMeterSwitch = false;
     for (const item of currentQueue) {
       if (!navigator.onLine) break;
+      if (currentQueueCacheKeyRef.current !== startedForKey) {
+        abortedDueToMeterSwitch = true;
+        break;
+      }
 
       try {
         await replayQueuedItem(item, { addPurchaseMutation, deletePurchaseMutation });
-        remainingItems.shift();
-        saveOfflineQueue([...remainingItems]);
       } catch (error) {
         console.error("Failed to sync action", error);
         break;
       }
+
+      if (currentQueueCacheKeyRef.current !== startedForKey) {
+        abortedDueToMeterSwitch = true;
+        break;
+      }
+
+      remainingItems.shift();
+      saveOfflineQueue([...remainingItems]);
     }
 
-    if (remainingItems.length === 0) {
+    if (!abortedDueToMeterSwitch && remainingItems.length === 0) {
       toast.success("All offline actions synced successfully!");
     }
     isSyncing.current = false;
-  }, [offlineQueue, addPurchaseMutation, deletePurchaseMutation, saveOfflineQueue]);
+  }, [offlineQueue, addPurchaseMutation, deletePurchaseMutation, saveOfflineQueue, queueCacheKey]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -356,11 +396,20 @@ export function usePurchases(): UsePurchasesReturn {
   const deletePurchaseMutation = useMutation(api.purchases.deletePurchase);
   const { activeMeter } = useMeters();
   const activeMeterId = activeMeter?.meterId;
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const { confirmedPurchases, offlineQueue, saveConfirmedPurchases, saveOfflineQueue } =
-    usePurchaseCache(activeMeterId);
+    usePurchaseCache(activeMeterId, userId);
+  const queueCacheKey = getQueueCacheKey(activeMeterId, userId);
 
-  useOfflineSync({ offlineQueue, saveOfflineQueue, addPurchaseMutation, deletePurchaseMutation });
+  useOfflineSync({
+    offlineQueue,
+    saveOfflineQueue,
+    addPurchaseMutation,
+    deletePurchaseMutation,
+    queueCacheKey,
+  });
 
   // Update confirmed purchases when network data arrives
   useEffect(() => {

@@ -97,6 +97,10 @@ async function seedMeterWithReading(
   });
 }
 
+function makeGoneError(): Error & { statusCode: number } {
+  return Object.assign(new Error("Gone"), { statusCode: 410 });
+}
+
 describe("alerts.checkLowBalances", () => {
   beforeEach(() => {
     mockSendNotification.mockClear();
@@ -199,5 +203,78 @@ describe("alerts.checkLowBalances", () => {
     await t.action(api.alerts.checkLowBalances, {});
 
     expect(mockSendNotification).not.toHaveBeenCalled();
+  });
+
+  it("updates the meter's lastAlertSent when the notification is delivered successfully", async () => {
+    const t = convexTest(schema, modules);
+    mockSendNotification.mockResolvedValueOnce(undefined);
+    await seedProfile(t, { userId: "admin-1", email: "admin1@test.com" });
+
+    const householdId = await seedHousehold(t, {
+      adminUserId: "admin-1",
+      memberUserIds: [],
+      name: "Delivered House",
+    });
+    const meterId = await seedMeterWithReading(t, {
+      householdId,
+      name: "Delivered Meter",
+      lowBalanceThreshold: 10,
+      readingPost: 5,
+    });
+
+    await t.action(api.alerts.checkLowBalances, {});
+
+    expect(mockSendNotification).toHaveBeenCalledTimes(1);
+    const meter = await t.run(async (ctx) => await ctx.db.get(meterId));
+    expect(meter?.lastAlertSent).toBeTypeOf("number");
+  });
+
+  it("does NOT update the meter's lastAlertSent when every recipient's send fails (expired subscription, 410)", async () => {
+    const t = convexTest(schema, modules);
+    mockSendNotification.mockRejectedValueOnce(makeGoneError());
+    await seedProfile(t, { userId: "admin-1", email: "admin1@test.com" });
+
+    const householdId = await seedHousehold(t, {
+      adminUserId: "admin-1",
+      memberUserIds: [],
+      name: "AllFailed House",
+    });
+    const meterId = await seedMeterWithReading(t, {
+      householdId,
+      name: "AllFailed Meter",
+      lowBalanceThreshold: 10,
+      readingPost: 5,
+    });
+
+    await t.action(api.alerts.checkLowBalances, {});
+
+    expect(mockSendNotification).toHaveBeenCalledTimes(1);
+    const meter = await t.run(async (ctx) => await ctx.db.get(meterId));
+    expect(meter?.lastAlertSent).toBeUndefined();
+  });
+
+  it("updates the meter's lastAlertSent when at least one of multiple recipients is delivered (mixed success/failure)", async () => {
+    const t = convexTest(schema, modules);
+    mockSendNotification.mockRejectedValueOnce(makeGoneError()).mockResolvedValueOnce(undefined);
+    await seedProfile(t, { userId: "admin-1", email: "admin1@test.com" });
+    await seedProfile(t, { userId: "member-1", email: "member1@test.com" });
+
+    const householdId = await seedHousehold(t, {
+      adminUserId: "admin-1",
+      memberUserIds: ["member-1"],
+      name: "Mixed House",
+    });
+    const meterId = await seedMeterWithReading(t, {
+      householdId,
+      name: "Mixed Meter",
+      lowBalanceThreshold: 10,
+      readingPost: 5,
+    });
+
+    await t.action(api.alerts.checkLowBalances, {});
+
+    expect(mockSendNotification).toHaveBeenCalledTimes(2);
+    const meter = await t.run(async (ctx) => await ctx.db.get(meterId));
+    expect(meter?.lastAlertSent).toBeTypeOf("number");
   });
 });

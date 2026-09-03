@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "./schema";
 import { internal } from "./_generated/api";
+import { SCAN_BATCH } from "./migrations";
 
 const modules = import.meta.glob(["./**/*.ts", "!./**/*.test.ts"]);
 
@@ -137,5 +138,104 @@ describe("migrations", () => {
     expect(count.purchases).toBe(0);
     expect(count.readings).toBe(0);
     expect(count.partial).toBe(false);
+  });
+
+  it("deterministically picks the oldest household when a userId is adminUserId of multiple households, without throwing", async () => {
+    const t = convexTest(schema, modules);
+
+    const dupAdminId = "dup-admin-1";
+
+    const oldestMeterId = await t.run(async (ctx) => {
+      // Two households both admin'd by the same user — `.unique()` would
+      // throw on this; the fix must instead deterministically pick the
+      // oldest (first-inserted) one.
+      const oldestHouseholdId = await ctx.db.insert("households", {
+        adminUserId: dupAdminId,
+        name: "Oldest Household",
+        createdAt: Date.now(),
+      });
+      const meterId = await ctx.db.insert("meters", {
+        householdId: oldestHouseholdId,
+        name: "Oldest Meter",
+        createdAt: Date.now(),
+      });
+
+      const newestHouseholdId = await ctx.db.insert("households", {
+        adminUserId: dupAdminId,
+        name: "Newest Household",
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("meters", {
+        householdId: newestHouseholdId,
+        name: "Newest Meter",
+        createdAt: Date.now(),
+      });
+
+      await ctx.db.insert("purchases", {
+        userId: dupAdminId,
+        date: "2024-03-01",
+        units: 5,
+        cost: 50,
+        amountPaid: 50,
+        tierBreakdown: [],
+      });
+
+      return meterId;
+    });
+
+    // Should not throw despite the duplicate-admin household data state.
+    await t.mutation(internal.migrations.backfillPurchaseMeterIds, { cursor: null });
+
+    const purchases = await t.run(async (ctx) =>
+      ctx.db
+        .query("purchases")
+        .withIndex("by_userId", (q) => q.eq("userId", dupAdminId))
+        .collect()
+    );
+    expect(purchases).toHaveLength(1);
+    expect(purchases[0]?.meterId).toBe(oldestMeterId);
+  });
+
+  it("counts unmigrated purchases across multiple .paginate() pages without erroring", async () => {
+    const t = convexTest(schema, modules);
+
+    const bulkUserId = "bulk-user-1";
+    const totalUnmigrated = SCAN_BATCH + 50; // forces >1 page
+
+    await t.run(async (ctx) => {
+      for (let i = 0; i < totalUnmigrated; i++) {
+        await ctx.db.insert("purchases", {
+          userId: bulkUserId,
+          date: "2024-04-01",
+          units: 1,
+          cost: 1,
+          amountPaid: 1,
+          tierBreakdown: [],
+        });
+      }
+    });
+
+    // Direct page-level check: first page is a full batch and not done,
+    // second page finishes off the remainder.
+    const firstPage = await t.query(internal.migrations.countUnmigratedPurchasesPage, {
+      cursor: null,
+    });
+    expect(firstPage.count).toBe(SCAN_BATCH);
+    expect(firstPage.isDone).toBe(false);
+
+    const secondPage = await t.query(internal.migrations.countUnmigratedPurchasesPage, {
+      cursor: firstPage.continueCursor,
+    });
+    expect(secondPage.count).toBe(50);
+    expect(secondPage.isDone).toBe(true);
+
+    // The composed multi-invocation loop reports the same total.
+    const result = await t.query(internal.migrations.countUnmigratedPurchases, {});
+    expect(result.count).toBe(totalUnmigrated);
+    expect(result.partial).toBe(false);
+
+    const overall = await t.query(internal.migrations.countUnmigrated, {});
+    expect(overall.purchases).toBe(totalUnmigrated);
+    expect(overall.partial).toBe(false);
   });
 });

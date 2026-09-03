@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Pencil, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,6 +152,18 @@ function EditMeterDialog({ meter, fullMeter, onUpdate }: EditMeterDialogProps): 
   );
   const [saving, setSaving] = useState(false);
 
+  // `useState` initializers above only run on first mount, but `fullMeter`
+  // comes from an async Convex query that may still be loading at that
+  // point. Re-sync the form fields whenever the dialog opens so they don't
+  // stay permanently blank if the meter list finished loading afterwards.
+  useEffect(() => {
+    if (!open) return;
+    setName(meter.name);
+    setMeterNumber(meter.meterNumber ?? "");
+    setLowBalanceThreshold(fullMeter?.lowBalanceThreshold?.toString() ?? "");
+    setDefaultDailyUsage(fullMeter?.defaultDailyUsage?.toString() ?? "");
+  }, [open, meter, fullMeter]);
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -255,7 +267,11 @@ function AddMeterForm({ householdId, onAdd }: AddMeterFormProps): JSX.Element {
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
+      <Label htmlFor="new-meter-number" className="text-sm font-medium">
+        Meter Number
+      </Label>
       <Input
+        id="new-meter-number"
         placeholder="Meter number (optional)"
         value={meterNumber}
         onChange={(e) => setMeterNumber(e.target.value)}

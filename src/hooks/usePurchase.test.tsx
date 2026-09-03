@@ -3,6 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { usePurchases } from "./usePurchase";
 import * as convexReact from "convex/react";
 import { useMeters } from "./useMeters";
+import { useAuth } from "./useAuth";
 
 interface QueueItem {
   type: string;
@@ -42,6 +43,10 @@ vi.mock("./useMeters", () => ({
   useMeters: vi.fn(),
 }));
 
+vi.mock("./useAuth", () => ({
+  useAuth: vi.fn(),
+}));
+
 const NO_ACTIVE_METER = {
   meters: [],
   activeMeter: undefined,
@@ -72,6 +77,14 @@ describe("usePurchases Hook - Offline Actions", () => {
     // Default online state
     vi.mocked(convexReact.useQuery).mockReturnValue([]);
     vi.mocked(useMeters).mockReturnValue(NO_ACTIVE_METER);
+    // No user by default, so the pre-existing bare-key fallback tests keep
+    // seeing un-suffixed cache keys. Tests that care about the userId-scoped
+    // fallback set this explicitly.
+    vi.mocked(useAuth).mockReturnValue({
+      user: undefined,
+      loading: false,
+      signOut: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
     Object.defineProperty(window.navigator, "onLine", { value: true, configurable: true });
   });
 
@@ -447,5 +460,90 @@ describe("usePurchases Hook - Meter safety", () => {
     const queue = parseQueue(localStorage.getItem("offline_purchases_queue:meter-a"));
     expect(queue).toHaveLength(1);
     expect(queue[0]!.meterId).toBe("meter-a");
+  });
+
+  it("scopes the cache-key fallback by userId while the active meter is still loading", async () => {
+    vi.mocked(useMeters).mockReturnValue(NO_ACTIVE_METER);
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: "user-1" },
+      loading: false,
+      signOut: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+    Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
+
+    const { result } = renderHook(() => usePurchases());
+
+    await act(async () => {
+      await result.current.addPurchase({
+        units: 15,
+        amountPaid: 45,
+        date: "2024-02-25T10:00:00.000Z",
+        meterReading: 60,
+      });
+    });
+
+    // Scoped by the current user while no meter is resolved yet...
+    expect(localStorage.getItem("offline_purchases_queue:user-1")).not.toBeNull();
+    // ...and the fully-bare legacy key is never touched once a user is known.
+    expect(localStorage.getItem("offline_purchases_queue")).toBeNull();
+  });
+
+  it("does not let a stale sync overwrite the new meter's offline queue after a meter switch mid-flight", async () => {
+    mockActiveMeter("meter-a");
+    Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
+
+    const { result, rerender } = renderHook(() => usePurchases());
+
+    await act(async () => {
+      await result.current.addPurchase({
+        units: 20,
+        amountPaid: 60,
+        date: "2024-02-25T10:00:00.000Z",
+        meterReading: 100,
+      });
+    });
+
+    expect(result.current.offlineCount).toBe(1);
+
+    // Make the add mutation hang so we can switch the active meter while the
+    // sync loop is awaiting it.
+    let resolveMutation: (value: unknown) => void = () => {};
+    mockAddPurchase.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveMutation = resolve;
+        })
+    );
+
+    Object.defineProperty(window.navigator, "onLine", { value: true, configurable: true });
+    rerender();
+
+    // Kick off the sync — it will hang inside the (still-pending) mutation.
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+
+    // Switch to a different meter with no queued items of its own, mid-flight.
+    mockActiveMeter("meter-b");
+    rerender();
+
+    expect(result.current.offlineCount).toBe(0);
+
+    // Now let the stale meter-a sync's mutation resolve.
+    await act(async () => {
+      resolveMutation({ success: true });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // meter-b's queue must still be empty — not clobbered by meter-a's stale
+    // remaining-items array via the shared React state setter.
+    expect(result.current.offlineCount).toBe(0);
+    expect(parseQueue(localStorage.getItem("offline_purchases_queue:meter-b"))).toHaveLength(0);
+    // meter-a's persisted queue is left untouched (the item was replayed but
+    // the stale closure aborted before removing it) — it'll be retried next
+    // time meter-a syncs.
+    expect(parseQueue(localStorage.getItem("offline_purchases_queue:meter-a"))).toHaveLength(1);
   });
 });

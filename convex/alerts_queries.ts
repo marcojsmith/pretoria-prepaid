@@ -7,27 +7,47 @@ import { resolveMeter } from "./lib/meters";
 import type { Doc } from "./_generated/dataModel";
 
 /**
- * Bound on the number of non-archived meters checked per cron tick. A
- * reasonable household count is small; this exists to satisfy the
- * "no unbounded .collect()" rule rather than to reflect an expected ceiling.
+ * Bound on the number of non-archived meters / household members scanned per
+ * cron tick, expressed as a bounded pagination loop (not a flat `.take()`).
+ * A flat `.take(n)` would deterministically return only the OLDEST `n` rows
+ * (Convex's default order is ascending `_creationTime`), permanently
+ * excluding anything created after the table grew past `n`. Paginating in a
+ * loop up to `SCAN_LIMIT` avoids that: growth past the household norm is
+ * still bounded (and logged), but every row gets a chance to be seen across
+ * cron ticks rather than being silently and permanently dropped.
  */
-const MAX_METERS_FOR_ALERTS = 500;
-const MAX_MEMBERS_PER_HOUSEHOLD_FOR_ALERTS = 200;
+const SCAN_LIMIT = 5000;
+const SCAN_BATCH = 500;
 
 /**
- * Internal query to fetch all non-archived meters, bounded to
- * `MAX_METERS_FOR_ALERTS`. Logs if the cap is hit so growth past it is
- * visible rather than silently dropping meters from alert checks.
+ * Internal query to fetch all non-archived meters, scanning up to
+ * `SCAN_LIMIT` rows via bounded pagination. Logs if the scan limit is hit so
+ * growth past it is visible rather than silently dropping meters from alert
+ * checks.
  */
 export const getMetersForAlerts = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const meters = await ctx.db.query("meters").take(MAX_METERS_FOR_ALERTS);
-    const nonArchived = meters.filter((m) => !m.archived);
-    if (meters.length >= MAX_METERS_FOR_ALERTS) {
-      console.error("getMetersForAlerts hit MAX_METERS_FOR_ALERTS cap", {
-        cap: MAX_METERS_FOR_ALERTS,
-      });
+    const nonArchived: Doc<"meters">[] = [];
+    let cursor: string | null = null;
+    let scanned = 0;
+    let isDone = false;
+
+    while (scanned < SCAN_LIMIT) {
+      const page = await ctx.db.query("meters").paginate({ cursor, numItems: SCAN_BATCH });
+      for (const meter of page.page) {
+        if (!meter.archived) {
+          nonArchived.push(meter);
+        }
+      }
+      scanned += page.page.length;
+      isDone = page.isDone;
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
+
+    if (!isDone && scanned >= SCAN_LIMIT) {
+      console.error("getMetersForAlerts hit SCAN_LIMIT", { scanLimit: SCAN_LIMIT });
     }
     return nonArchived;
   },
@@ -35,25 +55,44 @@ export const getMetersForAlerts = internalQuery({
 
 /**
  * Internal query returning the profiles of household members subscribed to
- * push notifications for the given meter's household.
+ * push notifications for the given meter's household. Scans up to
+ * `SCAN_LIMIT` household members via bounded pagination.
  */
 export const getMeterAlertRecipients = internalQuery({
   args: { householdId: v.id("households") },
   handler: async (ctx, args) => {
-    const members = await ctx.db
-      .query("household_members")
-      .withIndex("by_householdId", (q) => q.eq("householdId", args.householdId))
-      .take(MAX_MEMBERS_PER_HOUSEHOLD_FOR_ALERTS);
-
     const recipients: Doc<"profiles">[] = [];
-    for (const member of members) {
-      const profile = await ctx.db
-        .query("profiles")
-        .withIndex("by_userId", (q) => q.eq("userId", member.userId))
-        .unique();
-      if (profile?.pushNotificationsEnabled && profile.pushSubscription) {
-        recipients.push(profile);
+    let cursor: string | null = null;
+    let scanned = 0;
+    let isDone = false;
+
+    while (scanned < SCAN_LIMIT) {
+      const page = await ctx.db
+        .query("household_members")
+        .withIndex("by_householdId", (q) => q.eq("householdId", args.householdId))
+        .paginate({ cursor, numItems: SCAN_BATCH });
+
+      for (const member of page.page) {
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", member.userId))
+          .unique();
+        if (profile?.pushNotificationsEnabled && profile.pushSubscription) {
+          recipients.push(profile);
+        }
       }
+
+      scanned += page.page.length;
+      isDone = page.isDone;
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
+
+    if (!isDone && scanned >= SCAN_LIMIT) {
+      console.error("getMeterAlertRecipients hit SCAN_LIMIT", {
+        householdId: args.householdId,
+        scanLimit: SCAN_LIMIT,
+      });
     }
     return recipients;
   },

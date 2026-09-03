@@ -23,7 +23,11 @@ import type { Id } from "./_generated/dataModel";
 const BATCH_SIZE = 100;
 const TAKE_HOUSEHOLD_METERS = 10;
 const SCAN_LIMIT = 5000;
-const SCAN_BATCH = 500;
+// Exported (value unchanged) so tests can seed exactly `SCAN_BATCH + n` rows
+// to deterministically exercise the multi-page `.paginate()` composition in
+// `countUnmigratedInPurchases`/`countUnmigratedInReadings` without needing to
+// guess the batch size.
+export const SCAN_BATCH = 500;
 
 const cursorArg = v.optional(v.union(v.string(), v.null()));
 const chainNextArg = v.optional(v.boolean());
@@ -32,10 +36,24 @@ async function resolveMeterIdForUserId(
   ctx: MutationCtx,
   userId: string
 ): Promise<Id<"meters"> | null> {
-  const household = await ctx.db
+  // `.unique()` throws if a userId is ever adminUserId of more than one
+  // household, which would abort the whole batch mid-migration. That
+  // shouldn't happen in normal app flow, but as a defensive guard we instead
+  // take up to 2 and deterministically pick the oldest (first-created) one —
+  // the household the user has had the longest relationship with and is most
+  // likely still actively using — rather than letting one bad row halt the
+  // migration.
+  const households = await ctx.db
     .query("households")
     .withIndex("by_adminUserId", (q) => q.eq("adminUserId", userId))
-    .unique();
+    .take(2);
+  const household = households[0];
+  if (households.length > 1) {
+    console.error(
+      "resolveMeterIdForUserId: userId is adminUserId of multiple households, using the oldest",
+      { userId, count: households.length }
+    );
+  }
   if (!household) return null;
 
   const meters = await ctx.db
@@ -225,6 +243,59 @@ export const runAll = internalMutation({
   },
 });
 
+const pageResultValidator = v.object({
+  count: v.number(),
+  scanned: v.number(),
+  isDone: v.boolean(),
+  continueCursor: v.string(),
+});
+
+// Convex only allows a single `.paginate()` call per function invocation, so
+// each page scan is its own internal query. `countUnmigratedInPurchases` /
+// `countUnmigratedInReadings` compose repeated calls to these via
+// `ctx.runQuery` rather than looping `.paginate()` in-process, since each
+// `ctx.runQuery` call is a separate function invocation and therefore its
+// own single `.paginate()` call.
+export const countUnmigratedPurchasesPage = internalQuery({
+  args: { cursor: cursorArg },
+  returns: pageResultValidator,
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("purchases")
+      .paginate({ cursor: args.cursor ?? null, numItems: SCAN_BATCH });
+    let count = 0;
+    for (const p of page.page) {
+      if (!p.meterId) count++;
+    }
+    return {
+      count,
+      scanned: page.page.length,
+      isDone: page.isDone,
+      continueCursor: page.continueCursor,
+    };
+  },
+});
+
+export const countUnmigratedReadingsPage = internalQuery({
+  args: { cursor: cursorArg },
+  returns: pageResultValidator,
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("meter_readings")
+      .paginate({ cursor: args.cursor ?? null, numItems: SCAN_BATCH });
+    let count = 0;
+    for (const r of page.page) {
+      if (!r.meterId) count++;
+    }
+    return {
+      count,
+      scanned: page.page.length,
+      isDone: page.isDone,
+      continueCursor: page.continueCursor,
+    };
+  },
+});
+
 async function countUnmigratedInPurchases(
   ctx: QueryCtx
 ): Promise<{ count: number; partial: boolean }> {
@@ -234,11 +305,10 @@ async function countUnmigratedInPurchases(
   let isDone = false;
 
   while (scanned < SCAN_LIMIT) {
-    const page = await ctx.db.query("purchases").paginate({ cursor, numItems: SCAN_BATCH });
-    for (const p of page.page) {
-      if (!p.meterId) count++;
-    }
-    scanned += page.page.length;
+    const page: { count: number; scanned: number; isDone: boolean; continueCursor: string } =
+      await ctx.runQuery(internal.migrations.countUnmigratedPurchasesPage, { cursor });
+    count += page.count;
+    scanned += page.scanned;
     isDone = page.isDone;
     if (page.isDone) break;
     cursor = page.continueCursor;
@@ -256,11 +326,10 @@ async function countUnmigratedInReadings(
   let isDone = false;
 
   while (scanned < SCAN_LIMIT) {
-    const page = await ctx.db.query("meter_readings").paginate({ cursor, numItems: SCAN_BATCH });
-    for (const r of page.page) {
-      if (!r.meterId) count++;
-    }
-    scanned += page.page.length;
+    const page: { count: number; scanned: number; isDone: boolean; continueCursor: string } =
+      await ctx.runQuery(internal.migrations.countUnmigratedReadingsPage, { cursor });
+    count += page.count;
+    scanned += page.scanned;
     isDone = page.isDone;
     if (page.isDone) break;
     cursor = page.continueCursor;
@@ -271,9 +340,6 @@ async function countUnmigratedInReadings(
 
 const countResultValidator = v.object({ count: v.number(), partial: v.boolean() });
 
-// Convex only allows a single `.paginate()` call per function invocation, so
-// each table's scan is its own internal query, and `countUnmigrated` composes
-// them via `ctx.runQuery` rather than calling the helpers directly in-process.
 export const countUnmigratedPurchases = internalQuery({
   args: {},
   returns: countResultValidator,

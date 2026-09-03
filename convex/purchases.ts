@@ -108,15 +108,28 @@ export const getPurchases = query({
     if (!identity) return [];
 
     const meter = await resolveMeter(ctx, identity.tokenIdentifier, args.meterId);
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
+
     if (meter) {
-      return await ctx.db
+      const meterScoped = await ctx.db
         .query("purchases")
         .withIndex("by_meterId_date", (q) => q.eq("meterId", meter._id))
         .order("desc")
         .collect();
+
+      const legacyUnmigrated = (
+        await ctx.db
+          .query("purchases")
+          .withIndex("by_userId_date", (q) => q.eq("userId", effectiveUserId))
+          .order("desc")
+          .collect()
+      ).filter((p) => p.meterId === undefined);
+
+      return [...meterScoped, ...legacyUnmigrated].sort(
+        (a, b) => b.date.localeCompare(a.date) || b._creationTime - a._creationTime
+      );
     }
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
     return await ctx.db
       .query("purchases")
       .withIndex("by_userId_date", (q) => q.eq("userId", effectiveUserId))
@@ -147,6 +160,34 @@ interface AddPurchaseArgs {
   meterReading: number;
 }
 
+async function fetchMonthPurchasesForMeterWithLegacy(options: {
+  ctx: MutationCtx;
+  meter: Doc<"meters">;
+  effectiveUserId: string;
+  monthKey: string;
+  date: string;
+}): Promise<Doc<"purchases">[]> {
+  const { ctx, meter, effectiveUserId, monthKey, date } = options;
+
+  const meterScopedMonthPurchases = await ctx.db
+    .query("purchases")
+    .withIndex("by_meterId_date", (q) =>
+      q.eq("meterId", meter._id).gte("date", monthKey).lte("date", date)
+    )
+    .collect();
+
+  const legacyUnmigratedMonthPurchases = (
+    await ctx.db
+      .query("purchases")
+      .withIndex("by_userId_date", (q) =>
+        q.eq("userId", effectiveUserId).gte("date", monthKey).lte("date", date)
+      )
+      .collect()
+  ).filter((p) => p.meterId === undefined);
+
+  return [...meterScopedMonthPurchases, ...legacyUnmigratedMonthPurchases];
+}
+
 async function addPurchaseOnMeter(options: {
   ctx: MutationCtx;
   meter: Doc<"meters">;
@@ -157,12 +198,13 @@ async function addPurchaseOnMeter(options: {
   const monthKey = args.date.substring(0, DATE_MONTH_LENGTH);
   const rates = await ctx.db.query("electricity_rates").collect();
 
-  const monthPurchases = await ctx.db
-    .query("purchases")
-    .withIndex("by_meterId_date", (q) =>
-      q.eq("meterId", meter._id).gte("date", monthKey).lte("date", args.date)
-    )
-    .collect();
+  const monthPurchases = await fetchMonthPurchasesForMeterWithLegacy({
+    ctx,
+    meter,
+    effectiveUserId,
+    monthKey,
+    date: args.date,
+  });
 
   const { breakdown, total } = computeBreakdown({
     rates,
@@ -287,10 +329,15 @@ export const addPurchase = mutation({
 async function deletePurchaseOnMeter(options: {
   ctx: MutationCtx;
   meter: Doc<"meters">;
+  effectiveUserId: string;
   purchase: Doc<"purchases">;
 }) {
-  const { ctx, meter, purchase } = options;
-  if (purchase.meterId !== meter._id) {
+  const { ctx, meter, effectiveUserId, purchase } = options;
+  if (purchase.meterId !== undefined) {
+    if (purchase.meterId !== meter._id) {
+      throw new Error("Unauthorized");
+    }
+  } else if (purchase.userId !== effectiveUserId) {
     throw new Error("Unauthorized");
   }
 
@@ -362,13 +409,13 @@ export const deletePurchase = mutation({
     const purchase = await ctx.db.get(args.id);
     if (!purchase) return;
 
+    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
     const meter = await resolveMeter(ctx, identity.tokenIdentifier, args.meterId);
     if (meter) {
-      await deletePurchaseOnMeter({ ctx, meter, purchase });
+      await deletePurchaseOnMeter({ ctx, meter, effectiveUserId, purchase });
       return;
     }
 
-    const effectiveUserId = await resolveEffectiveUserId(ctx, identity.tokenIdentifier);
     await deletePurchaseLegacy({ ctx, effectiveUserId, purchase });
   },
 });

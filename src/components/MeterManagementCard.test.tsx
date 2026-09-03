@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MeterManagementCard } from "./MeterManagementCard";
 import { useMeters } from "@/hooks/useMeters";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -117,8 +117,9 @@ describe("MeterManagementCard", () => {
     fireEvent.click(screen.getByLabelText("Edit meter Main"));
 
     expect(await screen.findByText("Edit meter")).toBeInTheDocument();
+    const dialog = within(screen.getByRole("dialog"));
     expect(screen.getByLabelText("Name")).toHaveValue("Main");
-    expect(screen.getByLabelText("Meter Number")).toHaveValue("123");
+    expect(dialog.getByLabelText("Meter Number")).toHaveValue("123");
     expect(screen.getByLabelText(/Low Balance Threshold/)).toHaveValue(15);
     expect(screen.getByLabelText(/Default Daily Usage/)).toHaveValue(4);
 
@@ -144,7 +145,7 @@ describe("MeterManagementCard", () => {
 
     fireEvent.click(screen.getByLabelText("Edit meter Cottage"));
     expect(await screen.findByText("Edit meter")).toBeInTheDocument();
-    expect(screen.getByLabelText("Meter Number")).toHaveValue("");
+    expect(within(screen.getByRole("dialog")).getByLabelText("Meter Number")).toHaveValue("");
 
     fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
 
@@ -192,5 +193,52 @@ describe("MeterManagementCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(mockArchiveMeter).not.toHaveBeenCalled();
+  });
+
+  it("populates the edit dialog's threshold/usage fields once meters finish loading after mount", async () => {
+    // myMeters is still undefined (loading) at first mount.
+    vi.mocked(useMeters).mockReturnValue({
+      meters: undefined,
+      activeMeter: undefined,
+      loading: true,
+      setActiveMeter: vi.fn(),
+      addMeter: mockAddMeter,
+      updateMeter: mockUpdateMeter,
+      archiveMeter: mockArchiveMeter,
+    } as unknown as ReturnType<typeof useMeters>);
+
+    const { rerender } = render(
+      <MeterManagementCard householdId={"h1" as Id<"households">} meters={meters} isAdmin={true} />
+    );
+
+    // myMeters resolves on a later re-render.
+    vi.mocked(useMeters).mockReturnValue({
+      meters: fullMeters,
+      activeMeter: fullMeters[0],
+      loading: false,
+      setActiveMeter: vi.fn(),
+      addMeter: mockAddMeter,
+      updateMeter: mockUpdateMeter,
+      archiveMeter: mockArchiveMeter,
+    } as unknown as ReturnType<typeof useMeters>);
+
+    rerender(
+      <MeterManagementCard householdId={"h1" as Id<"households">} meters={meters} isAdmin={true} />
+    );
+
+    fireEvent.click(screen.getByLabelText("Edit meter Main"));
+
+    expect(await screen.findByText("Edit meter")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Low Balance Threshold/)).toHaveValue(15);
+    expect(screen.getByLabelText(/Default Daily Usage/)).toHaveValue(4);
+  });
+
+  it("gives the add-meter meter-number input an accessible label", () => {
+    render(
+      <MeterManagementCard householdId={"h1" as Id<"households">} meters={meters} isAdmin={true} />
+    );
+    expect(screen.getByLabelText("Meter Number")).toBe(
+      screen.getByPlaceholderText(/Meter number/i)
+    );
   });
 });
