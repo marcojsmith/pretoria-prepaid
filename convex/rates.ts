@@ -3,6 +3,7 @@ import type { QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { selectActiveRates } from "./electricity_logic";
+import { todaySast } from "./lib/date";
 import {
   DATE_MONTH_LENGTH,
   TIER_1_MIN,
@@ -77,7 +78,7 @@ export const getRates = query({
   args: {},
   handler: async (ctx) => {
     const allRates = await ctx.db.query("electricity_rates").order("asc").collect();
-    const today = new Date().toISOString().split("T")[0] ?? "";
+    const today = todaySast();
     return selectActiveRates(allRates, today).sort((a, b) => a.tier_number - b.tier_number);
   },
 });
