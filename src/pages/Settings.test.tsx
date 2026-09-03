@@ -23,6 +23,17 @@ vi.mock("sonner", () => ({
     error: vi.fn(),
   },
 }));
+vi.mock("@/hooks/useMeters", () => ({
+  useMeters: vi.fn(() => ({
+    meters: [],
+    activeMeter: undefined,
+    loading: false,
+    setActiveMeter: vi.fn(),
+    addMeter: vi.fn(),
+    updateMeter: vi.fn(),
+    archiveMeter: vi.fn(),
+  })),
+}));
 
 describe("Settings Page", () => {
   const mockUser = {
@@ -67,8 +78,17 @@ describe("Settings Page", () => {
     );
 
     expect(screen.getByLabelText(/preferred name/i)).toHaveValue("Test User");
-    expect(screen.getByLabelText(/meter number/i)).toHaveValue("1234567890");
-    expect(screen.getByLabelText(/low balance threshold/i)).toHaveValue(10);
+  });
+
+  it("no longer renders meterNumber or lowBalanceThreshold fields", () => {
+    render(
+      <BrowserRouter>
+        <Settings />
+      </BrowserRouter>
+    );
+
+    expect(screen.queryByLabelText(/meter number/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/low balance threshold/i)).not.toBeInTheDocument();
   });
 
   it("handles form submission successfully", async () => {
@@ -83,20 +103,12 @@ describe("Settings Page", () => {
     fireEvent.change(screen.getByLabelText(/preferred name/i), {
       target: { value: "New Name" },
     });
-    fireEvent.change(screen.getByLabelText(/meter number/i), {
-      target: { value: "0987654321" },
-    });
-    fireEvent.change(screen.getByLabelText(/low balance threshold/i), {
-      target: { value: "20" },
-    });
 
     fireEvent.click(screen.getByRole("button", { name: /save settings/i }));
 
     await waitFor(() => {
       expect(mockUpdateProfile).toHaveBeenCalledWith({
         preferredName: "New Name",
-        meterNumber: "0987654321",
-        lowBalanceThreshold: 20,
         pushNotificationsEnabled: false,
       });
     });

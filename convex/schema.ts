@@ -31,6 +31,7 @@ export default defineSchema({
       })
     ),
     dashboardLayout: v.optional(v.array(v.object({ id: v.string(), visible: v.boolean() }))),
+    activeMeterId: v.optional(v.id("meters")),
   }).index("by_userId", ["userId"]),
   purchases: defineTable({
     userId: v.string(),
@@ -47,9 +48,11 @@ export default defineSchema({
         cost: v.number(),
       })
     ),
+    meterId: v.optional(v.id("meters")),
   })
     .index("by_userId", ["userId"])
-    .index("by_userId_date", ["userId", "date"]),
+    .index("by_userId_date", ["userId", "date"])
+    .index("by_meterId_date", ["meterId", "date"]),
   meter_readings: defineTable({
     userId: v.string(),
     date: v.string(),
@@ -61,10 +64,23 @@ export default defineSchema({
       v.literal("orphaned"),
       v.literal("correction")
     ),
+    meterId: v.optional(v.id("meters")),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_date", ["userId", "date"])
-    .index("by_userId_source", ["userId", "source"]),
+    .index("by_userId_source", ["userId", "source"])
+    .index("by_meterId_date", ["meterId", "date"])
+    .index("by_meterId_source", ["meterId", "source"]),
+  meters: defineTable({
+    householdId: v.id("households"),
+    name: v.string(),
+    meterNumber: v.optional(v.string()),
+    lowBalanceThreshold: v.optional(v.number()),
+    defaultDailyUsage: v.optional(v.number()),
+    lastAlertSent: v.optional(v.number()),
+    archived: v.optional(v.boolean()),
+    createdAt: v.number(),
+  }).index("by_householdId", ["householdId"]),
   user_roles: defineTable({
     userId: v.string(),
     role: v.union(v.literal("admin"), v.string()),
@@ -87,7 +103,8 @@ export default defineSchema({
     joinedAt: v.number(),
   })
     .index("by_userId", ["userId"])
-    .index("by_householdId", ["householdId"]),
+    .index("by_householdId", ["householdId"])
+    .index("by_householdId_userId", ["householdId", "userId"]),
   household_invites: defineTable({
     householdId: v.id("households"),
     code: v.string(),

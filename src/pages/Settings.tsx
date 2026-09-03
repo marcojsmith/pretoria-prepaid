@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { useHousehold } from "@/hooks/useHousehold";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,12 +22,15 @@ export default function Settings(): JSX.Element | null {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, updateProfile, loading: profileLoading } = useProfile();
-  const { isMember } = useHousehold();
 
+  // Note: `meterNumber`/`lowBalanceThreshold` were intentionally removed from
+  // this form in phase 2a — meter management (including thresholds) now
+  // lives on the Household page's "Meters" card, since these are per-meter
+  // settings, not per-user ones. The backend still accepts these fields on
+  // `api.users.updateProfile` (see `mirrorMeterFields` in `convex/users.ts`)
+  // for other potential callers; this page simply stops using them.
   const [formData, setFormData] = useState({
     preferredName: "",
-    meterNumber: "",
-    lowBalanceThreshold: "10",
     pushNotificationsEnabled: false,
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -38,8 +40,6 @@ export default function Settings(): JSX.Element | null {
     if (profile) {
       setFormData({
         preferredName: profile.preferredName || "",
-        meterNumber: profile.meterNumber || "",
-        lowBalanceThreshold: profile.lowBalanceThreshold?.toString() || "10",
         pushNotificationsEnabled: profile.pushNotificationsEnabled || false,
       });
     }
@@ -59,13 +59,10 @@ export default function Settings(): JSX.Element | null {
       try {
         const updates: {
           preferredName?: string;
-          meterNumber?: string;
           pushNotificationsEnabled?: boolean;
           pushSubscription?: PushSubscriptionJSON | null;
-          lowBalanceThreshold?: number;
         } = {
           preferredName: formData.preferredName,
-          meterNumber: formData.meterNumber,
           pushNotificationsEnabled: formData.pushNotificationsEnabled,
         };
 
@@ -85,10 +82,6 @@ export default function Settings(): JSX.Element | null {
           // User is disabling push notifications — explicitly clear subscription
           await unsubscribeUserFromPush();
           updates.pushSubscription = null;
-        }
-
-        if (formData.lowBalanceThreshold) {
-          updates.lowBalanceThreshold = parseFloat(formData.lowBalanceThreshold);
         }
 
         await updateProfile(updates);
@@ -119,7 +112,7 @@ export default function Settings(): JSX.Element | null {
     <div className="min-h-screen bg-background">
       <SEO
         title="Settings"
-        description="Manage your profile, meter details, and electricity notification preferences."
+        description="Manage your profile and electricity notification preferences."
         noindex
       />
       <Header />
@@ -136,7 +129,7 @@ export default function Settings(): JSX.Element | null {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Profile Information</CardTitle>
-              <CardDescription>How we should address you and your meter details.</CardDescription>
+              <CardDescription>How we should address you.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -148,54 +141,18 @@ export default function Settings(): JSX.Element | null {
                   onChange={(e) => setFormData({ ...formData, preferredName: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="meterNumber">Meter Number</Label>
-                <Input
-                  id="meterNumber"
-                  placeholder="e.g. 1234567890"
-                  value={formData.meterNumber}
-                  onChange={(e) => setFormData({ ...formData, meterNumber: e.target.value })}
-                  disabled={isMember}
-                />
-                {isMember && (
-                  <p className="text-[10px] text-muted-foreground">
-                    Managed by your household admin.
-                  </p>
-                )}
-              </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Alerts & Thresholds</CardTitle>
-              <CardDescription>Configure notifications and low balance alerts.</CardDescription>
+              <CardTitle className="text-lg">Notifications</CardTitle>
+              <CardDescription>
+                Configure push notifications. Meter details and low-balance thresholds are now
+                managed from the Household page's Meters section.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="lowBalanceThreshold">Low Balance Threshold (kWh)</Label>
-                <Input
-                  id="lowBalanceThreshold"
-                  type="number"
-                  placeholder="e.g. 10"
-                  value={formData.lowBalanceThreshold}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lowBalanceThreshold: e.target.value })
-                  }
-                  disabled={isMember}
-                />
-                {isMember ? (
-                  <p className="text-[10px] text-muted-foreground">
-                    Managed by your household admin.
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-muted-foreground">
-                    When your estimated balance falls below this, we'll show an alert (simulating
-                    your meter's beep).
-                  </p>
-                )}
-              </div>
-
               <div className="flex items-center justify-between space-x-2 rounded-lg border p-3">
                 <div className="space-y-0.5">
                   <Label htmlFor="pushNotifications" className="text-sm font-medium">

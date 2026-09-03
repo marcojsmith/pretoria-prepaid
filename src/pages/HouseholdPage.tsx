@@ -6,13 +6,15 @@ import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { ShareModal } from "@/components/ShareModal";
 import { HouseholdMembersList, HouseholdActions } from "@/components/HouseholdMemberList";
+import { MeterManagementCard } from "@/components/MeterManagementCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { HouseholdMember } from "@/types/household";
+import type { HouseholdMember, HouseholdMeter } from "@/types/household";
 import { useHousehold } from "@/hooks/useHousehold";
 import { useAuth } from "@/hooks/useAuth";
+import type { Id } from "../../convex/_generated/dataModel";
 
 export default function HouseholdPage(): JSX.Element {
   const navigate = useNavigate();
@@ -254,8 +256,10 @@ function NoHouseholdView({
 
 interface HasHouseholdViewProps {
   household: {
+    householdId: string;
     name: string;
     members: HouseholdMember[];
+    meters?: HouseholdMeter[];
   } | null;
   currentUserId: string | undefined;
   isAdmin: boolean;
@@ -302,6 +306,14 @@ function HasHouseholdView({
           )}
         </CardContent>
       </Card>
+
+      {household && (
+        <MeterManagementCard
+          householdId={household.householdId as Id<"households">}
+          meters={household.meters ?? []}
+          isAdmin={isAdmin}
+        />
+      )}
 
       <Card>
         <CardHeader>

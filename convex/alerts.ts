@@ -9,24 +9,25 @@ import type { Doc } from "./_generated/dataModel";
 import { MS_PER_DAY, MS_PER_HOUR, DEFAULT_LOW_BALANCE_THRESHOLD } from "./constants";
 
 type ProfileDoc = Doc<"profiles">;
+type MeterDoc = Doc<"meters">;
 
 const HTTP_STATUS_GONE = 410;
 const HTTP_STATUS_NOT_FOUND = 404;
 const HTTP_STATUS_FORBIDDEN = 403;
 
-async function sendLowBalanceNotification(options: {
+async function sendLowBalanceNotificationToRecipient(options: {
   ctx: ActionCtx;
   profile: ProfileDoc;
-  estimatedBalance: number;
-}): Promise<void> {
-  const { ctx, profile, estimatedBalance } = options;
-  console.warn("Threshold met for user. Attempting to send push notification...", {
+  body: string;
+}): Promise<boolean> {
+  const { ctx, profile, body } = options;
+  console.warn("Threshold met for meter. Attempting to send push notification...", {
     userId: profile.userId,
   });
 
   const payload = JSON.stringify({
     title: "Low Electricity Balance",
-    body: `Your estimated balance is ${Math.round(estimatedBalance)} kWh. Time to refill!`,
+    body,
     icon: "/icons/icon-192x192.png",
     badge: "/icons/icon-192x192.png",
     data: { url: "/dashboard" },
@@ -34,10 +35,8 @@ async function sendLowBalanceNotification(options: {
 
   try {
     await webpush.sendNotification(profile.pushSubscription as webpush.PushSubscription, payload);
-    await ctx.runMutation(internal.alerts_queries.updateAlertTimestamp, {
-      userId: profile.userId,
-    });
     console.warn("Successfully sent alert to user", { userId: profile.userId });
+    return true;
   } catch (error) {
     const httpError = error as { statusCode?: number };
     if (
@@ -50,10 +49,12 @@ async function sendLowBalanceNotification(options: {
       await ctx.runMutation(internal.alerts_queries.removeExpiredSubscription, {
         userId: profile.userId,
       });
+      return false;
     } else if (httpError.statusCode === HTTP_STATUS_FORBIDDEN) {
       console.error("Permission denied (403) for user. VAPID keys might not match.", {
         userId: profile.userId,
       });
+      return false;
     } else {
       console.error("Error sending push to user", { userId: profile.userId, error });
       throw error;
@@ -61,33 +62,16 @@ async function sendLowBalanceNotification(options: {
   }
 }
 
-function isRateLimited(profile: ProfileDoc, nowTimestamp: number): boolean {
-  return !!(profile.lastAlertSent && nowTimestamp - profile.lastAlertSent < MS_PER_DAY);
+function isRateLimited(meter: MeterDoc, nowTimestamp: number): boolean {
+  return !!(meter.lastAlertSent && nowTimestamp - meter.lastAlertSent < MS_PER_DAY);
 }
 
-async function processProfileAlert(options: {
-  ctx: ActionCtx;
-  profile: ProfileDoc;
-  nowTimestamp: number;
-}): Promise<void> {
-  const { ctx, profile, nowTimestamp } = options;
-  if (!profile.pushSubscription) {
-    console.warn("Profile marked as enabled but has no subscription object. Skipping.", {
-      userId: profile.userId,
-    });
-    return;
-  }
-
-  if (isRateLimited(profile, nowTimestamp)) {
-    const hoursLeft = Math.round(
-      (MS_PER_DAY - (nowTimestamp - (profile.lastAlertSent ?? 0))) / MS_PER_HOUR
-    );
-    console.warn("Profile alerted recently. Cooling down.", { userId: profile.userId, hoursLeft });
-    return;
-  }
-
-  const { readings } = await ctx.runQuery(internal.alerts_queries.getUserDataForAlert, {
-    userId: profile.userId,
+async function computeMeterStats(
+  ctx: ActionCtx,
+  meter: MeterDoc
+): Promise<ReturnType<typeof calculateConsumptionStats>> {
+  const { readings } = await ctx.runQuery(internal.alerts_queries.getMeterDataForAlert, {
+    meterId: meter._id,
   });
 
   const filteredReadings = readings.filter(
@@ -96,29 +80,106 @@ async function processProfileAlert(options: {
   );
   const stats = calculateConsumptionStats(
     filteredReadings,
-    profile.lowBalanceThreshold ?? DEFAULT_LOW_BALANCE_THRESHOLD
+    meter.lowBalanceThreshold ?? DEFAULT_LOW_BALANCE_THRESHOLD
   );
 
   if (!stats) {
-    console.warn("Could not calculate stats for profile. Missing readings?", {
-      userId: profile.userId,
-    });
-    return;
+    console.warn("Could not calculate stats for meter. Missing readings?", { meterId: meter._id });
+    return null;
   }
 
-  console.warn("Profile balance check", {
-    userId: profile.userId,
+  console.warn("Meter balance check", {
+    meterId: meter._id,
     estimatedBalance: Math.round(stats.estimatedBalance),
     lowBalanceThreshold: stats.lowBalanceThreshold,
   });
 
-  if (stats.estimatedBalance <= stats.lowBalanceThreshold) {
-    await sendLowBalanceNotification({ ctx, profile, estimatedBalance: stats.estimatedBalance });
+  return stats;
+}
+
+async function processMeterAlert(options: {
+  ctx: ActionCtx;
+  meter: MeterDoc;
+  nowTimestamp: number;
+  householdMeterCount: number;
+}): Promise<void> {
+  const { ctx, meter, nowTimestamp, householdMeterCount } = options;
+
+  if (isRateLimited(meter, nowTimestamp)) {
+    const hoursLeft = Math.round(
+      (MS_PER_DAY - (nowTimestamp - (meter.lastAlertSent ?? 0))) / MS_PER_HOUR
+    );
+    console.warn("Meter alerted recently. Cooling down.", { meterId: meter._id, hoursLeft });
+    return;
+  }
+
+  const recipients = await ctx.runQuery(internal.alerts_queries.getMeterAlertRecipients, {
+    householdId: meter.householdId,
+  });
+  if (recipients.length === 0) {
+    return;
+  }
+
+  const stats = await computeMeterStats(ctx, meter);
+  if (!stats || stats.estimatedBalance > stats.lowBalanceThreshold) {
+    return;
+  }
+
+  await sendMeterAlerts({
+    ctx,
+    meter,
+    recipients,
+    estimatedBalance: stats.estimatedBalance,
+    householdMeterCount,
+  });
+}
+
+async function sendMeterAlerts(options: {
+  ctx: ActionCtx;
+  meter: MeterDoc;
+  recipients: ProfileDoc[];
+  estimatedBalance: number;
+  householdMeterCount: number;
+}): Promise<void> {
+  const { ctx, meter, recipients, estimatedBalance, householdMeterCount } = options;
+
+  // Only name the meter in the copy when the household actually has more
+  // than one meter — keeps today's generic wording for the common
+  // single-meter case, avoiding unnecessary UI churn.
+  const body =
+    householdMeterCount > 1
+      ? `${meter.name}'s estimated balance is ${Math.round(estimatedBalance)} kWh. Time to refill!`
+      : `Your estimated balance is ${Math.round(estimatedBalance)} kWh. Time to refill!`;
+
+  let deliveredCount = 0;
+  for (const profile of recipients) {
+    try {
+      const delivered = await sendLowBalanceNotificationToRecipient({ ctx, profile, body });
+      if (delivered) {
+        deliveredCount++;
+      }
+    } catch (error) {
+      console.error("Failed to send alert to recipient", { userId: profile.userId, error });
+    }
+  }
+
+  if (deliveredCount > 0) {
+    await ctx.runMutation(internal.alerts_queries.updateMeterAlertTimestamp, {
+      meterId: meter._id,
+    });
+  } else {
+    console.warn("No recipients were successfully notified for meter. Skipping cooldown update.", {
+      meterId: meter._id,
+    });
   }
 }
 
 /**
- * Action to check all users and send low balance alerts.
+ * Action to check all meters and send low balance alerts to subscribed
+ * household members. Cooldown (`lastAlertSent`) and thresholds live on the
+ * meter, not the profile, so members sharing a meter share one cooldown and
+ * are alerted about that meter regardless of which meter is active for them
+ * individually.
  */
 export const checkLowBalances = action({
   args: {},
@@ -139,26 +200,37 @@ export const checkLowBalances = action({
       return;
     }
 
-    const profiles = await ctx.runQuery(internal.alerts_queries.getProfilesForAlerts);
-    console.warn("Checking low balances for profiles with active push subscriptions.", {
-      profileCount: profiles.length,
-    });
+    const meters = await ctx.runQuery(internal.alerts_queries.getMetersForAlerts);
+    console.warn("Checking low balances for meters.", { meterCount: meters.length });
+
+    const householdMeterCounts = new Map<string, number>();
+    for (const meter of meters) {
+      householdMeterCounts.set(
+        meter.householdId,
+        (householdMeterCounts.get(meter.householdId) ?? 0) + 1
+      );
+    }
 
     const nowTimestamp = Date.now();
 
     let failureCount = 0;
-    for (const profile of profiles) {
+    for (const meter of meters) {
       try {
-        await processProfileAlert({ ctx, profile, nowTimestamp });
+        await processMeterAlert({
+          ctx,
+          meter,
+          nowTimestamp,
+          householdMeterCount: householdMeterCounts.get(meter.householdId) ?? 1,
+        });
       } catch (error) {
         failureCount++;
-        console.error("Failed to process alert for profile", { userId: profile.userId, error });
+        console.error("Failed to process alert for meter", { meterId: meter._id, error });
       }
     }
     if (failureCount > 0) {
       console.error("Alert processing complete with failures", {
         failureCount,
-        totalProfiles: profiles.length,
+        totalMeters: meters.length,
       });
     }
   },

@@ -688,4 +688,222 @@ describe("readings", () => {
       expect(profile?.defaultDailyUsage).toBe(20);
     });
   });
+
+  describe("meter-scoped behavior", () => {
+    async function seedHouseholdWithTwoMeters(t: ReturnType<typeof convexTest>) {
+      const userId = "meter-reader-1";
+      const { meterA, meterB } = await t.mutation(async (ctx) => {
+        const householdId = await ctx.db.insert("households", {
+          adminUserId: userId,
+          name: "Home",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId,
+          role: "admin",
+          joinedAt: Date.now(),
+        });
+        const meterA = await ctx.db.insert("meters", {
+          householdId,
+          name: "A",
+          lowBalanceThreshold: 30,
+          createdAt: Date.now(),
+        });
+        const meterB = await ctx.db.insert("meters", {
+          householdId,
+          name: "B",
+          lowBalanceThreshold: 5,
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("profiles", {
+          userId,
+          email: null,
+          activeMeterId: meterA,
+          lowBalanceThreshold: 999, // profile value must be ignored on the meter path
+        });
+        await ctx.db.insert("meter_readings", {
+          userId,
+          meterId: meterA,
+          date: "2024-01-10",
+          readingPre: 1000,
+          readingPost: 1050,
+          source: "purchase",
+        });
+        await ctx.db.insert("meter_readings", {
+          userId,
+          meterId: meterB,
+          date: "2024-01-10",
+          readingPre: 500,
+          readingPost: 520,
+          source: "purchase",
+        });
+        return { meterA, meterB };
+      });
+      return { userId, meterA, meterB };
+    }
+
+    it("scopes getReadings to an explicit meterId", async () => {
+      const t = convexTest(schema, modules);
+      const { userId, meterA, meterB } = await seedHouseholdWithTwoMeters(t);
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      const readingsA = await asUser.query(api.readings.getReadings, { meterId: meterA });
+      const readingsB = await asUser.query(api.readings.getReadings, { meterId: meterB });
+
+      expect(readingsA).toHaveLength(1);
+      expect(readingsA[0]?.readingPost).toBe(1050);
+      expect(readingsB).toHaveLength(1);
+      expect(readingsB[0]?.readingPost).toBe(520);
+    });
+
+    it("uses the meter's lowBalanceThreshold, not the profile's, on the meter path", async () => {
+      const t = convexTest(schema, modules);
+      const { userId, meterB } = await seedHouseholdWithTwoMeters(t);
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      const stats = await asUser.query(api.readings.getConsumptionStats, { meterId: meterB });
+      expect(stats?.lowBalanceThreshold).toBe(5);
+    });
+
+    it("throws Unauthorized for a meterId the caller has no membership for", async () => {
+      const t = convexTest(schema, modules);
+      const { meterA } = await seedHouseholdWithTwoMeters(t);
+      const strangerId = "reading-stranger-1";
+      const asStranger = t.withIdentity({ subject: strangerId, tokenIdentifier: strangerId });
+
+      await expect(asStranger.query(api.readings.getReadings, { meterId: meterA })).rejects.toThrow(
+        "Unauthorized"
+      );
+      await expect(
+        asStranger.query(api.readings.getConsumptionStats, { meterId: meterA })
+      ).rejects.toThrow("Unauthorized");
+    });
+
+    it("getReadings merges unmigrated legacy readings (meterId undefined) with meter-scoped ones", async () => {
+      const t = convexTest(schema, modules);
+      const { userId, meterA } = await seedHouseholdWithTwoMeters(t);
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      // Legacy row for the same user, never migrated to carry a meterId.
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-05",
+          readingPre: 900,
+          readingPost: 950,
+          source: "purchase",
+        });
+      });
+
+      const result = await asUser.query(api.readings.getReadings, { meterId: meterA });
+
+      expect(result).toHaveLength(2);
+      expect(result[0]?.date).toBe("2024-01-10");
+      expect(result[0]?.meterId).toBe(meterA);
+      expect(result[1]?.date).toBe("2024-01-05");
+      expect(result[1]?.meterId).toBeUndefined();
+    });
+
+    it("hasAnyReadings returns true when only legacy (unmigrated) readings exist", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "meter-reader-legacy-1";
+
+      const meterA = await t.mutation(async (ctx) => {
+        const householdId = await ctx.db.insert("households", {
+          adminUserId: userId,
+          name: "Home",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId,
+          role: "admin",
+          joinedAt: Date.now(),
+        });
+        const meterA = await ctx.db.insert("meters", {
+          householdId,
+          name: "A",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("profiles", { userId, email: null, activeMeterId: meterA });
+        // Legacy reading: no meterId, but belongs to this user.
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-05",
+          readingPre: 900,
+          readingPost: 950,
+          source: "purchase",
+        });
+        return meterA;
+      });
+
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+      const result = await asUser.query(api.readings.hasAnyReadings, { meterId: meterA });
+
+      expect(result).toBe(true);
+    });
+
+    it("hasPurchaseReadings returns true when only legacy (unmigrated) purchase readings exist", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "meter-reader-legacy-2";
+
+      const meterA = await t.mutation(async (ctx) => {
+        const householdId = await ctx.db.insert("households", {
+          adminUserId: userId,
+          name: "Home",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId,
+          role: "admin",
+          joinedAt: Date.now(),
+        });
+        const meterA = await ctx.db.insert("meters", {
+          householdId,
+          name: "A",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("profiles", { userId, email: null, activeMeterId: meterA });
+        // Legacy purchase reading: no meterId, but belongs to this user.
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-05",
+          readingPre: 900,
+          readingPost: 950,
+          source: "purchase",
+        });
+        return meterA;
+      });
+
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+      const result = await asUser.query(api.readings.hasPurchaseReadings, { meterId: meterA });
+
+      expect(result).toBe(true);
+    });
+
+    it("getConsumptionStats computes stats from a mix of meter-scoped and legacy-unmigrated readings", async () => {
+      const t = convexTest(schema, modules);
+      const { userId, meterA } = await seedHouseholdWithTwoMeters(t);
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      // Legacy reading, dated after the meter-scoped seed reading, so it
+      // becomes the most recent anchor for the balance calculation.
+      await t.mutation(async (ctx) => {
+        await ctx.db.insert("meter_readings", {
+          userId,
+          date: "2024-01-20",
+          readingPre: 1050,
+          readingPost: 1100,
+          source: "purchase",
+        });
+      });
+
+      const stats = await asUser.query(api.readings.getConsumptionStats, { meterId: meterA });
+
+      expect(stats).not.toBeNull();
+      expect(stats?.lastReading).toBe(1100);
+    });
+  });
 });

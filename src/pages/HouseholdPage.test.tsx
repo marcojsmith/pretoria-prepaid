@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import HouseholdPage from "./HouseholdPage";
 
@@ -37,12 +37,28 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock("@/hooks/useMeters", () => ({
+  useMeters: vi.fn(),
+}));
+
 import { useHousehold } from "../hooks/useHousehold";
+import { useMeters } from "@/hooks/useMeters";
 import { toast } from "sonner";
+
+const defaultMetersMock = {
+  meters: [],
+  activeMeter: undefined,
+  loading: false,
+  setActiveMeter: vi.fn(),
+  addMeter: vi.fn(),
+  updateMeter: vi.fn(),
+  archiveMeter: vi.fn(),
+} as unknown as ReturnType<typeof useMeters>;
 
 describe("HouseholdPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useMeters).mockReturnValue(defaultMetersMock);
   });
 
   const defaultMockProps = {
@@ -317,5 +333,116 @@ describe("HouseholdPage", () => {
     fireEvent.click(confirmButton);
 
     expect(removeMember).toHaveBeenCalledWith({ userId: "user2" });
+  });
+
+  describe("Meter management", () => {
+    const householdWithMeters = {
+      householdId: "h1",
+      name: "My House",
+      adminUserId: "user1",
+      myRole: "admin" as const,
+      members: [
+        {
+          userId: "user1",
+          role: "admin" as const,
+          preferredName: "Admin User",
+          email: "admin@test.com",
+        },
+      ],
+      meters: [
+        { meterId: "m1", name: "Home", meterNumber: "12345", archived: false },
+        { meterId: "m2", name: "Cottage", archived: false },
+      ],
+    };
+
+    it("renders the meter list for admins", () => {
+      vi.mocked(useHousehold).mockReturnValue({
+        ...defaultMockProps,
+        household: householdWithMeters,
+        loading: false,
+        inHousehold: true,
+        isAdmin: true,
+      } as unknown as ReturnType<typeof useHousehold>);
+
+      render(
+        <BrowserRouter>
+          <HouseholdPage />
+        </BrowserRouter>
+      );
+
+      expect(screen.getByText("Home")).toBeInTheDocument();
+      expect(screen.getByText("Cottage")).toBeInTheDocument();
+    });
+
+    it("shows add-meter form and archive controls to admins", () => {
+      vi.mocked(useHousehold).mockReturnValue({
+        ...defaultMockProps,
+        household: householdWithMeters,
+        loading: false,
+        inHousehold: true,
+        isAdmin: true,
+      } as unknown as ReturnType<typeof useHousehold>);
+
+      render(
+        <BrowserRouter>
+          <HouseholdPage />
+        </BrowserRouter>
+      );
+
+      expect(screen.getByPlaceholderText(/Meter name/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Add Meter/i })).toBeInTheDocument();
+    });
+
+    it("hides add-meter form and edit/archive controls from non-admin members", () => {
+      vi.mocked(useHousehold).mockReturnValue({
+        ...defaultMockProps,
+        household: householdWithMeters,
+        loading: false,
+        inHousehold: true,
+        isAdmin: false,
+      } as unknown as ReturnType<typeof useHousehold>);
+
+      render(
+        <BrowserRouter>
+          <HouseholdPage />
+        </BrowserRouter>
+      );
+
+      expect(screen.queryByPlaceholderText(/Meter name/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Add Meter/i })).not.toBeInTheDocument();
+    });
+
+    it("calls addMeter with the household id when submitting the add-meter form", async () => {
+      const addMeter = vi.fn().mockResolvedValue("newMeterId");
+      vi.mocked(useMeters).mockReturnValue({
+        ...defaultMetersMock,
+        addMeter,
+      } as unknown as ReturnType<typeof useMeters>);
+      vi.mocked(useHousehold).mockReturnValue({
+        ...defaultMockProps,
+        household: householdWithMeters,
+        loading: false,
+        inHousehold: true,
+        isAdmin: true,
+      } as unknown as ReturnType<typeof useHousehold>);
+
+      render(
+        <BrowserRouter>
+          <HouseholdPage />
+        </BrowserRouter>
+      );
+
+      fireEvent.change(screen.getByPlaceholderText(/Meter name/i), {
+        target: { value: "New Meter" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Add Meter/i }));
+
+      await waitFor(() => {
+        expect(addMeter).toHaveBeenCalledWith({
+          householdId: "h1",
+          name: "New Meter",
+        });
+      });
+    });
   });
 });

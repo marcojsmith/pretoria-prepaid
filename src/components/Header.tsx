@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { NavMenu } from "@/components/NavMenu";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Zap, LogOut, ArrowLeft, User } from "lucide-react";
+import { Zap, LogOut, User } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MeterSwitcher } from "@/components/MeterSwitcher";
 import { useToast } from "@/hooks/use-toast";
 import { memo } from "react";
 
@@ -90,7 +91,7 @@ function UserMenu({ user, onSignOut }: { user: UserMenuUser; onSignOut: () => vo
 }
 
 /**
- * Sticky top navigation header with branding, back navigation, theme toggle, and user menu.
+ * Sticky top navigation header with branding, the meter switcher, theme toggle, and user menu.
  *
  * @param props - {@link HeaderProps}
  * @param props.offlineCount - Number of queued offline actions to surface in the nav menu (default 0).
@@ -98,11 +99,8 @@ function UserMenu({ user, onSignOut }: { user: UserMenuUser; onSignOut: () => vo
  */
 export const Header = memo(function Header({ offlineCount = 0 }: HeaderProps): JSX.Element {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-
-  const isMainEntryPage = location.pathname === DASHBOARD_PATH || location.pathname === "/";
 
   const handleSignOut = () => {
     void (async () => {
@@ -137,17 +135,7 @@ export const Header = memo(function Header({ offlineCount = 0 }: HeaderProps): J
         </div>
 
         <div className="flex items-center gap-2">
-          {!isMainEntryPage && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1 px-2 text-[10px] sm:text-xs"
-              onClick={() => navigate(DASHBOARD_PATH)}
-            >
-              <ArrowLeft className="h-3 w-3" />
-              <span className="xs:inline hidden">Dashboard</span>
-            </Button>
-          )}
+          <MeterSwitcher />
 
           <ThemeToggle />
 

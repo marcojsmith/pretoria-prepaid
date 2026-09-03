@@ -1,8 +1,9 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import type { Doc } from "../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { useCallback } from "react";
 import { toast } from "sonner";
+import { useMeters } from "./useMeters";
 
 export interface ConsumptionStats {
   lastReading: number;
@@ -28,17 +29,25 @@ export interface UseConsumptionReturn {
 }
 
 export function useConsumption(): UseConsumptionReturn {
-  const readings = useQuery(api.readings.getReadings);
-  const stats = useQuery(api.readings.getConsumptionStats) as ConsumptionStats | null | undefined;
-  const hasAnyReadings = useQuery(api.readings.hasAnyReadings) ?? false;
-  const hasPurchaseReadings = useQuery(api.readings.hasPurchaseReadings) ?? false;
+  const readings = useQuery(api.readings.getReadings, {});
+  const stats = useQuery(api.readings.getConsumptionStats, {}) as
+    | ConsumptionStats
+    | null
+    | undefined;
+  const hasAnyReadings = useQuery(api.readings.hasAnyReadings, {}) ?? false;
+  const hasPurchaseReadings = useQuery(api.readings.hasPurchaseReadings, {}) ?? false;
   const addOnboardingReadingMutation = useMutation(api.readings.addOnboardingReading);
   const correctMeterReadingMutation = useMutation(api.readings.correctMeterReading);
+  const { activeMeter } = useMeters();
+  const activeMeterId = activeMeter?.meterId;
 
   const correctBalance = useCallback(
     async (reading: number) => {
       try {
-        await correctMeterReadingMutation({ reading });
+        await correctMeterReadingMutation({
+          reading,
+          ...(activeMeterId ? { meterId: activeMeterId } : {}),
+        });
         toast.success("Meter reading updated");
         return { error: null } as const;
       } catch (error) {
@@ -47,15 +56,22 @@ export function useConsumption(): UseConsumptionReturn {
         return { error: error as Error };
       }
     },
-    [correctMeterReadingMutation]
+    [correctMeterReadingMutation, activeMeterId]
   );
 
   const addOnboardingReading = useCallback(
     async (reading: number, defaultDailyUsage?: number) => {
       try {
-        const args: { reading: number; defaultDailyUsage?: number } = { reading };
+        const args: {
+          reading: number;
+          defaultDailyUsage?: number;
+          meterId?: Id<"meters">;
+        } = { reading };
         if (defaultDailyUsage !== undefined) {
           args.defaultDailyUsage = defaultDailyUsage;
+        }
+        if (activeMeterId !== undefined) {
+          args.meterId = activeMeterId;
         }
         await addOnboardingReadingMutation(args);
         toast.success("Onboarding reading saved successfully");
@@ -64,7 +80,7 @@ export function useConsumption(): UseConsumptionReturn {
         toast.error("Failed to save onboarding reading");
       }
     },
-    [addOnboardingReadingMutation]
+    [addOnboardingReadingMutation, activeMeterId]
   );
 
   return {

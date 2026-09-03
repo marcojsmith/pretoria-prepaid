@@ -14,7 +14,7 @@ import { QuickActions } from "@/components/QuickActions";
 import { DashboardGrid } from "@/components/DashboardGrid";
 import { DashboardLayoutEditor } from "@/components/DashboardLayoutEditor";
 import { Button } from "@/components/ui/button";
-import { Loader2, Zap, Pencil } from "lucide-react";
+import { Loader2, Zap, LayoutDashboard } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { OnboardingForm } from "@/components/OnboardingForm";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -41,12 +41,13 @@ function DashboardHeader({ onEditLayout }: DashboardHeaderProps): JSX.Element {
         <h1 className="text-xl font-bold tracking-tight text-foreground">Your Usage</h1>
         <Button
           variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          size="sm"
+          className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
           onClick={onEditLayout}
-          aria-label="Edit dashboard layout"
+          aria-label="Customize dashboard layout"
         >
-          <Pencil className="h-4 w-4" />
+          <LayoutDashboard className="h-4 w-4" />
+          <span className="text-xs">Customize</span>
         </Button>
       </div>
       <QuickActions />

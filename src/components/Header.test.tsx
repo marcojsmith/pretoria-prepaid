@@ -12,7 +12,6 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useLocation: () => ({ pathname: "/settings" }),
   };
 });
 
@@ -38,6 +37,10 @@ vi.mock("@/components/NavMenu", () => ({
 
 vi.mock("@/components/ThemeToggle", () => ({
   ThemeToggle: () => <div data-testid="theme-toggle" />,
+}));
+
+vi.mock("@/components/MeterSwitcher", () => ({
+  MeterSwitcher: () => <div data-testid="meter-switcher" />,
 }));
 
 vi.mock("@/components/ui/dropdown-menu", () => ({
@@ -80,15 +83,6 @@ describe("Header", () => {
     );
     expect(screen.getByTestId("nav-menu")).toBeInTheDocument();
     expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
-  });
-
-  it("shows Back to Dashboard button when not on main page", () => {
-    render(
-      <BrowserRouter>
-        <Header />
-      </BrowserRouter>
-    );
-    expect(screen.getByText(/Dashboard/i)).toBeInTheDocument();
   });
 
   it("shows user name in dropdown", () => {
