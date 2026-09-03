@@ -10,7 +10,7 @@ A production-grade Progressive Web App (PWA) designed to help residents of Preto
 
 - **Proactive Tier Guidance:** Get warned before you accidentally buy units at a higher price tier. The app calculates how many kWh remain in your current cheaper tier and exactly how much to spend to stay within it.
 - **Smart Consumption Estimation:** Real-time balance estimation based on your personalized burn rate and manual meter readings.
-- **Household Management:** Shared household data with invite-based membership; multi-meter backend is in place (phase 1) with a meter switcher UI planned next.
+- **Household Management:** Shared household data with invite-based membership; full multi-meter support with a header meter switcher UI for switching the active meter.
 - **Invite-Only Access:** Secure registration system with invite codes.
 - **Data Portability:** Export your entire purchase and reading history to CSV or print-to-PDF for your records.
 - **Visual Analytics:** Interactive charts for yearly consumption, daily usage trends, and purchase frequency.
