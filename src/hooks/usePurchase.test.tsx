@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { usePurchases } from "./usePurchase";
 import * as convexReact from "convex/react";
+import { useMeters } from "./useMeters";
 
 interface QueueItem {
   type: string;
   purchaseId?: string;
   units?: number;
+  meterId?: string;
 }
 
 function parseQueue(raw: string | null): QueueItem[] {
@@ -36,6 +38,29 @@ vi.mock("convex/react", () => ({
   }),
 }));
 
+vi.mock("./useMeters", () => ({
+  useMeters: vi.fn(),
+}));
+
+const NO_ACTIVE_METER = {
+  meters: [],
+  activeMeter: undefined,
+  loading: false,
+  setActiveMeter: vi.fn(),
+  addMeter: vi.fn(),
+  updateMeter: vi.fn(),
+  archiveMeter: vi.fn(),
+} as unknown as ReturnType<typeof useMeters>;
+
+function mockActiveMeter(meterId: string) {
+  vi.mocked(useMeters).mockReturnValue({
+    ...NO_ACTIVE_METER,
+    activeMeter: { meterId, name: "Test Meter" } as unknown as ReturnType<
+      typeof useMeters
+    >["activeMeter"],
+  });
+}
+
 describe("usePurchases Hook - Offline Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -46,6 +71,7 @@ describe("usePurchases Hook - Offline Actions", () => {
 
     // Default online state
     vi.mocked(convexReact.useQuery).mockReturnValue([]);
+    vi.mocked(useMeters).mockReturnValue(NO_ACTIVE_METER);
     Object.defineProperty(window.navigator, "onLine", { value: true, configurable: true });
   });
 
@@ -311,5 +337,115 @@ describe("usePurchases Hook - Offline Actions", () => {
     expect(mockAddPurchase).toHaveBeenCalledTimes(1);
     const queue = parseQueue(localStorage.getItem("offline_purchases_queue"));
     expect(queue).toHaveLength(1);
+  });
+});
+
+describe("usePurchases Hook - Meter safety", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-02-25T10:00:00.000Z"));
+    mutationCallCount = 0;
+    vi.mocked(convexReact.useQuery).mockReturnValue([]);
+    Object.defineProperty(window.navigator, "onLine", { value: true, configurable: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("captures the active meter id at queue time on an offline add", async () => {
+    mockActiveMeter("meter-a");
+    Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
+
+    const { result } = renderHook(() => usePurchases());
+
+    await act(async () => {
+      await result.current.addPurchase({
+        units: 100,
+        amountPaid: 300,
+        date: "2024-02-25T10:00:00.000Z",
+        meterReading: 500,
+      });
+    });
+
+    const queue = parseQueue(localStorage.getItem("offline_purchases_queue:meter-a"));
+    expect(queue).toHaveLength(1);
+    expect(queue[0]!.meterId).toBe("meter-a");
+  });
+
+  it("uses the per-meter cache key for confirmed purchases and the offline queue", async () => {
+    mockActiveMeter("meter-b");
+    Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
+
+    const { result } = renderHook(() => usePurchases());
+
+    await act(async () => {
+      await result.current.addPurchase({
+        units: 50,
+        amountPaid: 150,
+        date: "2024-02-25T10:00:00.000Z",
+        meterReading: 250,
+      });
+    });
+
+    expect(localStorage.getItem("offline_purchases_queue:meter-b")).not.toBeNull();
+    // The un-suffixed legacy key must not be touched once a meter is known.
+    expect(localStorage.getItem("offline_purchases_queue")).toBeNull();
+  });
+
+  it("passes the captured meterId (not the meter active at replay time) when syncing a queued add", async () => {
+    // Queue an item while meter-a is active.
+    mockActiveMeter("meter-a");
+    Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
+
+    const { result, rerender } = renderHook(() => usePurchases());
+
+    await act(async () => {
+      await result.current.addPurchase({
+        units: 20,
+        amountPaid: 60,
+        date: "2024-02-25T10:00:00.000Z",
+        meterReading: 100,
+      });
+    });
+
+    // Switch the active meter mid-queue, then come back online.
+    mockActiveMeter("meter-b");
+    mockAddPurchase.mockResolvedValue({ success: true });
+    Object.defineProperty(window.navigator, "onLine", { value: true, configurable: true });
+    rerender();
+
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockAddPurchase).toHaveBeenCalledWith(expect.objectContaining({ meterId: "meter-a" }));
+  });
+
+  it("does not change the target meter of an already-queued item when the active meter switches", async () => {
+    mockActiveMeter("meter-a");
+    Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
+
+    const { result, rerender } = renderHook(() => usePurchases());
+
+    await act(async () => {
+      await result.current.addPurchase({
+        units: 10,
+        amountPaid: 30,
+        date: "2024-02-25T10:00:00.000Z",
+        meterReading: 40,
+      });
+    });
+
+    mockActiveMeter("meter-b");
+    rerender();
+
+    const queue = parseQueue(localStorage.getItem("offline_purchases_queue:meter-a"));
+    expect(queue).toHaveLength(1);
+    expect(queue[0]!.meterId).toBe("meter-a");
   });
 });

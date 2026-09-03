@@ -6,12 +6,20 @@ export interface HouseholdMember {
   email: string | null;
 }
 
+export interface HouseholdMeter {
+  meterId: string;
+  name: string;
+  meterNumber?: string | undefined;
+  archived: boolean;
+}
+
 export interface MyHousehold {
   householdId: string;
   name: string;
   adminUserId: string;
   myRole: "admin" | "member";
   members: HouseholdMember[];
+  meters: HouseholdMeter[];
 }
 
 export interface InviteData {

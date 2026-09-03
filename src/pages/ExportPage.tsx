@@ -79,8 +79,8 @@ export default function ExportPage(): JSX.Element | null {
   const { toast } = useToast();
 
   const profile = useQuery(api.users.getProfile);
-  const purchases = useQuery(api.purchases.getPurchases);
-  const readings = useQuery(api.readings.getReadings);
+  const purchases = useQuery(api.purchases.getPurchases, {});
+  const readings = useQuery(api.readings.getReadings, {});
 
   const [userData, setUserData] = useState<string | null>(null);
   const [loadingUser, setLoadingUser] = useState(false);

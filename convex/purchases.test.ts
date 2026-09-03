@@ -420,4 +420,154 @@ describe("purchases", () => {
       expect(readings).toHaveLength(0);
     });
   });
+
+  describe("meter-scoped behavior", () => {
+    async function seedHouseholdWithTwoMeters(t: ReturnType<typeof convexTest>) {
+      const userId = "meter-user-1";
+      const { householdId, meterA, meterB } = await t.mutation(async (ctx) => {
+        const householdId = await ctx.db.insert("households", {
+          adminUserId: userId,
+          name: "Home",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId,
+          role: "admin",
+          joinedAt: Date.now(),
+        });
+        const meterA = await ctx.db.insert("meters", {
+          householdId,
+          name: "A",
+          createdAt: Date.now(),
+        });
+        const meterB = await ctx.db.insert("meters", {
+          householdId,
+          name: "B",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("profiles", { userId, email: null, activeMeterId: meterA });
+        return { householdId, meterA, meterB };
+      });
+      return { userId, householdId, meterA, meterB };
+    }
+
+    it("scopes getPurchases to an explicit meterId (multi-meter scoping)", async () => {
+      const t = convexTest(schema, modules);
+      const { userId, meterA, meterB } = await seedHouseholdWithTwoMeters(t);
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      await seedRates(t);
+      await asUser.mutation(api.purchases.addPurchase, {
+        date: "2024-03-01",
+        units: 10,
+        cost: 0,
+        amountPaid: 40,
+        meterReading: 100,
+        meterId: meterA,
+      });
+      await asUser.mutation(api.purchases.addPurchase, {
+        date: "2024-03-02",
+        units: 20,
+        cost: 0,
+        amountPaid: 80,
+        meterReading: 200,
+        meterId: meterB,
+      });
+
+      const purchasesA = await asUser.query(api.purchases.getPurchases, { meterId: meterA });
+      const purchasesB = await asUser.query(api.purchases.getPurchases, { meterId: meterB });
+
+      expect(purchasesA).toHaveLength(1);
+      expect(purchasesA[0]?.units).toBe(10);
+      expect(purchasesB).toHaveLength(1);
+      expect(purchasesB[0]?.units).toBe(20);
+    });
+
+    it("falls back to the active meter, then follows setActiveMeter (active-meter fallback)", async () => {
+      const t = convexTest(schema, modules);
+      const { userId, meterA, meterB } = await seedHouseholdWithTwoMeters(t);
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      await seedRates(t);
+      await asUser.mutation(api.purchases.addPurchase, {
+        date: "2024-03-01",
+        units: 10,
+        cost: 0,
+        amountPaid: 40,
+        meterReading: 100,
+        meterId: meterA,
+      });
+      await asUser.mutation(api.purchases.addPurchase, {
+        date: "2024-03-02",
+        units: 20,
+        cost: 0,
+        amountPaid: 80,
+        meterReading: 200,
+        meterId: meterB,
+      });
+
+      const initial = await asUser.query(api.purchases.getPurchases, {});
+      expect(initial).toHaveLength(1);
+      expect(initial[0]?.units).toBe(10); // meterA is active
+
+      await asUser.mutation(api.meters.setActiveMeter, { meterId: meterB });
+
+      const afterSwitch = await asUser.query(api.purchases.getPurchases, {});
+      expect(afterSwitch).toHaveLength(1);
+      expect(afterSwitch[0]?.units).toBe(20); // meterB now active
+    });
+
+    it("throws Unauthorized for a meterId the caller has no membership for", async () => {
+      const t = convexTest(schema, modules);
+      const { meterA } = await seedHouseholdWithTwoMeters(t);
+      const strangerId = "stranger-1";
+      const asStranger = t.withIdentity({ subject: strangerId, tokenIdentifier: strangerId });
+
+      await expect(
+        asStranger.query(api.purchases.getPurchases, { meterId: meterA })
+      ).rejects.toThrow("Unauthorized");
+
+      await expect(
+        asStranger.mutation(api.purchases.addPurchase, {
+          date: "2024-03-01",
+          units: 10,
+          cost: 40,
+          amountPaid: 40,
+          meterReading: 100,
+          meterId: meterA,
+        })
+      ).rejects.toThrow("Unauthorized");
+    });
+
+    it("dual-keys the meter-path insert with both meterId and userId so legacy readers still see it", async () => {
+      const t = convexTest(schema, modules);
+      const { userId, meterA } = await seedHouseholdWithTwoMeters(t);
+      const asUser = t.withIdentity({ subject: userId, tokenIdentifier: userId });
+
+      await seedRates(t);
+      await asUser.mutation(api.purchases.addPurchase, {
+        date: "2024-03-01",
+        units: 10,
+        cost: 0,
+        amountPaid: 40,
+        meterReading: 100,
+        meterId: meterA,
+      });
+
+      const inserted = await t.run(async (ctx) => ctx.db.query("purchases").collect());
+      expect(inserted).toHaveLength(1);
+      expect(inserted[0]?.meterId).toBe(meterA);
+      expect(inserted[0]?.userId).toBe(userId);
+
+      // A legacy (userId-only) query still finds the row.
+      const legacyResult = await t.run(async (ctx) =>
+        ctx.db
+          .query("purchases")
+          .withIndex("by_userId_date", (q) => q.eq("userId", userId))
+          .collect()
+      );
+      expect(legacyResult).toHaveLength(1);
+    });
+  });
 });

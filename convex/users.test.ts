@@ -340,4 +340,98 @@ describe("users", () => {
       expect(profile?.pushSubscription).toBeDefined();
     });
   });
+
+  describe("updateProfile meter mirroring", () => {
+    async function seedHouseholdWithMeter(t: ReturnType<typeof convexTest>) {
+      const adminId = "profile-admin-1";
+      const memberId = "profile-member-1";
+
+      const meterId = await t.mutation(async (ctx) => {
+        const householdId = await ctx.db.insert("households", {
+          adminUserId: adminId,
+          name: "Home",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId: adminId,
+          role: "admin",
+          joinedAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId: memberId,
+          role: "member",
+          joinedAt: Date.now(),
+        });
+        const meterId = await ctx.db.insert("meters", {
+          householdId,
+          name: "Home Meter",
+          meterNumber: "OLD",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("profiles", { userId: adminId, email: null, activeMeterId: meterId });
+        await ctx.db.insert("profiles", {
+          userId: memberId,
+          email: null,
+          activeMeterId: meterId,
+        });
+        return meterId;
+      });
+
+      return { adminId, memberId, meterId };
+    }
+
+    it("mirrors meterNumber/lowBalanceThreshold/defaultDailyUsage onto the meter when the caller is admin", async () => {
+      const t = convexTest(schema, modules);
+      const { adminId, meterId } = await seedHouseholdWithMeter(t);
+
+      await t
+        .withIdentity({ subject: adminId, tokenIdentifier: adminId })
+        .mutation(api.users.updateProfile, {
+          meterNumber: "NEW123",
+          lowBalanceThreshold: 42,
+          defaultDailyUsage: 7,
+        });
+
+      const meter = await t.mutation(async (ctx) => ctx.db.get(meterId));
+      expect(meter?.meterNumber).toBe("NEW123");
+      expect(meter?.lowBalanceThreshold).toBe(42);
+      expect(meter?.defaultDailyUsage).toBe(7);
+
+      const profile = await t.mutation(async (ctx) => {
+        return await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", adminId))
+          .unique();
+      });
+      expect(profile?.meterNumber).toBe("NEW123");
+      expect(profile?.lowBalanceThreshold).toBe(42);
+    });
+
+    it("does not patch the meter when a non-admin member updates their profile", async () => {
+      const t = convexTest(schema, modules);
+      const { memberId, meterId } = await seedHouseholdWithMeter(t);
+
+      await t
+        .withIdentity({ subject: memberId, tokenIdentifier: memberId })
+        .mutation(api.users.updateProfile, {
+          meterNumber: "MEMBER-EDIT",
+          lowBalanceThreshold: 11,
+        });
+
+      const meter = await t.mutation(async (ctx) => ctx.db.get(meterId));
+      expect(meter?.meterNumber).toBe("OLD");
+      expect(meter?.lowBalanceThreshold).toBeUndefined();
+
+      const profile = await t.mutation(async (ctx) => {
+        return await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", memberId))
+          .unique();
+      });
+      expect(profile?.meterNumber).toBe("MEMBER-EDIT");
+      expect(profile?.lowBalanceThreshold).toBe(11);
+    });
+  });
 });

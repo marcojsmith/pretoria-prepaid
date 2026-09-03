@@ -4,6 +4,7 @@ import { v } from "convex/values";
 const ERR_NOT_AUTH = "Not authenticated";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const INVITE_CODE_LENGTH = 8;
+const TAKE_HOUSEHOLD_METERS = 10;
 
 export const getMyHousehold = query({
   args: {},
@@ -41,12 +42,26 @@ export const getMyHousehold = query({
       })
     );
 
+    const allMeters = await ctx.db
+      .query("meters")
+      .withIndex("by_householdId", (q) => q.eq("householdId", household._id))
+      .collect();
+    const meters = allMeters
+      .filter((m) => !m.archived)
+      .map((m) => ({
+        meterId: m._id,
+        name: m.name,
+        meterNumber: m.meterNumber,
+        archived: m.archived ?? false,
+      }));
+
     return {
       householdId: household._id,
       name: household.name,
       adminUserId: household.adminUserId,
       myRole: membership.role,
       members: memberProfiles,
+      meters,
     };
   },
 });
@@ -125,6 +140,20 @@ export const createHousehold = mutation({
       role: "admin",
       joinedAt: Date.now(),
     });
+
+    const meterId = await ctx.db.insert("meters", {
+      householdId,
+      name: "Home",
+      createdAt: Date.now(),
+    });
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
+      .unique();
+    if (profile && !profile.activeMeterId) {
+      await ctx.db.patch(profile._id, { activeMeterId: meterId });
+    }
 
     return householdId;
   },
@@ -238,6 +267,21 @@ export const joinHousehold = mutation({
       role: "member",
       joinedAt: Date.now(),
     });
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
+      .unique();
+    if (profile && !profile.activeMeterId) {
+      const householdMeters = await ctx.db
+        .query("meters")
+        .withIndex("by_householdId", (q) => q.eq("householdId", invite.householdId))
+        .take(TAKE_HOUSEHOLD_METERS);
+      const firstMeter = householdMeters.find((m) => !m.archived);
+      if (firstMeter) {
+        await ctx.db.patch(profile._id, { activeMeterId: firstMeter._id });
+      }
+    }
 
     return invite.householdId;
   },

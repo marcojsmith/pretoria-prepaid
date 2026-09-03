@@ -722,4 +722,54 @@ describe("household", () => {
       expect(result).toHaveLength(2);
     });
   });
+
+  describe("phase-2 known regression: syncUser auto-provisioning vs. join/create guards", () => {
+    it("createHousehold still throws 'Already in a household' for a user auto-provisioned by syncUser", async () => {
+      const t = convexTest(schema, modules);
+      const userId = "https://example.com|autoprovisioned1";
+      const asUser = t.withIdentity({ subject: "autoprovisioned1", tokenIdentifier: userId });
+
+      // syncUser auto-provisions a personal household + meter (see convex/users.ts).
+      await asUser.mutation(api.users.syncUser, { email: "auto1@test.com" });
+
+      await expect(asUser.mutation(api.household.createHousehold, { name: "New" })).rejects.toThrow(
+        "Already in a household"
+      );
+    });
+
+    it("joinHousehold still throws 'Already in a household' for a user auto-provisioned by syncUser", async () => {
+      const t = convexTest(schema, modules);
+      const adminId = "https://example.com|inviteadmin1";
+      const userId = "https://example.com|autoprovisioned2";
+      const code = "JOINCODE";
+
+      await t.mutation(async (ctx) => {
+        const householdId = await ctx.db.insert("households", {
+          adminUserId: adminId,
+          name: "Other Household",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId: adminId,
+          role: "admin",
+          joinedAt: Date.now(),
+        });
+        await ctx.db.insert("household_invites", {
+          householdId,
+          code,
+          createdBy: adminId,
+          createdAt: Date.now(),
+          expiresAt: Date.now() + 1_000_000,
+        });
+      });
+
+      const asUser = t.withIdentity({ subject: "autoprovisioned2", tokenIdentifier: userId });
+      await asUser.mutation(api.users.syncUser, { email: "auto2@test.com" });
+
+      await expect(asUser.mutation(api.household.joinHousehold, { code })).rejects.toThrow(
+        "Already in a household"
+      );
+    });
+  });
 });

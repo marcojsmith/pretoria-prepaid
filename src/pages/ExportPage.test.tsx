@@ -40,6 +40,7 @@ vi.mock("../hooks/usePurchase");
 vi.mock("../hooks/use-toast");
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
+  useMutation: vi.fn(() => vi.fn()),
 }));
 
 // Mock DropdownMenu to render children directly for easier testing
