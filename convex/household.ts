@@ -5,6 +5,7 @@ const ERR_NOT_AUTH = "Not authenticated";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const INVITE_CODE_LENGTH = 8;
 const TAKE_HOUSEHOLD_METERS = 10;
+const TAKE_DISBAND_METERS = 200;
 
 export const getMyHousehold = query({
   args: {},
@@ -347,6 +348,30 @@ export const disbandHousehold = mutation({
       .query("household_members")
       .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
       .collect();
+
+    // Meters cannot exist without a household (householdId is required in the
+    // schema), so when the household is disbanded its meters must be deleted
+    // too. Any former member whose activeMeterId pointed at one of these
+    // meters must have that reference cleared, mirroring the cleanup done in
+    // meters.archiveMeter.
+    const householdMeters = await ctx.db
+      .query("meters")
+      .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
+      .take(TAKE_DISBAND_METERS);
+    const meterIds = new Set(householdMeters.map((m) => m._id));
+
+    for (const m of allMembers) {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", m.userId))
+        .unique();
+      if (profile?.activeMeterId && meterIds.has(profile.activeMeterId)) {
+        await ctx.db.patch(profile._id, { activeMeterId: undefined });
+      }
+    }
+
+    for (const meter of householdMeters) await ctx.db.delete(meter._id);
+
     for (const m of allMembers) await ctx.db.delete(m._id);
 
     const allInvites = await ctx.db
