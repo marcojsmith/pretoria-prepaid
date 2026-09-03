@@ -10,10 +10,10 @@ import {
   DEFAULT_READINGS_TAKE,
   MAX_RECENT_PURCHASES,
   DEFAULT_THRESHOLD,
-  DATE_MONTH_LENGTH,
   MAX_INTERVAL_READINGS,
   DEFAULT_PURCHASES_TO_SHOW,
 } from "./constants";
+import { currentMonthKeySast } from "./lib/date";
 
 type IntervalEntry = {
   newerDate: string;
@@ -351,8 +351,7 @@ async function fetchUserPurchaseData(
     filteredReadings: { source: string; date: string; readingPre: number; readingPost: number }[];
   }
 ) {
-  const today = new Date().toISOString().split("T")[0] ?? "";
-  const monthKey = today.substring(0, DATE_MONTH_LENGTH);
+  const monthKey = currentMonthKeySast();
   const currentMonthPurchases = await ctx.db
     .query("purchases")
     .withIndex("by_userId_date", (q) =>
