@@ -15,7 +15,7 @@
 ---
 
 - [x] Prepaid token purchase recording (Manual entry)
-- [~] Multiple meter support (Backend complete — `meters` table, per-meter CRUD, migration; UI switcher is phase 2, not yet built)
+- [x] Multiple meter support (`meters` table, per-meter CRUD, migration, and header `MeterSwitcher` UI for switching the active meter)
 - [x] Account balance tracking (Estimated kWh)
 - [x] Transaction history with filters (Search, Month/Year filter)
 - [x] Usage analytics (Monthly/Yearly charts, daily burn rate)
