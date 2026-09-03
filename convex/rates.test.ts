@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "./schema";
 import { api } from "./_generated/api";
@@ -7,16 +7,15 @@ import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob(["./**/*.ts", "../_generated/**/*.ts", "!./**/*.test.ts"]);
 
-/**
- * `ctx.scheduler.runAfter(0, ...)` jobs only flip from "pending" to "inProgress"
- * once real wall-clock time elapses, so `finishInProgressScheduledFunctions()`
- * alone is a no-op immediately after the triggering mutation returns.
- */
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 describe("rates", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe("getRates", () => {
     it("returns empty array when no rates exist", async () => {
       const t = convexTest(schema, modules);
@@ -232,8 +231,7 @@ describe("rates", () => {
         .withIdentity({ subject: adminId, tokenIdentifier: adminId })
         .mutation(api.rates.updateRate, { id: rateId, rate: 5.0 });
 
-      await delay(10);
-      await t.finishInProgressScheduledFunctions();
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
 
       const purchase = await t.mutation(async (ctx) => ctx.db.get(purchaseId));
       expect(purchase?.cost).toBe(500);
@@ -273,8 +271,7 @@ describe("rates", () => {
         .withIdentity({ subject: adminId, tokenIdentifier: adminId })
         .mutation(api.rates.updateRate, { id: rateId, rate: 5.0 });
 
-      await delay(10);
-      await t.finishInProgressScheduledFunctions();
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
 
       const purchase = await t.mutation(async (ctx) => ctx.db.get(purchaseId));
       expect(purchase?.cost).toBe(342.585);
@@ -312,8 +309,7 @@ describe("rates", () => {
         .withIdentity({ subject: adminId, tokenIdentifier: adminId })
         .mutation(api.rates.updateRate, { id: rateId, tier_label: "Renamed Tier" });
 
-      await delay(10);
-      await t.finishInProgressScheduledFunctions();
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
 
       const purchase = await t.mutation(async (ctx) => ctx.db.get(purchaseId));
       expect(purchase?.cost).toBe(400);
