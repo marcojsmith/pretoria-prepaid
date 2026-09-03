@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, memo, useCallback } from "react";
+import { useEffect, useMemo, useState, memo, useCallback, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -12,12 +12,15 @@ import { PatreonBanner } from "@/components/PatreonBanner";
 import { Header } from "@/components/Header";
 import { QuickActions } from "@/components/QuickActions";
 import { DashboardGrid } from "@/components/DashboardGrid";
-import { DashboardLayoutEditor } from "@/components/DashboardLayoutEditor";
 import { Button } from "@/components/ui/button";
 import { Loader2, Zap, LayoutDashboard } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { OnboardingForm } from "@/components/OnboardingForm";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
+const DashboardLayoutEditor = lazy(() =>
+  import("@/components/DashboardLayoutEditor").then((m) => ({ default: m.DashboardLayoutEditor }))
+);
 
 function DashboardLoading(): JSX.Element {
   return (
@@ -93,7 +96,11 @@ interface LayoutEditorWrapperProps {
 }
 
 function LayoutEditorWrapper(props: LayoutEditorWrapperProps): JSX.Element {
-  return <DashboardLayoutEditor {...props} />;
+  return (
+    <Suspense fallback={null}>
+      <DashboardLayoutEditor {...props} />
+    </Suspense>
+  );
 }
 
 function RatesFooter(): JSX.Element {
