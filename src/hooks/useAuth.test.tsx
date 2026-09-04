@@ -125,12 +125,14 @@ describe("AuthProvider", () => {
     };
     window.addEventListener("error", onWindowError);
 
-    expect(() => renderHook(() => useAuth())).toThrow(
-      "useAuth must be used within an AuthProvider"
-    );
-
-    window.removeEventListener("error", onWindowError);
-    consoleSpy.mockRestore();
+    try {
+      expect(() => renderHook(() => useAuth())).toThrow(
+        "useAuth must be used within an AuthProvider"
+      );
+    } finally {
+      window.removeEventListener("error", onWindowError);
+      consoleSpy.mockRestore();
+    }
   });
 
   it("useAuth returns context when used within AuthProvider", () => {

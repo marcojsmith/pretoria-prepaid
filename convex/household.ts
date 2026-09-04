@@ -67,15 +67,17 @@ export const getMyHousehold = query({
   },
 });
 
-// This query is intentionally unauthenticated (invite recipients haven't
-// joined yet) and has no rate limiting. This repo's existing rate limiter
-// (convex/lib/rateLimiter.ts) is designed for authenticated mutations keyed
-// by identity.tokenIdentifier and writes to a `rate_limits` table via
-// MutationCtx; it can't be reused here since this is a query (no db writes)
-// with no identity to key on. Invite codes are drawn from a 32-char charset
-// at length 8 (32^8 ≈ 1.1e12 combinations), making brute force impractical.
-// Accepted as a low-risk tradeoff rather than building new per-IP throttle
-// infrastructure for this endpoint alone.
+/**
+ * This query is intentionally unauthenticated (invite recipients haven't
+ * joined yet) and has no rate limiting. This repo's existing rate limiter
+ * (convex/lib/rateLimiter.ts) is designed for authenticated mutations keyed
+ * by identity.tokenIdentifier and writes to a `rate_limits` table via
+ * MutationCtx; it can't be reused here since this is a query (no db writes)
+ * with no identity to key on. Invite codes are drawn from a 32-char charset
+ * at length 8 (32^8 ≈ 1.1e12 combinations), making brute force impractical.
+ * Accepted as a low-risk tradeoff rather than building new per-IP throttle
+ * infrastructure for this endpoint alone.
+ */
 export const getInviteByCode = query({
   args: { code: v.string() },
   handler: async (ctx, args) => {

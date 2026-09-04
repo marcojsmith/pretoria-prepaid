@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { selectActiveRates } from "./electricity_logic";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import {
+  selectActiveRates,
+  calculateConsumptionStats,
+  DEFAULT_BURN_RATE,
+} from "./electricity_logic";
 
 const legacy = [
   { tier_number: 1, rate: 3.42585 },
@@ -42,5 +46,36 @@ describe("selectActiveRates", () => {
       3.7274
     );
     expect(selectActiveRates(all, "2027-07-01").find((r) => r.tier_number === 1)?.rate).toBe(4.1);
+  });
+});
+
+describe("calculateConsumptionStats - SAST day boundary", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("counts a reading from the previous SAST calendar date at 00:00 SAST as a full elapsed day", () => {
+    // "Now" is 2026-09-04T00:30 SAST (= 2026-09-03T22:30Z), i.e. just after the SAST
+    // midnight boundary. The reading was taken on the previous SAST calendar date,
+    // "2026-09-03", at 00:00 SAST. This should count as exactly 1 whole elapsed day,
+    // not a fractional ~0.9375 days as a naive UTC ms-diff against real "now" would give.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-03T22:30:00.000Z"));
+
+    const stats = calculateConsumptionStats(
+      [
+        {
+          date: "2026-09-03",
+          readingPre: 100,
+          readingPost: 100,
+          source: "onboarding",
+        },
+      ],
+      20
+    );
+
+    expect(stats).not.toBeNull();
+    // No purchase intervals available, so the default burn rate is used.
+    expect(stats?.estimatedBalance).toBe(100 - 1 * DEFAULT_BURN_RATE);
   });
 });

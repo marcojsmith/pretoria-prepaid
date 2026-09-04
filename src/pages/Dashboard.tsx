@@ -95,9 +95,22 @@ interface LayoutEditorWrapperProps {
   onReset: () => void;
 }
 
-function LayoutEditorWrapper(props: LayoutEditorWrapperProps): JSX.Element {
+function LayoutEditorWrapper(props: LayoutEditorWrapperProps): JSX.Element | null {
+  if (!props.open) {
+    return null;
+  }
+
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading editor...
+          </div>
+        </div>
+      }
+    >
       <DashboardLayoutEditor {...props} />
     </Suspense>
   );
