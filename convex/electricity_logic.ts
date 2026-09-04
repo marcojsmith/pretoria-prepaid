@@ -1,4 +1,5 @@
 import { MS_PER_DAY_UNIT, EXPONENTIAL_DECAY_FACTOR } from "./constants";
+import { todaySast } from "./lib/date";
 
 /**
  * Interface for meter readings with pre/post purchase values.
@@ -156,10 +157,15 @@ function computeDailyBurnRate(purchaseReadings: MeterReading[]): number {
  * Returns the number of days elapsed since `readingDate`, or 0 if it was today.
  */
 function daysSince(readingDate: string): number {
-  const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = todaySast();
   if (readingDate === todayStr) return 0;
-  return Math.max(0, (now.getTime() - new Date(readingDate).getTime()) / MS_PER_DAY_UNIT);
+  // Diff two SAST calendar-date strings (both parsed as UTC midnight) rather than
+  // subtracting the real "now" instant, so whole SAST days near midnight (00:00-02:00
+  // SAST) are counted correctly instead of being off by a fractional day.
+  return Math.max(
+    0,
+    (new Date(todayStr).getTime() - new Date(readingDate).getTime()) / MS_PER_DAY_UNIT
+  );
 }
 
 /**

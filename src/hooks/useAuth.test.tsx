@@ -113,14 +113,26 @@ describe("AuthProvider", () => {
   });
 
   it("useAuth throws error when outside provider", () => {
-    // Suppress console.error for this test as we expect an error
+    // Suppress console.error for this test as we expect an error.
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // React's dev-mode error handling re-throws the render error through a
+    // simulated DOM event; jsdom reports that as an "Uncaught" exception
+    // straight to stderr (bypassing console.error) unless something marks
+    // the event as handled. Since this error is expected and asserted
+    // below, suppress jsdom's uncaught-exception logging for this test only.
+    const onWindowError = (event: ErrorEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("error", onWindowError);
 
-    expect(() => renderHook(() => useAuth())).toThrow(
-      "useAuth must be used within an AuthProvider"
-    );
-
-    consoleSpy.mockRestore();
+    try {
+      expect(() => renderHook(() => useAuth())).toThrow(
+        "useAuth must be used within an AuthProvider"
+      );
+    } finally {
+      window.removeEventListener("error", onWindowError);
+      consoleSpy.mockRestore();
+    }
   });
 
   it("useAuth returns context when used within AuthProvider", () => {

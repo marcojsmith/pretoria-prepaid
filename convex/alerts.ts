@@ -1,6 +1,6 @@
 "use node";
 
-import { action } from "./_generated/server";
+import { internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import webpush from "web-push";
@@ -181,7 +181,7 @@ async function sendMeterAlerts(options: {
  * are alerted about that meter regardless of which meter is active for them
  * individually.
  */
-export const checkLowBalances = action({
+export const checkLowBalances = internalAction({
   args: {},
   handler: async (ctx) => {
     const publicKey = process.env["VITE_VAPID_PUBLIC_KEY"];

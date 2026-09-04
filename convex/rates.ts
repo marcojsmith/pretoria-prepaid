@@ -1,8 +1,9 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { selectActiveRates } from "./electricity_logic";
+import { todaySast } from "./lib/date";
 import {
   DATE_MONTH_LENGTH,
   TIER_1_MIN,
@@ -45,39 +46,86 @@ async function checkAdmin(ctx: QueryCtx) {
   return { identity, userRole };
 }
 
+// Purchases are scanned this many rows per invocation of `repriceBatch`, matching
+// the batch size used by the migration chain in `migrations.ts`, so a single
+// mutation never reads the whole (unbounded) `purchases` table.
+const REPRICE_BATCH_SIZE = 500;
+
 /**
- * Schedules recalculation for every (user, month) with a purchase dated on or after
- * `effectiveFrom`, so already-recorded purchases pick up the corrected/new rate.
- * Shared by `addRatePeriod` (a brand new tariff row) and `updateRate` (a correction
- * to an existing row) — both need the same "reprice everything from this date on"
- * behavior, and `recalculateMonthlyPurchases` re-derives each purchase's cost from
- * its own date via `selectActiveRates`, so this is safe even when a later tariff
- * period for the same tier supersedes the one being corrected.
+ * Kicks off an asynchronous, paginated scan over `purchases` that finds every
+ * (user, month) with a purchase dated on or after `effectiveFrom` and schedules
+ * recalculation for each, so already-recorded purchases pick up the
+ * corrected/new rate. Shared by `addRatePeriod` (a brand new tariff row) and
+ * `updateRate` (a correction to an existing row) — both need the same "reprice
+ * everything from this date on" behavior, and `recalculateMonthlyPurchases`
+ * re-derives each purchase's cost from its own date via `selectActiveRates`, so
+ * this is safe even when a later tariff period for the same tier supersedes the
+ * one being corrected.
+ *
+ * The scan itself runs out-of-band via `repriceBatch` (self-scheduled in pages
+ * of `REPRICE_BATCH_SIZE`) rather than inline, so the triggering mutation never
+ * touches more than a single page of `purchases`.
  */
-async function scheduleRepricingFrom(ctx: MutationCtx, effectiveFrom: string): Promise<number> {
-  const purchases = await ctx.db.query("purchases").collect();
-  const pairs = new Set<string>();
-  for (const purchase of purchases) {
-    if (purchase.date >= effectiveFrom) {
-      pairs.add(`${purchase.userId} ${purchase.date.substring(0, DATE_MONTH_LENGTH)}`);
-    }
-  }
-  for (const pair of pairs) {
-    const [userId, monthKey] = pair.split(" ");
-    if (!userId || !monthKey) continue;
-    await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {
-      userId,
-      monthKey,
-    });
-  }
-  return pairs.size;
+async function scheduleRepricingFrom(ctx: MutationCtx, effectiveFrom: string): Promise<void> {
+  await ctx.scheduler.runAfter(0, internal.rates.repriceBatch, {
+    effectiveFrom,
+    cursor: null,
+    seenPairs: [],
+  });
 }
+
+/**
+ * Processes one page of the `purchases` table looking for (user, month) pairs
+ * affected by `effectiveFrom`, schedules `recalculateMonthlyPurchases` for any
+ * newly-seen pair, then self-schedules to continue from `continueCursor` until
+ * the table is exhausted. `seenPairs` is threaded through invocations so the
+ * same (user, month) pair is never scheduled twice even though it may appear
+ * across many pages.
+ */
+export const repriceBatch = internalMutation({
+  args: {
+    effectiveFrom: v.string(),
+    cursor: v.union(v.string(), v.null()),
+    seenPairs: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("purchases")
+      .paginate({ cursor: args.cursor, numItems: REPRICE_BATCH_SIZE });
+
+    const seenPairs = new Set(args.seenPairs);
+    for (const purchase of page.page) {
+      if (purchase.date < args.effectiveFrom) continue;
+      const pair = `${purchase.userId} ${purchase.date.substring(0, DATE_MONTH_LENGTH)}`;
+      if (seenPairs.has(pair)) continue;
+      seenPairs.add(pair);
+
+      const [userId, monthKey] = pair.split(" ");
+      if (!userId || !monthKey) continue;
+      await ctx.scheduler.runAfter(0, internal.purchases.recalculateMonthlyPurchases, {
+        userId,
+        monthKey,
+      });
+    }
+
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.rates.repriceBatch, {
+        effectiveFrom: args.effectiveFrom,
+        cursor: page.continueCursor,
+        seenPairs: Array.from(seenPairs),
+      });
+    }
+
+    return null;
+  },
+});
 
 export const getRates = query({
   args: {},
   handler: async (ctx) => {
     const allRates = await ctx.db.query("electricity_rates").order("asc").collect();
-    const today = new Date().toISOString().split("T")[0] ?? "";
+    const today = todaySast();
     return selectActiveRates(allRates, today).sort((a, b) => a.tier_number - b.tier_number);
   },
 });
@@ -134,9 +182,9 @@ export const updateRate = mutation({
       (restUpdates.min_units !== undefined && restUpdates.min_units !== oldRate.min_units) ||
       (restUpdates.max_units !== undefined && restUpdates.max_units !== oldRate.max_units);
 
-    const recalculatedMonths = affectsCost
-      ? await scheduleRepricingFrom(ctx, oldRate.effectiveFrom ?? "")
-      : 0;
+    if (affectsCost) {
+      await scheduleRepricingFrom(ctx, oldRate.effectiveFrom ?? "");
+    }
 
     // Audit logging
     console.warn("[AUDIT] Rate updated", {
@@ -144,7 +192,7 @@ export const updateRate = mutation({
       rateId: id,
       old: oldRate,
       updates,
-      recalculatedMonths,
+      repricingScheduled: affectsCost,
     });
   },
 });
@@ -187,13 +235,13 @@ export const addRatePeriod = mutation({
     }
 
     // Reprice every purchase recorded on or after the new period's start.
-    const recalculatedMonths = await scheduleRepricingFrom(ctx, args.effectiveFrom);
+    await scheduleRepricingFrom(ctx, args.effectiveFrom);
 
     console.warn("[AUDIT] Rate period added", {
       addedBy: identity.email ?? identity.tokenIdentifier,
       effectiveFrom: args.effectiveFrom,
       rates: args.rates,
-      recalculatedMonths,
+      repricingScheduled: true,
     });
   },
 });

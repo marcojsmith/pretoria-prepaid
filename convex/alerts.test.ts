@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "./schema";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob(["./**/*.ts", "../_generated/**/*.ts", "!./**/*.test.ts"]);
@@ -138,7 +138,7 @@ describe("alerts.checkLowBalances", () => {
       readingPost: 100, // above threshold -> no breach
     });
 
-    await t.action(api.alerts.checkLowBalances, {});
+    await t.action(internal.alerts.checkLowBalances, {});
 
     // 2 subscribed members notified for the single breaching meter
     expect(mockSendNotification).toHaveBeenCalledTimes(2);
@@ -178,7 +178,7 @@ describe("alerts.checkLowBalances", () => {
       readingPost: 5,
     });
 
-    await t.action(api.alerts.checkLowBalances, {});
+    await t.action(internal.alerts.checkLowBalances, {});
 
     expect(mockSendNotification).toHaveBeenCalledTimes(1);
   });
@@ -200,7 +200,7 @@ describe("alerts.checkLowBalances", () => {
       readingPost: 100,
     });
 
-    await t.action(api.alerts.checkLowBalances, {});
+    await t.action(internal.alerts.checkLowBalances, {});
 
     expect(mockSendNotification).not.toHaveBeenCalled();
   });
@@ -222,7 +222,7 @@ describe("alerts.checkLowBalances", () => {
       readingPost: 5,
     });
 
-    await t.action(api.alerts.checkLowBalances, {});
+    await t.action(internal.alerts.checkLowBalances, {});
 
     expect(mockSendNotification).toHaveBeenCalledTimes(1);
     const meter = await t.run(async (ctx) => await ctx.db.get(meterId));
@@ -246,7 +246,7 @@ describe("alerts.checkLowBalances", () => {
       readingPost: 5,
     });
 
-    await t.action(api.alerts.checkLowBalances, {});
+    await t.action(internal.alerts.checkLowBalances, {});
 
     expect(mockSendNotification).toHaveBeenCalledTimes(1);
     const meter = await t.run(async (ctx) => await ctx.db.get(meterId));
@@ -271,7 +271,7 @@ describe("alerts.checkLowBalances", () => {
       readingPost: 5,
     });
 
-    await t.action(api.alerts.checkLowBalances, {});
+    await t.action(internal.alerts.checkLowBalances, {});
 
     expect(mockSendNotification).toHaveBeenCalledTimes(2);
     const meter = await t.run(async (ctx) => await ctx.db.get(meterId));

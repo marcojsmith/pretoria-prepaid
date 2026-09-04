@@ -452,7 +452,7 @@ describe("household", () => {
       ).rejects.toThrow("Not admin");
     });
 
-    it("deletes all members, invites, and household document", async () => {
+    it("removes non-admin members and invites, but keeps the household document", async () => {
       const t = convexTest(schema, modules);
       const adminId = "https://example.com|admin";
       const userId = "https://example.com|user1";
@@ -493,7 +493,7 @@ describe("household", () => {
       const household = await t.mutation(async (ctx) => {
         return await ctx.db.get(householdId!);
       });
-      expect(household).toBeNull();
+      expect(household).not.toBeNull();
 
       const members = await t.mutation(async (ctx) => {
         return await ctx.db
@@ -501,7 +501,8 @@ describe("household", () => {
           .withIndex("by_householdId", (q) => q.eq("householdId", householdId!))
           .collect();
       });
-      expect(members).toHaveLength(0);
+      expect(members).toHaveLength(1);
+      expect(members[0]?.userId).toBe(adminId);
 
       const invites = await t.mutation(async (ctx) => {
         return await ctx.db
@@ -510,6 +511,91 @@ describe("household", () => {
           .collect();
       });
       expect(invites).toHaveLength(0);
+    });
+
+    it("keeps household meters assigned to the admin and clears activeMeterId only for removed members", async () => {
+      const t = convexTest(schema, modules);
+      const adminId = "https://example.com|admin";
+      const userId = "https://example.com|user1";
+
+      let householdId: Id<"households"> | null = null;
+      let adminMeterId: Id<"meters"> | null = null;
+      let memberMeterId: Id<"meters"> | null = null;
+
+      await t.mutation(async (ctx) => {
+        householdId = await ctx.db.insert("households", {
+          adminUserId: adminId,
+          name: "Test Household",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId: adminId,
+          role: "admin",
+          joinedAt: Date.now(),
+        });
+        await ctx.db.insert("household_members", {
+          householdId,
+          userId,
+          role: "member",
+          joinedAt: Date.now(),
+        });
+
+        adminMeterId = await ctx.db.insert("meters", {
+          householdId,
+          name: "Admin Meter",
+          createdAt: Date.now(),
+        });
+        memberMeterId = await ctx.db.insert("meters", {
+          householdId,
+          name: "Member Meter",
+          createdAt: Date.now(),
+        });
+
+        await ctx.db.insert("profiles", {
+          userId: adminId,
+          email: "admin@test.com",
+          activeMeterId: adminMeterId,
+        });
+        await ctx.db.insert("profiles", {
+          userId,
+          email: "user1@test.com",
+          activeMeterId: memberMeterId,
+        });
+      });
+
+      await t
+        .withIdentity({ subject: "admin", tokenIdentifier: adminId })
+        .mutation(api.household.disbandHousehold, {});
+
+      const meters = await t.mutation(async (ctx) => {
+        return await ctx.db
+          .query("meters")
+          .withIndex("by_householdId", (q) => q.eq("householdId", householdId!))
+          .collect();
+      });
+      expect(meters).toHaveLength(2);
+
+      const adminMeter = await t.mutation(async (ctx) => ctx.db.get(adminMeterId!));
+      const memberMeter = await t.mutation(async (ctx) => ctx.db.get(memberMeterId!));
+      expect(adminMeter).not.toBeNull();
+      expect(memberMeter).not.toBeNull();
+
+      const adminProfile = await t.mutation(async (ctx) => {
+        return await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", adminId))
+          .unique();
+      });
+      const memberProfile = await t.mutation(async (ctx) => {
+        return await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", userId))
+          .unique();
+      });
+
+      expect(adminProfile?.activeMeterId).toBe(adminMeterId);
+      expect(memberProfile?.activeMeterId).toBeUndefined();
     });
   });
 

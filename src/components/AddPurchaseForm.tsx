@@ -15,6 +15,7 @@ import {
 import type { ElectricityRate, TierBreakdown } from "@/lib/electricity";
 import { Plus, Zap, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { todaySast } from "../../convex/lib/date";
 
 interface AddPurchaseFormProps {
   unitsAlreadyBought: number;
@@ -362,7 +363,7 @@ export function AddPurchaseForm({
   const [amountPaid, setAmountPaid] = useState("");
   const [unitsReceived, setUnitsReceived] = useState("");
   const [meterReading, setMeterReading] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0] ?? "");
+  const [date, setDate] = useState(todaySast());
   const [isUnitsManual, setIsUnitsManual] = useState(false);
   const [calculatedBreakdown, setCalculatedBreakdown] = useState<TierBreakdown[]>([]);
 

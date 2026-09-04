@@ -6,6 +6,7 @@ import { DEFAULT_READINGS_TAKE, DEFAULT_LOW_BALANCE_THRESHOLD } from "./constant
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimiter";
 import { resolveEffectiveUserId } from "./lib/household";
 import { resolveMeter } from "./lib/meters";
+import { todaySast } from "./lib/date";
 import type { Doc } from "./_generated/dataModel";
 
 const meterIdArg = { meterId: v.optional(v.id("meters")) };
@@ -64,7 +65,7 @@ async function addOnboardingReadingOnMeter(options: {
     .withIndex("by_meterId_date", (q) => q.eq("meterId", meter._id))
     .take(1);
 
-  const todayStr = new Date().toISOString().split("T")[0] ?? "";
+  const todayStr = todaySast();
   const existing = existingReadings[0];
 
   if (existing) {
@@ -104,7 +105,7 @@ async function addOnboardingReadingLegacy(options: {
     .withIndex("by_userId", (q) => q.eq("userId", effectiveUserId))
     .take(1);
 
-  const todayStr = new Date().toISOString().split("T")[0] ?? "";
+  const todayStr = todaySast();
   const existing = existingReadings[0];
 
   if (existing) {
@@ -332,7 +333,7 @@ export const correctMeterReading = mutation({
       windowMs: RATE_LIMITS.correctMeterReading.windowMs,
     });
 
-    const todayStr = new Date().toISOString().split("T")[0] ?? "";
+    const todayStr = todaySast();
     const meter = await resolveMeter(ctx, identity.tokenIdentifier, args.meterId);
 
     if (meter) {

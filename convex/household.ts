@@ -5,6 +5,7 @@ const ERR_NOT_AUTH = "Not authenticated";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const INVITE_CODE_LENGTH = 8;
 const TAKE_HOUSEHOLD_METERS = 10;
+const TAKE_DISBAND_METERS = 200;
 
 export const getMyHousehold = query({
   args: {},
@@ -66,6 +67,17 @@ export const getMyHousehold = query({
   },
 });
 
+/**
+ * This query is intentionally unauthenticated (invite recipients haven't
+ * joined yet) and has no rate limiting. This repo's existing rate limiter
+ * (convex/lib/rateLimiter.ts) is designed for authenticated mutations keyed
+ * by identity.tokenIdentifier and writes to a `rate_limits` table via
+ * MutationCtx; it can't be reused here since this is a query (no db writes)
+ * with no identity to key on. Invite codes are drawn from a 32-char charset
+ * at length 8 (32^8 ≈ 1.1e12 combinations), making brute force impractical.
+ * Accepted as a low-risk tradeoff rather than building new per-IP throttle
+ * infrastructure for this endpoint alone.
+ */
 export const getInviteByCode = query({
   args: { code: v.string() },
   handler: async (ctx, args) => {
@@ -347,14 +359,36 @@ export const disbandHousehold = mutation({
       .query("household_members")
       .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
       .collect();
-    for (const m of allMembers) await ctx.db.delete(m._id);
+
+    // Meters stay with the household and remain assigned to the admin, who
+    // keeps the household (and its meters/readings/purchases history)
+    // intact. Non-admin members are removed and lose access; any of their
+    // profiles pointing at a meter in this household have that reference
+    // cleared so they can add their own meter elsewhere.
+    const householdMeters = await ctx.db
+      .query("meters")
+      .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
+      .take(TAKE_DISBAND_METERS);
+    const meterIds = new Set(householdMeters.map((m) => m._id));
+
+    const nonAdminMembers = allMembers.filter((m) => m.userId !== identity.tokenIdentifier);
+
+    for (const m of nonAdminMembers) {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", m.userId))
+        .unique();
+      if (profile?.activeMeterId && meterIds.has(profile.activeMeterId)) {
+        await ctx.db.patch(profile._id, { activeMeterId: undefined });
+      }
+    }
+
+    for (const m of nonAdminMembers) await ctx.db.delete(m._id);
 
     const allInvites = await ctx.db
       .query("household_invites")
       .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
       .collect();
     for (const inv of allInvites) await ctx.db.delete(inv._id);
-
-    await ctx.db.delete(membership.householdId);
   },
 });
