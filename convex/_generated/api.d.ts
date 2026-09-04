@@ -15,6 +15,7 @@ import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
 import type * as electricity_logic from "../electricity_logic.js";
 import type * as household from "../household.js";
+import type * as lib_date from "../lib/date.js";
 import type * as lib_household from "../lib/household.js";
 import type * as lib_meters from "../lib/meters.js";
 import type * as lib_rateLimiter from "../lib/rateLimiter.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   electricity_logic: typeof electricity_logic;
   household: typeof household;
+  "lib/date": typeof lib_date;
   "lib/household": typeof lib_household;
   "lib/meters": typeof lib_meters;
   "lib/rateLimiter": typeof lib_rateLimiter;

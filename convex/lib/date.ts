@@ -1,4 +1,5 @@
 const SAST_OFFSET_MS = 2 * 60 * 60 * 1000; // SAST is UTC+2, no DST
+const MONTH_KEY_LENGTH = 7; // "YYYY-MM".length
 
 /**
  * Returns today's date as YYYY-MM-DD in South Africa Standard Time (UTC+2),
@@ -15,5 +16,5 @@ export function todaySast(): string {
  * Returns the current month as YYYY-MM in South Africa Standard Time (UTC+2).
  */
 export function currentMonthKeySast(): string {
-  return todaySast().substring(0, 7);
+  return todaySast().substring(0, MONTH_KEY_LENGTH);
 }
