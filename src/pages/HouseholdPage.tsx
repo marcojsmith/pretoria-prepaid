@@ -322,7 +322,7 @@ function HasHouseholdView({
           </CardTitle>
           <CardDescription>
             {isAdmin
-              ? "Disbanding removes all members and permanently dissolves the household."
+              ? "Disbanding removes all other members. You keep the household and its meters; they'll need to add their own meter."
               : "You will no longer have access to the shared meter data."}
           </CardDescription>
         </CardHeader>

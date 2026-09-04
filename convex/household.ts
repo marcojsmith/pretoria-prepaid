@@ -358,18 +358,20 @@ export const disbandHousehold = mutation({
       .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
       .collect();
 
-    // Meters cannot exist without a household (householdId is required in the
-    // schema), so when the household is disbanded its meters must be deleted
-    // too. Any former member whose activeMeterId pointed at one of these
-    // meters must have that reference cleared, mirroring the cleanup done in
-    // meters.archiveMeter.
+    // Meters stay with the household and remain assigned to the admin, who
+    // keeps the household (and its meters/readings/purchases history)
+    // intact. Non-admin members are removed and lose access; any of their
+    // profiles pointing at a meter in this household have that reference
+    // cleared so they can add their own meter elsewhere.
     const householdMeters = await ctx.db
       .query("meters")
       .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
       .take(TAKE_DISBAND_METERS);
     const meterIds = new Set(householdMeters.map((m) => m._id));
 
-    for (const m of allMembers) {
+    const nonAdminMembers = allMembers.filter((m) => m.userId !== identity.tokenIdentifier);
+
+    for (const m of nonAdminMembers) {
       const profile = await ctx.db
         .query("profiles")
         .withIndex("by_userId", (q) => q.eq("userId", m.userId))
@@ -379,16 +381,12 @@ export const disbandHousehold = mutation({
       }
     }
 
-    for (const meter of householdMeters) await ctx.db.delete(meter._id);
-
-    for (const m of allMembers) await ctx.db.delete(m._id);
+    for (const m of nonAdminMembers) await ctx.db.delete(m._id);
 
     const allInvites = await ctx.db
       .query("household_invites")
       .withIndex("by_householdId", (q) => q.eq("householdId", membership.householdId))
       .collect();
     for (const inv of allInvites) await ctx.db.delete(inv._id);
-
-    await ctx.db.delete(membership.householdId);
   },
 });

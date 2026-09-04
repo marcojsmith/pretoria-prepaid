@@ -452,7 +452,7 @@ describe("household", () => {
       ).rejects.toThrow("Not admin");
     });
 
-    it("deletes all members, invites, and household document", async () => {
+    it("removes non-admin members and invites, but keeps the household document", async () => {
       const t = convexTest(schema, modules);
       const adminId = "https://example.com|admin";
       const userId = "https://example.com|user1";
@@ -493,7 +493,7 @@ describe("household", () => {
       const household = await t.mutation(async (ctx) => {
         return await ctx.db.get(householdId!);
       });
-      expect(household).toBeNull();
+      expect(household).not.toBeNull();
 
       const members = await t.mutation(async (ctx) => {
         return await ctx.db
@@ -501,7 +501,8 @@ describe("household", () => {
           .withIndex("by_householdId", (q) => q.eq("householdId", householdId!))
           .collect();
       });
-      expect(members).toHaveLength(0);
+      expect(members).toHaveLength(1);
+      expect(members[0]?.userId).toBe(adminId);
 
       const invites = await t.mutation(async (ctx) => {
         return await ctx.db
@@ -512,7 +513,7 @@ describe("household", () => {
       expect(invites).toHaveLength(0);
     });
 
-    it("deletes household meters and clears activeMeterId for former members", async () => {
+    it("keeps household meters assigned to the admin and clears activeMeterId only for removed members", async () => {
       const t = convexTest(schema, modules);
       const adminId = "https://example.com|admin";
       const userId = "https://example.com|user1";
@@ -573,12 +574,12 @@ describe("household", () => {
           .withIndex("by_householdId", (q) => q.eq("householdId", householdId!))
           .collect();
       });
-      expect(meters).toHaveLength(0);
+      expect(meters).toHaveLength(2);
 
       const adminMeter = await t.mutation(async (ctx) => ctx.db.get(adminMeterId!));
       const memberMeter = await t.mutation(async (ctx) => ctx.db.get(memberMeterId!));
-      expect(adminMeter).toBeNull();
-      expect(memberMeter).toBeNull();
+      expect(adminMeter).not.toBeNull();
+      expect(memberMeter).not.toBeNull();
 
       const adminProfile = await t.mutation(async (ctx) => {
         return await ctx.db
@@ -593,7 +594,7 @@ describe("household", () => {
           .unique();
       });
 
-      expect(adminProfile?.activeMeterId).toBeUndefined();
+      expect(adminProfile?.activeMeterId).toBe(adminMeterId);
       expect(memberProfile?.activeMeterId).toBeUndefined();
     });
   });
