@@ -417,6 +417,15 @@ Avoid clutter and unnecessary elements.
 - **Styling Preference:** This project uses **TailwindCSS** extensively. You must use TailwindCSS for all UI development and styling to ensure consistency with the existing architecture, overriding any general system defaults for Vanilla CSS.
 - **Purpose:** Use for manual deployments, inspecting build logs (`bunx vercel logs`), and verifying environment health. Before assuming a deployment is successful, use `bunx vercel list` to confirm status.
 
+## opencode (cost-efficient delegation)
+
+- **Usage:** For well-scoped implementation tasks, work can be delegated to the `opencode` CLI running the `openrouter/z-ai/glm-5.3-flash` model to save cost versus doing the implementation directly.
+- **Command:** `opencode run -m openrouter/z-ai/glm-5.3-flash --auto "<detailed task prompt>"` from the project root.
+- **Usage rules:**
+  - Only delegate tasks with a clear, fully-specified scope (exact files, exact behavior, exact tests to update) — the prompt must stand alone since the subprocess has no conversation context.
+  - Always review the resulting diff and run lint/tests yourself afterward; do not trust the subprocess's self-reported pass/fail without verifying.
+  - Not a substitute for judgment calls, architecture decisions, or ambiguous requirements — handle those directly.
+
 ## GitHub CLI
 
 - **Usage:** Run via `gh` from the **project root** directory.

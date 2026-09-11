@@ -14,8 +14,24 @@ import {
   subscribeUserToPush,
   unsubscribeUserFromPush,
   isPushSupported,
+  NotificationPermissionBlockedError,
 } from "@/lib/push-notifications";
 import type { PushSubscriptionJSON } from "@/lib/push-notifications";
+
+/**
+ * Shows a toast for a failed push subscription attempt. A browser-level
+ * permission block gets dedicated guidance since re-toggling the app
+ * setting cannot resolve it.
+ */
+function showPushSubscriptionErrorToast(error: unknown): void {
+  if (error instanceof NotificationPermissionBlockedError) {
+    toast.error(error.message);
+    return;
+  }
+  const errorMessage =
+    error instanceof Error ? error.message : "Failed to enable push notifications.";
+  toast.error(errorMessage);
+}
 
 // eslint-disable-next-line llm-core/max-function-length
 export default function Settings(): JSX.Element | null {
@@ -71,9 +87,7 @@ export default function Settings(): JSX.Element | null {
           try {
             updates.pushSubscription = await subscribeUserToPush();
           } catch (error: unknown) {
-            const errorMessage =
-              error instanceof Error ? error.message : "Failed to enable push notifications.";
-            toast.error(errorMessage);
+            showPushSubscriptionErrorToast(error);
             setFormData((prev) => ({ ...prev, pushNotificationsEnabled: false }));
             setIsSaving(false);
             return; // Stop submission if subscription failed

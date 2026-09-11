@@ -4,6 +4,9 @@ import {
   subscribeUserToPush,
   unsubscribeUserFromPush,
   clearBadge,
+  getNotificationPermissionState,
+  NotificationPermissionBlockedError,
+  NOTIFICATION_PERMISSION_BLOCKED_MESSAGE,
 } from "./push-notifications";
 
 describe("push-notifications", () => {
@@ -18,9 +21,11 @@ describe("push-notifications", () => {
 
   const mockNotification = {
     requestPermission: vi.fn(),
+    permission: "default" as NotificationPermission,
   };
 
   beforeEach(() => {
+    mockNotification.permission = "default";
     vi.stubGlobal("navigator", {
       serviceWorker: mockServiceWorker,
     });
@@ -66,6 +71,52 @@ describe("push-notifications", () => {
   it("throws error when permission is denied", async () => {
     mockNotification.requestPermission.mockResolvedValue("denied");
     await expect(subscribeUserToPush()).rejects.toThrow("Notification permission was denied.");
+  });
+
+  it("getNotificationPermissionState returns the browser's current permission state", () => {
+    vi.stubGlobal("window", {
+      atob: (str: string) => Buffer.from(str, "base64").toString("binary"),
+      PushManager: {},
+      Notification: mockNotification,
+    });
+
+    mockNotification.permission = "granted";
+    expect(getNotificationPermissionState()).toBe("granted");
+
+    mockNotification.permission = "denied";
+    expect(getNotificationPermissionState()).toBe("denied");
+
+    mockNotification.permission = "default";
+    expect(getNotificationPermissionState()).toBe("default");
+  });
+
+  it('getNotificationPermissionState returns "default" when Notification is unavailable on window', () => {
+    vi.stubGlobal("window", {
+      atob: (str: string) => Buffer.from(str, "base64").toString("binary"),
+      PushManager: {},
+    });
+    expect(getNotificationPermissionState()).toBe("default");
+  });
+
+  it('getNotificationPermissionState returns "default" when window is undefined (SSR)', () => {
+    vi.stubGlobal("window", undefined);
+    expect(getNotificationPermissionState()).toBe("default");
+  });
+
+  it("throws the blocked error when notifications were already denied before prompting", async () => {
+    vi.stubGlobal("window", {
+      atob: (str: string) => Buffer.from(str, "base64").toString("binary"),
+      PushManager: {},
+      Notification: mockNotification,
+    });
+    mockNotification.permission = "denied";
+    mockNotification.requestPermission.mockResolvedValue("denied");
+    mockNotification.requestPermission.mockClear();
+
+    const promise = subscribeUserToPush();
+    await expect(promise).rejects.toThrow(NOTIFICATION_PERMISSION_BLOCKED_MESSAGE);
+    await expect(promise).rejects.toBeInstanceOf(NotificationPermissionBlockedError);
+    expect(mockNotification.requestPermission).not.toHaveBeenCalled();
   });
 
   it("unsubscribes user from push", async () => {

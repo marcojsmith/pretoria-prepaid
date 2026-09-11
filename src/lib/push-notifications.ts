@@ -26,6 +26,17 @@ export function isPushSupported(): boolean {
   return "serviceWorker" in navigator && "PushManager" in window;
 }
 
+/**
+ * Returns the browser's current notification permission state.
+ * Falls back to "default" in SSR or unsupported environments.
+ */
+export function getNotificationPermissionState(): NotificationPermission {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return "default";
+  }
+  return Notification.permission;
+}
+
 export interface PushSubscriptionJSON {
   endpoint: string;
   expirationTime: number | null;
@@ -36,9 +47,31 @@ export interface PushSubscriptionJSON {
 }
 
 /**
+ * Actionable message shown when notifications are blocked at the browser
+ * level. Exported so callers and tests can reference it without string
+ * matching.
+ */
+export const NOTIFICATION_PERMISSION_BLOCKED_MESSAGE =
+  "Notifications are blocked in your browser settings. To enable them, open site settings via the padlock or site info icon in your browser's address bar, allow notifications for this site, then try again.";
+
+/**
+ * Thrown when notifications were already blocked at the browser level
+ * (`Notification.permission` is "denied") before a prompt could be shown.
+ * Re-prompting is impossible; the user must re-enable notifications via the
+ * browser's site settings for this site.
+ */
+export class NotificationPermissionBlockedError extends Error {
+  constructor(message = NOTIFICATION_PERMISSION_BLOCKED_MESSAGE) {
+    super(message);
+    this.name = "NotificationPermissionBlockedError";
+  }
+}
+
+/**
  * Requests permission for notifications and subscribes the user to push.
  * @returns The subscription object.
  * @throws Error if failed or denied.
+ * @throws NotificationPermissionBlockedError if notifications are already blocked in browser settings.
  */
 export async function subscribeUserToPush(): Promise<PushSubscriptionJSON> {
   if (!isPushSupported()) {
@@ -46,6 +79,13 @@ export async function subscribeUserToPush(): Promise<PushSubscriptionJSON> {
   }
 
   try {
+    // Once Notification.permission is "denied", calling requestPermission()
+    // resolves "denied" immediately without showing the native dialog again,
+    // so detect the pre-existing block before prompting.
+    if (getNotificationPermissionState() === "denied") {
+      throw new NotificationPermissionBlockedError();
+    }
+
     // 1. Request permission
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
