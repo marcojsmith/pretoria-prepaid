@@ -8,11 +8,13 @@ import { toast } from "sonner";
 import * as pushNotifications from "@/lib/push-notifications";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { PushSubscriptionJSON } from "@/lib/push-notifications";
+import type * as pushNotificationsModule from "@/lib/push-notifications";
 
 // Mock hooks
 vi.mock("@/hooks/useAuth");
 vi.mock("@/hooks/useProfile");
-vi.mock("@/lib/push-notifications", () => ({
+vi.mock("@/lib/push-notifications", async (importOriginal) => ({
+  ...(await importOriginal<typeof pushNotificationsModule>()),
   subscribeUserToPush: vi.fn(),
   unsubscribeUserFromPush: vi.fn(),
   isPushSupported: vi.fn(() => true),
@@ -198,6 +200,29 @@ describe("Settings Page", () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Notification permission denied");
     });
+  });
+
+  it("shows browser-settings guidance when notifications are blocked by the browser", async () => {
+    const mockSubscribe = vi.mocked(pushNotifications.subscribeUserToPush);
+    mockSubscribe.mockRejectedValueOnce(new pushNotifications.NotificationPermissionBlockedError());
+
+    render(
+      <BrowserRouter>
+        <Settings />
+      </BrowserRouter>
+    );
+
+    const checkbox = screen.getByLabelText(/Push Notifications/i);
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: /Save Settings/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        pushNotifications.NOTIFICATION_PERMISSION_BLOCKED_MESSAGE
+      );
+    });
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
+    expect(checkbox).not.toBeChecked();
   });
 
   it("handles submission errors", async () => {
