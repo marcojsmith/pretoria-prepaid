@@ -21,6 +21,8 @@
 ## Testing Standards
 
 - **Target Coverage**: **97%** or higher for all new features.
+- **Enforced Floors**: `vitest.config.ts` sets per-folder thresholds for `src/**` and `convex/**` just below current coverage. Raise them as coverage improves; never lower them to pass a PR.
+- **Quality Gates**: pre-commit runs lint-staged; pre-push runs typecheck, coverage and build; `.github/workflows/ci.yml` runs lint, typecheck, coverage and build on every PR.
 - **Tools**: Vitest for unit/integration, Chrome DevTools MCP for E2E verification.
 - **Mocking Strategy**:
   - `IntersectionObserver` mocked for infinite scroll tests.
