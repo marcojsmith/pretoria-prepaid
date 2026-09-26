@@ -20,7 +20,7 @@ A production-grade Progressive Web App (PWA) designed to help residents of Preto
   - **InstallPrompt:** Custom in-app installation experience.
   - **Offline-First:** Full background sync for logging data without an active connection.
   - **Push Notifications:** Low-balance alerts (Web Push API).
-- **97%+ Test Coverage:** Robustly tested using Vitest and React Testing Library, including E2E UI verification.
+- **Enforced Test Coverage:** Coverage floors checked in CI; robustly tested using Vitest and React Testing Library, including E2E UI verification.
 - **Security & Speed:** Real-time synchronization via Convex, secure auth via Clerk, and a lightning-fast UI built with Tailwind CSS.
 
 ## Tech Stack
