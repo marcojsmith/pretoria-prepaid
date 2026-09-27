@@ -30,4 +30,4 @@
 - [x] Smart Consumption Monitoring: Logging manual meter readings and calculating daily burn rates.
 - [x] Admin Management Suite: UI for administrative rate updates.
 - [x] Performance and Offline Excellence (PWA): InjectManifest, background sync, and App Badge support.
-- [x] Test Coverage: 97%+ unit and integration test coverage.
+- [x] Test Coverage: enforced floors in CI (see `vitest.config.ts`).
